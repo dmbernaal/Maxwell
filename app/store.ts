@@ -7,15 +7,14 @@ interface ChatStore {
   // State
   sessions: Record<string, ChatSession>;
   activeSessionId: string | null;
-  agentState: AgentState;
   hasHydrated: boolean;
 
   // Actions
   createSession: () => string;
   switchSession: (sessionId: string) => void;
   deleteSession: (sessionId: string) => void;
-  addMessage: (content: string, role: 'user' | 'agent', verified?: boolean) => void;
-  setAgentState: (state: AgentState) => void;
+  addMessage: (content: string, role: 'user' | 'agent', verified?: boolean, sessionId?: string) => void;
+  setAgentState: (state: AgentState, sessionId?: string) => void;
   setHasHydrated: (state: boolean) => void;
 
   // Computed Helpers
@@ -27,7 +26,6 @@ export const useChatStore = create<ChatStore>()(
     (set, get) => ({
       sessions: {},
       activeSessionId: null,
-      agentState: 'relaxed',
       hasHydrated: false,
 
       createSession: () => {
@@ -37,20 +35,20 @@ export const useChatStore = create<ChatStore>()(
           title: 'New Conversation',
           createdAt: Date.now(),
           updatedAt: Date.now(),
-          messages: []
+          messages: [],
+          agentState: 'relaxed'
         };
 
         set((state) => ({
           sessions: { ...state.sessions, [id]: newSession },
-          activeSessionId: id,
-          agentState: 'relaxed'
+          activeSessionId: id
         }));
 
         return id;
       },
 
       switchSession: (sessionId) => {
-        set({ activeSessionId: sessionId, agentState: 'relaxed' });
+        set({ activeSessionId: sessionId });
       },
 
       deleteSession: (sessionId) => {
@@ -65,18 +63,19 @@ export const useChatStore = create<ChatStore>()(
 
           return {
             sessions: newSessions,
-            activeSessionId: newActiveId,
-            agentState: 'relaxed'
+            activeSessionId: newActiveId
           };
         });
       },
 
-      addMessage: (content, role, verified = false) => {
+      addMessage: (content, role, verified = false, sessionId) => {
         set((state) => {
-          const activeId = state.activeSessionId;
-          if (!activeId || !state.sessions[activeId]) return state;
+          // Use provided sessionId or fallback to activeSessionId
+          const targetId = sessionId || state.activeSessionId;
 
-          const session = state.sessions[activeId];
+          if (!targetId || !state.sessions[targetId]) return state;
+
+          const session = state.sessions[targetId];
           const newMessage: Message = {
             id: uuidv4(),
             role,
@@ -94,7 +93,7 @@ export const useChatStore = create<ChatStore>()(
           return {
             sessions: {
               ...state.sessions,
-              [activeId]: {
+              [targetId]: {
                 ...session,
                 messages: [...session.messages, newMessage],
                 updatedAt: Date.now(),
@@ -105,7 +104,23 @@ export const useChatStore = create<ChatStore>()(
         });
       },
 
-      setAgentState: (agentState) => set({ agentState }),
+      setAgentState: (agentState, sessionId) => {
+        set((state) => {
+          const targetId = sessionId || state.activeSessionId;
+          if (!targetId || !state.sessions[targetId]) return state;
+
+          return {
+            sessions: {
+              ...state.sessions,
+              [targetId]: {
+                ...state.sessions[targetId],
+                agentState
+              }
+            }
+          };
+        });
+      },
+
       setHasHydrated: (hasHydrated) => set({ hasHydrated }),
 
       getActiveSession: () => {

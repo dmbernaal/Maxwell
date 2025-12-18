@@ -14,5 +14,6 @@ export interface ChatSession {
   createdAt: number;
   updatedAt: number;
   messages: Message[];
+  agentState: AgentState;
 }
 

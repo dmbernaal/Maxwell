@@ -24,7 +24,6 @@ const spacerVariants = {
 
 export default function Home() {
   const {
-    agentState,
     addMessage,
     setAgentState,
     getActiveSession,
@@ -47,9 +46,10 @@ export default function Home() {
     }
   }, [hasHydrated, activeSessionId, createSession]);
 
-  // Get active messages
+  // Get active messages and state
   const activeSession = getActiveSession();
   const messages = activeSession?.messages || [];
+  const agentState = activeSession?.agentState || 'relaxed';
 
   // Update history tracking when session changes
   if (renderedSessionId.current !== activeSessionId) {
@@ -57,18 +57,6 @@ export default function Home() {
     // Mark ALL current messages as history so they don't animate individually
     historyIds.current = new Set(messages.map(m => m.id));
     renderedSessionId.current = activeSessionId;
-  } else {
-    // Same session, but maybe new messages added?
-    // We don't add them to historyIds here, so they WILL animate.
-    // But we should add them *after* render so next time they are history?
-    // Actually, we only care about the *initial load* of the session.
-    // If we add a message, it animates. If we reload the page, it's history.
-    // Wait, if we add a message, it's not in historyIds, so it animates. Good.
-    // If we re-render for some other reason, it's still not in historyIds...
-    // So it might re-animate if the parent re-renders?
-    // No, Framer Motion handles re-renders fine unless key changes.
-    // But we should probably add them to historyIds *after* they have been shown once?
-    // For now, let's stick to "Session Switch" logic.
   }
 
   // Auto-scroll to bottom
@@ -88,21 +76,27 @@ export default function Home() {
   }, [agentState, messages.length]);
 
   const handleQuery = (q: string) => {
-    addMessage(q, 'user');
+    if (!activeSessionId) return;
 
-    setAgentState('thinking');
+    // Capture the session ID at the start of the query
+    // This ensures that async operations target THIS session, even if the user switches away
+    const currentSessionId = activeSessionId;
+
+    addMessage(q, 'user', false, currentSessionId);
+
+    setAgentState('thinking', currentSessionId);
 
     setTimeout(() => {
-      setAgentState('orchestrating');
+      setAgentState('orchestrating', currentSessionId);
     }, 2000);
 
     setTimeout(() => {
-      setAgentState('synthesizing');
+      setAgentState('synthesizing', currentSessionId);
     }, 4500);
 
     setTimeout(() => {
-      setAgentState('complete');
-      addMessage(MOCK_RESPONSE, 'agent', true);
+      setAgentState('complete', currentSessionId);
+      addMessage(MOCK_RESPONSE, 'agent', true, currentSessionId);
     }, 6000);
   };
 
