@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { SmallGhostLogo } from './components/SmallGhostLogo';
 import InputInterface from './components/InputInterface';
 import ResponseDisplay from './components/ResponseDisplay';
 import UserMessage from './components/UserMessage';
+import ChatHistory from './components/ChatHistory';
 import { useChatStore } from './store';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -22,8 +23,29 @@ const spacerVariants = {
 };
 
 export default function Home() {
-  const { messages, agentState, addMessage, setAgentState } = useChatStore();
+  const {
+    agentState,
+    addMessage,
+    setAgentState,
+    getActiveSession,
+    createSession,
+    hasHydrated,
+    activeSessionId
+  } = useChatStore();
+
+  const [currentLayout, setCurrentLayout] = useState<'relaxed' | 'active'>('relaxed');
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Initialize session if needed
+  useEffect(() => {
+    if (hasHydrated && !activeSessionId) {
+      createSession();
+    }
+  }, [hasHydrated, activeSessionId, createSession]);
+
+  // Get active messages
+  const activeSession = getActiveSession();
+  const messages = activeSession?.messages || [];
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -32,12 +54,17 @@ export default function Home() {
     }
   }, [messages, agentState]);
 
+  // Update layout based on state
+  useEffect(() => {
+    if (agentState !== 'relaxed' || messages.length > 0) {
+      setCurrentLayout('active');
+    } else {
+      setCurrentLayout('relaxed');
+    }
+  }, [agentState, messages.length]);
+
   const handleQuery = (q: string) => {
-    addMessage({
-      id: uuidv4(),
-      role: 'user',
-      content: q
-    });
+    addMessage(q, 'user');
 
     setAgentState('thinking');
 
@@ -51,24 +78,19 @@ export default function Home() {
 
     setTimeout(() => {
       setAgentState('complete');
-      addMessage({
-        id: uuidv4(),
-        role: 'agent',
-        content: MOCK_RESPONSE,
-        verified: true
-      });
+      addMessage(MOCK_RESPONSE, 'agent', true);
     }, 6000);
   };
 
-  // Simple boolean - stable across renders
-  const hasMessages = messages.length > 0;
-  const currentLayout = hasMessages ? 'active' : 'relaxed';
+  // Prevent hydration mismatch
+  if (!hasHydrated) return null;
 
   return (
     <main className="relative min-h-screen w-full bg-[var(--bg-primary)] overflow-hidden selection:bg-brand-accent/30 font-sans">
+      <ChatHistory />
 
       {/* GLOBAL EFFECTS */}
-      <div className="bg-grain" />
+      <div className="bg-grain opacity-20 pointer-events-none fixed inset-0 z-0" />
 
       {/* VIGNETTE - Kaiyros Aesthetic */}
       <div className="fixed inset-0 pointer-events-none z-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_var(--bg-primary)_100%),_radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.4)_100%)]" />
