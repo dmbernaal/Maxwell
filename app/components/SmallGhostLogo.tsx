@@ -69,13 +69,30 @@ export function SmallGhostLogo() {
       animate={{ y: [0, -4, 0], scale: [1, 1.02, 1] }}
       transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
     >
-      <svg width="100%" height="100%" viewBox="0 0 48 60" className="w-full h-full overflow-visible">
+      {/* AMBIENT GLOW - The "Soul" Aura */}
+      <motion.div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[140%] -z-10 rounded-full blur-[40px]"
+        animate={{
+          scale: [1, 1.15, 1],
+          opacity: [0.2, 0.4, 0.2],
+        }}
+        transition={{
+          duration: 4,
+          repeat: Infinity,
+          ease: "easeInOut"
+        }}
+        style={{
+          background: "radial-gradient(circle at center, rgba(111, 59, 245, 0.5) 0%, rgba(255, 153, 204, 0.2) 40%, transparent 70%)"
+        }}
+      />
+
+      <svg width="100%" height="100%" viewBox="0 0 48 60" className="w-full h-full overflow-visible drop-shadow-[0_0_15px_rgba(111,59,245,0.3)]">
         <defs>
           {/* THE SHAPE */}
           <clipPath id="ghostClip">
             <path d="M47.5 23V49.5C47.5 56 42.5 60 36 60C32 60 28.5 58 26 55C24 52.5 20.5 52.5 18 55C15.5 57 12.5 58 9 58C3.5 58 0 54 0 49V23C0 10.5 10.5 0 23 0C35.5 0 47.5 10.5 47.5 23Z" />
           </clipPath>
-          
+
           {/* THE FALLBACK (Safari) */}
           <linearGradient id="fallbackGradient" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#ff99cc" />
@@ -97,7 +114,7 @@ export function SmallGhostLogo() {
 
         {/* RENDER BODY: Safari/Server (Static) */}
         {(isSafariMobile || !isClient) && (
-          <path 
+          <path
             d="M47.5 23V49.5C47.5 56 42.5 60 36 60C32 60 28.5 58 26 55C24 52.5 20.5 52.5 18 55C15.5 57 12.5 58 9 58C3.5 58 0 54 0 49V23C0 10.5 10.5 0 23 0C35.5 0 47.5 10.5 47.5 23Z"
             fill="url(#fallbackGradient)"
           />
@@ -112,12 +129,12 @@ export function SmallGhostLogo() {
             cy: 24 + eyeOffset.y,
             ry: [6, 0.5, 6], // Blink
           }}
-          transition={{ 
+          transition={{
             cx: { type: "spring", stiffness: 150, damping: 15 }, // Movement physics
             ry: { duration: 0.1, repeat: Infinity, repeatDelay: 2.9 } // Blink timing
           }}
         />
-        
+
         {/* EYES (Right) */}
         <motion.ellipse
           rx="4" ry="6" fill="white"
@@ -127,7 +144,7 @@ export function SmallGhostLogo() {
             cy: 24 + eyeOffset.y,
             ry: [6, 0.5, 6],
           }}
-          transition={{ 
+          transition={{
             cx: { type: "spring", stiffness: 150, damping: 15 },
             ry: { duration: 0.1, repeat: Infinity, repeatDelay: 2.9 }
           }}

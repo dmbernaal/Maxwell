@@ -26,30 +26,24 @@ function SpotlightPill({ icon: Icon, label, onClick }: { icon: any, label: strin
       whileTap={{ scale: 0.95 }}
       onMouseMove={handleMouseMove}
       onClick={onClick}
-      className="
-        relative group flex items-center gap-2 px-4 py-2.5
-        rounded-full bg-white/5 border border-white/10
-        backdrop-blur-md
-        text-white/40 hover:text-white transition-colors duration-300
-        overflow-hidden cursor-pointer
-      "
+      className="relative group rounded-full p-[1px] bg-white/5 overflow-hidden"
     >
-      {/* Individual Spotlight Glow - Subtle Cool Tint */}
       <motion.div
         className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
         style={{
           background: useMotionTemplate`
             radial-gradient(
-              80px circle at ${mouseX}px ${mouseY}px,
-              rgba(255, 255, 255, 0.1),
+              60px circle at ${mouseX}px ${mouseY}px,
+              rgba(255, 255, 255, 0.05),
               transparent 80%
             )
           `,
         }}
       />
-
-      <Icon size={14} className="opacity-70 group-hover:opacity-100 transition-opacity relative z-10" />
-      <span className="text-[11px] font-medium uppercase tracking-[0.2em] relative z-10">{label}</span>
+      <div className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#18151d] backdrop-blur-md border border-transparent">
+        <Icon size={12} className="opacity-70 group-hover:opacity-100 transition-opacity text-white" />
+        <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/40 group-hover:text-white transition-colors">{label}</span>
+      </div>
     </motion.button>
   );
 }
@@ -102,7 +96,7 @@ export default function InputInterface({ state, onQuery }: InputInterfaceProps) 
         <motion.form
           onSubmit={handleSubmit}
           onMouseMove={handleMouseMove}
-          className="relative group w-full p-[1px] rounded-[24px] overflow-hidden"
+          className="relative group w-full p-[2px] rounded-[24px] bg-white/5 overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
@@ -113,8 +107,8 @@ export default function InputInterface({ state, onQuery }: InputInterfaceProps) 
             style={{
               background: useMotionTemplate`
                 radial-gradient(
-                  450px circle at ${mouseX}px ${mouseY}px,
-                  rgba(255, 255, 255, 0.1),
+                  300px circle at ${mouseX}px ${mouseY}px,
+                  rgba(255, 255, 255, 0.03),
                   transparent 80%
                 )
               `,
@@ -125,8 +119,7 @@ export default function InputInterface({ state, onQuery }: InputInterfaceProps) 
           <div
             className={`
               relative flex flex-col w-full rounded-[23px]
-              bg-[var(--bg-secondary)]/80 backdrop-blur-xl
-              border border-white/10
+              bg-[#18151d] backdrop-blur-xl
               transition-all duration-300 ease-out
               overflow-hidden
               ${isFocused
@@ -158,7 +151,7 @@ export default function InputInterface({ state, onQuery }: InputInterfaceProps) 
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 backdrop-blur-md transition-all text-xs font-medium text-white/60"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#18151d] hover:bg-[#231f29] border border-white/5 transition-all text-xs font-medium text-white/60"
                 >
                   <Plus size={14} />
                   <span>Focus</span>
@@ -166,7 +159,7 @@ export default function InputInterface({ state, onQuery }: InputInterfaceProps) 
 
                 <button
                   type="button"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 backdrop-blur-md transition-all text-xs font-medium text-white/60"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#18151d] hover:bg-[#231f29] border border-white/5 transition-all text-xs font-medium text-white/60"
                 >
                   <Paperclip size={14} />
                   <span>Attach</span>
@@ -175,7 +168,7 @@ export default function InputInterface({ state, onQuery }: InputInterfaceProps) 
 
               {/* Right: Actions */}
               <div className="flex items-center gap-3">
-                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md text-[11px] font-mono uppercase tracking-wider text-white/40 cursor-pointer hover:bg-white/10 transition-colors">
+                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#18151d] border border-white/5 text-[11px] font-mono uppercase tracking-wider text-white/40 cursor-pointer hover:bg-[#231f29] transition-colors">
                   <span>Pro</span>
                   <ChevronDown size={12} />
                 </div>
@@ -195,7 +188,7 @@ export default function InputInterface({ state, onQuery }: InputInterfaceProps) 
                   className={`
                     p-2 rounded-full transition-all duration-500
                     ${query
-                      ? 'bg-gradient-to-br from-[#ff99cc] via-[#6f3bf5] to-[#7bbbff] text-white shadow-[0_0_20px_-5px_rgba(111,59,245,0.5)] hover:scale-105'
+                      ? 'bg-white text-black shadow-[0_0_20px_-5px_rgba(255,255,255,0.3)] hover:scale-105'
                       : 'bg-white/5 text-white/20 cursor-not-allowed'
                     }
                   `}
@@ -212,7 +205,7 @@ export default function InputInterface({ state, onQuery }: InputInterfaceProps) 
           <AnimatePresence>
             {state === 'relaxed' && !query && (
               <motion.div
-                className="flex flex-wrap justify-center gap-3 px-4"
+                className="flex flex-nowrap justify-center gap-2 px-4 overflow-x-auto no-scrollbar w-full"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
