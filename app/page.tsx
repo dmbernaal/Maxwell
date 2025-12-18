@@ -36,6 +36,10 @@ export default function Home() {
   const [currentLayout, setCurrentLayout] = useState<'relaxed' | 'active'>('relaxed');
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Track which messages are "history" (already rendered) vs "new" (just added)
+  const historyIds = useRef(new Set<string>());
+  const renderedSessionId = useRef(activeSessionId);
+
   // Initialize session if needed
   useEffect(() => {
     if (hasHydrated && !activeSessionId) {
@@ -46,6 +50,26 @@ export default function Home() {
   // Get active messages
   const activeSession = getActiveSession();
   const messages = activeSession?.messages || [];
+
+  // Update history tracking when session changes
+  if (renderedSessionId.current !== activeSessionId) {
+    // We just switched sessions!
+    // Mark ALL current messages as history so they don't animate individually
+    historyIds.current = new Set(messages.map(m => m.id));
+    renderedSessionId.current = activeSessionId;
+  } else {
+    // Same session, but maybe new messages added?
+    // We don't add them to historyIds here, so they WILL animate.
+    // But we should add them *after* render so next time they are history?
+    // Actually, we only care about the *initial load* of the session.
+    // If we add a message, it animates. If we reload the page, it's history.
+    // Wait, if we add a message, it's not in historyIds, so it animates. Good.
+    // If we re-render for some other reason, it's still not in historyIds...
+    // So it might re-animate if the parent re-renders?
+    // No, Framer Motion handles re-renders fine unless key changes.
+    // But we should probably add them to historyIds *after* they have been shown once?
+    // For now, let's stick to "Session Switch" logic.
+  }
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -96,36 +120,54 @@ export default function Home() {
       <div className="fixed inset-0 pointer-events-none z-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_var(--bg-primary)_100%),_radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.4)_100%)]" />
 
       {/* LAYOUT TRANSITIONS */}
-      <LayoutGroup>
+      <AnimatePresence mode="wait">
         {currentLayout === 'relaxed' ? (
-          <div className="fixed inset-0 flex flex-col items-center justify-center z-30 pointer-events-none">
+          <motion.div
+            key="relaxed-layout"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.2 } }}
+            className="fixed inset-0 flex flex-col items-center justify-center z-30 pointer-events-none"
+          >
             <div className="pointer-events-auto flex flex-col items-center w-full max-w-3xl px-4">
               {/* Ghost Centered */}
               <motion.div
-                layoutId="ghost-logo"
+                initial={{ opacity: 0, scale: 0.9, filter: 'blur(10px)' }}
+                animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, scale: 0.9, filter: 'blur(10px)' }}
+                transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }} // Cubic bezier for "premium" feel
                 className="w-[160px] h-[200px] mb-8"
-                transition={{ type: 'spring', stiffness: 300, damping: 40 }}
               >
                 <SmallGhostLogo />
               </motion.div>
 
               {/* Input Centered */}
               <motion.div
-                layoutId="input-area"
+                initial={{ opacity: 0, y: 20, filter: 'blur(5px)' }}
+                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, y: 20, filter: 'blur(5px)' }}
+                transition={{ duration: 0.4, delay: 0.1, ease: 'easeOut' }}
                 className="w-full"
-                transition={{ type: 'spring', stiffness: 300, damping: 40 }}
               >
-                <InputInterface state={agentState} onQuery={handleQuery} />
+                <InputInterface state={agentState} hasMessages={messages.length > 0} onQuery={handleQuery} />
               </motion.div>
             </div>
-          </div>
+          </motion.div>
         ) : (
-          <>
+          <motion.div
+            key="active-layout"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-30 pointer-events-none"
+          >
             {/* Ghost - Smart Fixed Header */}
             <motion.div
-              layoutId="ghost-logo"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
               className="fixed top-0 left-0 w-full z-30 flex justify-center pointer-events-none"
-              transition={{ type: 'spring', stiffness: 300, damping: 40 }}
             >
               <div className="w-full max-w-4xl px-4 md:px-6 pt-8">
                 <div className="w-full max-w-3xl mx-auto">
@@ -139,17 +181,19 @@ export default function Home() {
 
             {/* Input Bottom */}
             <motion.div
-              layoutId="input-area"
-              className="fixed bottom-0 left-0 w-full z-30 px-4 pb-6 flex justify-center"
-              transition={{ type: 'spring', stiffness: 300, damping: 40 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+              className="fixed bottom-0 left-0 w-full z-30 px-4 pb-6 flex justify-center pointer-events-auto"
             >
               <div className="w-full max-w-3xl">
-                <InputInterface state={agentState} onQuery={handleQuery} />
+                <InputInterface state={agentState} hasMessages={messages.length > 0} onQuery={handleQuery} />
               </div>
             </motion.div>
-          </>
+          </motion.div>
         )}
-      </LayoutGroup>
+      </AnimatePresence>
 
 
 
@@ -176,18 +220,31 @@ export default function Home() {
 
           {/* Message List */}
           <div className="w-full max-w-4xl px-4 md:px-6 pb-40 flex flex-col gap-6">
-
-
             <AnimatePresence mode="popLayout">
-              {messages.map((msg) => (
-                <div key={msg.id} className="w-full">
-                  {msg.role === 'user' ? (
-                    <UserMessage content={msg.content} />
-                  ) : (
-                    <ResponseDisplay message={msg} />
-                  )}
-                </div>
-              ))}
+              <motion.div
+                key={activeSessionId} // Re-mounts the list container on session switch
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+                className="flex flex-col gap-6 w-full"
+              >
+                {messages.map((msg) => {
+                  // Check if this message is part of the "history" load
+                  // If we just switched sessions, we want to treat existing messages as history
+                  // New messages added *after* the switch will animate normally
+                  const isHistory = historyIds.current.has(msg.id);
+
+                  return (
+                    <div key={msg.id} className="w-full">
+                      {msg.role === 'user' ? (
+                        <UserMessage content={msg.content} isHistory={isHistory} />
+                      ) : (
+                        <ResponseDisplay message={msg} isHistory={isHistory} />
+                      )}
+                    </div>
+                  );
+                })}
+              </motion.div>
             </AnimatePresence>
 
             {/* Processing Indicator */}

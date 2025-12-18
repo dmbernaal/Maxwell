@@ -7,6 +7,7 @@ import { Message } from '../types';
 
 interface ResponseDisplayProps {
   message: Message | null;
+  isHistory?: boolean;
 }
 
 const container = {
@@ -25,7 +26,7 @@ const item = {
   show: { opacity: 1, y: 0 }
 };
 
-export default function ResponseDisplay({ message }: ResponseDisplayProps) {
+export default function ResponseDisplay({ message, isHistory = false }: ResponseDisplayProps) {
   if (!message) return null;
 
   // Split content into words for staggered animation
@@ -42,23 +43,26 @@ export default function ResponseDisplay({ message }: ResponseDisplayProps) {
 
       {/* Main Content */}
       <motion.div
-        variants={container}
-        initial="hidden"
+        variants={isHistory ? undefined : container}
+        initial={isHistory ? false : "hidden"}
         animate="show"
         className="prose prose-invert prose-lg leading-relaxed text-white/70 mb-12"
       >
         <p className="inline leading-relaxed text-[17px]">
           {words.map((word, i) => (
             <React.Fragment key={i}>
-              <motion.span variants={item} className="inline-block mr-1">
+              <motion.span
+                variants={isHistory ? undefined : item}
+                className="inline-block mr-1"
+              >
                 {word}
               </motion.span>
               {/* Mock Inline Verification for demo purposes */}
               {i === 15 && (
                 <motion.span
-                  initial={{ opacity: 0, scale: 0 }}
+                  initial={isHistory ? false : { opacity: 0, scale: 0 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 1 }}
+                  transition={{ delay: isHistory ? 0 : 1 }}
                   className="inline-flex items-center justify-center w-3.5 h-3.5 align-middle bg-teal-500/10 border border-teal-500/20 rounded-full ml-0.5 mr-1 cursor-help group/verify"
                   title="Verified Source"
                 >
@@ -72,9 +76,9 @@ export default function ResponseDisplay({ message }: ResponseDisplayProps) {
 
       {/* Sources - Kaiyros Data Cards Style */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={isHistory ? false : { opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.5 }}
+        transition={{ delay: isHistory ? 0 : 1.5 }}
         className="space-y-4"
       >
         <div className="flex items-center gap-3 mb-3">

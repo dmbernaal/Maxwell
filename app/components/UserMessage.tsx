@@ -5,12 +5,13 @@ import { motion } from 'framer-motion';
 
 interface UserMessageProps {
   content: string;
+  isHistory?: boolean;
 }
 
-export default function UserMessage({ content }: UserMessageProps) {
+export default function UserMessage({ content, isHistory = false }: UserMessageProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={isHistory ? false : { opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="w-full max-w-3xl mx-auto flex justify-end mb-4"
     >

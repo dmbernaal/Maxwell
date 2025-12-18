@@ -7,6 +7,7 @@ import { AgentState } from '../types';
 
 interface InputInterfaceProps {
   state: AgentState;
+  hasMessages: boolean;
   onQuery: (query: string) => void;
 }
 
@@ -48,7 +49,7 @@ function SpotlightPill({ icon: Icon, label, onClick }: { icon: any, label: strin
   );
 }
 
-export default function InputInterface({ state, onQuery }: InputInterfaceProps) {
+export default function InputInterface({ state, hasMessages, onQuery }: InputInterfaceProps) {
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
 
@@ -76,9 +77,9 @@ export default function InputInterface({ state, onQuery }: InputInterfaceProps) 
 
   return (
     <div className="w-full max-w-3xl mx-auto z-10 flex flex-col gap-6">
-      {/* Greeting - Only visible in Relaxed state */}
+      {/* Greeting - Only visible in Relaxed state AND no messages */}
       <AnimatePresence>
-        {state === 'relaxed' && (
+        {state === 'relaxed' && !hasMessages && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
