@@ -82,7 +82,7 @@ export default function Home() {
               <motion.div
                 layoutId="ghost-logo"
                 className="w-[160px] h-[200px] mb-8"
-                transition={{ type: 'spring', stiffness: 50, damping: 25 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 40 }}
               >
                 <SmallGhostLogo />
               </motion.div>
@@ -91,7 +91,7 @@ export default function Home() {
               <motion.div
                 layoutId="input-area"
                 className="w-full"
-                transition={{ type: 'spring', stiffness: 50, damping: 20 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 40 }}
               >
                 <InputInterface state={agentState} onQuery={handleQuery} />
               </motion.div>
@@ -99,20 +99,27 @@ export default function Home() {
           </div>
         ) : (
           <>
-            {/* Ghost Top-Left */}
+            {/* Ghost - Smart Fixed Header */}
             <motion.div
               layoutId="ghost-logo"
-              className="fixed top-8 left-8 z-30 w-[48px] h-[60px]"
-              transition={{ type: 'spring', stiffness: 50, damping: 25 }}
+              className="fixed top-0 left-0 w-full z-30 flex justify-center pointer-events-none"
+              transition={{ type: 'spring', stiffness: 300, damping: 40 }}
             >
-              <SmallGhostLogo />
+              <div className="w-full max-w-4xl px-4 md:px-6 pt-8">
+                <div className="w-full max-w-3xl mx-auto">
+                  <div className="w-[42px] h-[52px]">
+                    <SmallGhostLogo />
+                  </div>
+                </div>
+              </div>
             </motion.div>
+
 
             {/* Input Bottom */}
             <motion.div
               layoutId="input-area"
               className="fixed bottom-0 left-0 w-full z-30 px-4 pb-6 flex justify-center"
-              transition={{ type: 'spring', stiffness: 50, damping: 20 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 40 }}
             >
               <div className="w-full max-w-3xl">
                 <InputInterface state={agentState} onQuery={handleQuery} />
@@ -122,14 +129,7 @@ export default function Home() {
         )}
       </LayoutGroup>
 
-      {/* AMBIENT HEADER MASK - UPDATED TO NEW KAIYROS OBSIDIAN */}
-      <motion.div
-        className="fixed top-0 left-0 w-full h-[200px] z-10 pointer-events-none bg-gradient-to-b from-[var(--bg-primary)] via-[var(--bg-primary)]/80 to-transparent"
-        variants={blurVariants}
-        initial="relaxed"
-        animate={currentLayout}
-        transition={{ duration: 0.8 }}
-      />
+
 
       {/* CONTENT LAYER */}
       <div className="relative z-10 w-full h-screen flex flex-col">
@@ -137,7 +137,11 @@ export default function Home() {
         {/* Scrollable Chat Area */}
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto w-full flex flex-col items-center scroll-smooth"
+          className="flex-1 overflow-y-auto w-full flex flex-col items-center scroll-smooth no-scrollbar"
+          style={{
+            maskImage: 'linear-gradient(to bottom, transparent 0%, black 200px, black calc(100% - 300px), transparent calc(100% - 100px))',
+            WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 200px, black calc(100% - 300px), transparent calc(100% - 100px))'
+          }}
         >
           {/* Spacer */}
           <motion.div
@@ -150,6 +154,8 @@ export default function Home() {
 
           {/* Message List */}
           <div className="w-full max-w-4xl px-4 md:px-6 pb-40 flex flex-col gap-6">
+
+
             <AnimatePresence mode="popLayout">
               {messages.map((msg) => (
                 <div key={msg.id} className="w-full">
@@ -171,11 +177,14 @@ export default function Home() {
                   exit={{ opacity: 0 }}
                   className="w-full max-w-3xl mx-auto mt-2 mb-12 flex items-center gap-3"
                 >
-                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-                  <span className="text-white/40 font-light tracking-[0.2em] uppercase text-[10px] animate-pulse">
+                  <motion.div
+                    className="w-2 h-2 rounded-full bg-brand-accent shadow-[0_0_10px_rgba(111,59,245,0.5)]"
+                    animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  />
+                  <span className="text-[11px] font-medium text-white/40 uppercase tracking-[0.2em]">
                     {agentState}...
                   </span>
-                  <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
                 </motion.div>
               )}
             </AnimatePresence>
