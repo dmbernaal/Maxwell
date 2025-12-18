@@ -5,12 +5,15 @@
   --brand-accent: #6f3bf5;
   --color-black: #000000;
   --color-white: #ffffff;
-  
+
   /* Backgrounds - "Breathing Obsidian" Palette */
-  --bg-primary: #0f0f11;   /* App background - Deep Obsidian */
-  --bg-secondary: #141414; /* Component surface */
-  --bg-elevated: #1A1A1A;  /* Hover/Active surface */
-  
+  --bg-primary: #120F14;
+  /* App background - Deepest Pinkish Obsidian (Subtle Tint) */
+  --bg-secondary: rgba(255, 255, 255, 0.03);
+  /* Component surface - Subtle Glass */
+  --bg-elevated: rgba(255, 255, 255, 0.07);
+  /* Hover/Active surface - Subtle Glass */
+
   /* Text */
   --text-primary: #FFFFFF;
   --text-secondary: rgba(255, 255, 255, 0.6);
@@ -21,9 +24,12 @@
   --border-default: rgba(255, 255, 255, 0.1);
 
   /* Status */
-  --verified: #4ade80; /* Teal-ish Green */
-  --flagged: #fbbf24;  /* Warm Yellow */
-  --failed: #f87171;   /* Soft Red */
+  --verified: #4ade80;
+  /* Teal-ish Green */
+  --flagged: #fbbf24;
+  /* Warm Yellow */
+  --failed: #f87171;
+  /* Soft Red */
 }
 
 @theme inline {
@@ -31,11 +37,11 @@
   --color-bg-primary: var(--bg-primary);
   --color-bg-secondary: var(--bg-secondary);
   --color-bg-elevated: var(--bg-elevated);
-  
+
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
   --color-text-tertiary: var(--text-tertiary);
-  
+
   --color-border-subtle: var(--border-subtle);
   --color-border-default: var(--border-default);
 }
@@ -45,7 +51,8 @@ body {
   color: var(--text-primary);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   margin: 0;
-  overflow: hidden; /* App-like feel */
+  overflow: hidden;
+  /* App-like feel */
   -webkit-font-smoothing: antialiased;
 }
 
@@ -58,9 +65,10 @@ body {
   height: 100%;
   pointer-events: none;
   z-index: 50;
-  opacity: 0.08; /* Balanced for premium feel */
-  mix-blend-mode: soft-light; /* Smoother integration than overlay */
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.04;
+  /* Even more subtle */
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
 }
 
 /* Custom Scrollbar */
