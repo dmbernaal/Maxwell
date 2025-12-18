@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useRef } from 'react';
+import { motion, AnimatePresence, useMotionValue, useMotionTemplate } from 'framer-motion';
 import { Mic, ArrowRight, Search, Zap, Globe, FileText, Plus, ChevronDown, Paperclip, ScanEye } from 'lucide-react';
 import { AgentState } from '../types';
 
@@ -13,6 +13,16 @@ interface InputInterfaceProps {
 export default function InputInterface({ state, onQuery }: InputInterfaceProps) {
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  
+  // Spotlight effect logic
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  function handleMouseMove({ currentTarget, clientX, clientY }: React.MouseEvent) {
+    const { left, top } = currentTarget.getBoundingClientRect();
+    mouseX.set(clientX - left);
+    mouseY.set(clientY - top);
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,27 +53,46 @@ export default function InputInterface({ state, onQuery }: InputInterfaceProps) 
         )}
       </AnimatePresence>
 
-      {/* Central Command Input */}
+      {/* Central Command Input - Kaiyros Spotlight Aesthetic */}
       <motion.form
         onSubmit={handleSubmit}
-        className="relative group w-full"
+        onMouseMove={handleMouseMove}
+        className="relative group w-full p-[1px] rounded-[24px] overflow-hidden"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
+        {/* Spotlight Glow - Border Layer */}
+        <motion.div
+          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+          style={{
+            background: useMotionTemplate`
+              radial-gradient(
+                450px circle at ${mouseX}px ${mouseY}px,
+                rgba(111, 59, 245, 0.15),
+                transparent 80%
+              )
+            `,
+          }}
+        />
+
+        {/* Inner Container: Obsidian Surface */}
         <div 
           className={`
-            relative flex flex-col w-full rounded-[24px]
-            bg-gradient-to-b from-white/[0.03] to-white/[0.01] backdrop-blur-2xl
-            border border-white/5 ring-1 ring-white/5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)]
+            relative flex flex-col w-full rounded-[23px]
+            bg-[#141414]/90 backdrop-blur-xl
+            border border-white/10
             transition-all duration-300 ease-out
             overflow-hidden
             ${isFocused 
-              ? 'ring-white/10 shadow-[0_0_50px_-10px_rgba(139,92,246,0.1),_inset_0_1px_0_0_rgba(255,255,255,0.1)]' 
-              : 'hover:ring-white/10 hover:shadow-lg'
+              ? 'border-brand-accent/30 shadow-[0_0_50px_-10px_rgba(111,59,245,0.1)]' 
+              : 'shadow-2xl'
             }
           `}
         >
+          {/* Subtle top highlight gradient */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent pointer-events-none" />
+
           {/* Top Section: Text Area */}
           <div className="p-4 pb-2">
             <input
@@ -73,7 +102,7 @@ export default function InputInterface({ state, onQuery }: InputInterfaceProps) 
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
               placeholder="Ask anything..."
-              className="w-full bg-transparent text-lg text-white placeholder-white/40 focus:outline-none font-light py-2"
+              className="w-full bg-transparent text-lg text-white placeholder-white/30 focus:outline-none font-light py-2"
             />
           </div>
 
@@ -84,7 +113,7 @@ export default function InputInterface({ state, onQuery }: InputInterfaceProps) 
             <div className="flex items-center gap-2">
               <button 
                 type="button"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 transition-colors text-xs font-medium text-white/70"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 transition-all text-xs font-medium text-white/60"
               >
                 <Plus size={14} />
                 <span>Focus</span>
@@ -92,7 +121,7 @@ export default function InputInterface({ state, onQuery }: InputInterfaceProps) 
               
               <button 
                 type="button"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 transition-colors text-xs font-medium text-white/70"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 transition-all text-xs font-medium text-white/60"
               >
                 <Paperclip size={14} />
                 <span>Attach</span>
@@ -101,8 +130,7 @@ export default function InputInterface({ state, onQuery }: InputInterfaceProps) 
 
             {/* Right: Actions */}
             <div className="flex items-center gap-3">
-              {/* Model Selector (Placeholder for future entropy feature) */}
-              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-xs text-white/50 cursor-pointer hover:bg-white/10 transition-colors">
+              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-[11px] font-mono uppercase tracking-wider text-white/40 cursor-pointer hover:bg-white/10 transition-colors">
                 <span>Pro</span>
                 <ChevronDown size={12} />
               </div>
@@ -111,7 +139,7 @@ export default function InputInterface({ state, onQuery }: InputInterfaceProps) 
 
               <button 
                 type="button" 
-                className="text-white/40 hover:text-white transition-colors p-2"
+                className="text-white/30 hover:text-white transition-colors p-2"
               >
                 <Mic size={18} />
               </button>
@@ -120,10 +148,10 @@ export default function InputInterface({ state, onQuery }: InputInterfaceProps) 
                 type="submit" 
                 disabled={!query}
                 className={`
-                  p-2 rounded-full transition-all duration-300
+                  p-2 rounded-full transition-all duration-500
                   ${query 
-                    ? 'bg-white text-black hover:scale-105' 
-                    : 'bg-white/10 text-white/30 cursor-not-allowed'
+                    ? 'bg-brand-accent text-white shadow-[0_0_20px_-5px_rgba(111,59,245,0.5)] hover:scale-105' 
+                    : 'bg-white/5 text-white/20 cursor-not-allowed'
                   }
                 `}
               >
@@ -152,17 +180,17 @@ export default function InputInterface({ state, onQuery }: InputInterfaceProps) 
             ].map((item, idx) => (
               <motion.button
                 key={idx}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.05, backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => handlePillClick(item.label)}
                 className="
                   flex items-center gap-2 px-4 py-2
-                  rounded-full bg-transparent border border-white/5 backdrop-blur-sm
-                  text-white/40 hover:text-white hover:bg-white/5 hover:border-white/10 transition-all duration-300
+                  rounded-full bg-white/[0.02] border border-white/[0.05] backdrop-blur-sm
+                  text-white/40 hover:text-brand-accent transition-all duration-300
                 "
               >
                 <item.icon size={14} className="opacity-70" />
-                <span className="text-xs font-medium">{item.label}</span>
+                <span className="text-[11px] font-medium uppercase tracking-wider">{item.label}</span>
               </motion.button>
             ))}
           </motion.div>

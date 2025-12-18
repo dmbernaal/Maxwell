@@ -1,35 +1,36 @@
 @import "tailwindcss";
 
 :root {
-  /* Backgrounds - Deep Tinted Flat Color */
-  --bg-primary: #0D0B14; /* Deep Graphite Violet to match sphere */
-  --bg-secondary: #181625;
+  /* Kaiyros Design Tokens */
+  --brand-accent: #6f3bf5;
+  --color-black: #000000;
+  --color-white: #ffffff;
+  
+  /* Backgrounds - "Breathing Obsidian" Palette */
+  --bg-primary: #0f0f11;   /* App background - Deep Obsidian */
+  --bg-secondary: #141414; /* Component surface */
+  --bg-elevated: #1A1A1A;  /* Hover/Active surface */
   
   /* Text */
   --text-primary: #FFFFFF;
   --text-secondary: rgba(255, 255, 255, 0.6);
   --text-tertiary: rgba(255, 255, 255, 0.4);
 
-  /* Borders */
+  /* Borders - Ultra-thin translucents */
   --border-subtle: rgba(255, 255, 255, 0.05);
   --border-default: rgba(255, 255, 255, 0.1);
 
-  /* Sphere Colors */
-  --sphere-relaxed: #8B5CF6;
-  --sphere-thinking: #A855F7;
-  --sphere-orchestrating: #EC4899;
-  --sphere-synthesizing: #06B6D4;
-  --sphere-complete: #8B5CF6;
-
   /* Status */
-  --verified: #22C55E;
-  --flagged: #EAB308;
-  --failed: #EF4444;
+  --verified: #4ade80; /* Teal-ish Green */
+  --flagged: #fbbf24;  /* Warm Yellow */
+  --failed: #f87171;   /* Soft Red */
 }
 
 @theme inline {
+  --color-brand-accent: var(--brand-accent);
   --color-bg-primary: var(--bg-primary);
   --color-bg-secondary: var(--bg-secondary);
+  --color-bg-elevated: var(--bg-elevated);
   
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
@@ -37,12 +38,6 @@
   
   --color-border-subtle: var(--border-subtle);
   --color-border-default: var(--border-default);
-
-  --color-sphere-relaxed: var(--sphere-relaxed);
-  --color-sphere-thinking: var(--sphere-thinking);
-  --color-sphere-orchestrating: var(--sphere-orchestrating);
-  --color-sphere-synthesizing: var(--sphere-synthesizing);
-  --color-sphere-complete: var(--sphere-complete);
 }
 
 body {
@@ -54,7 +49,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* FILM GRAIN */
+/* KAIYROS FILM GRAIN - Cinematic Texture */
 .bg-grain {
   position: fixed;
   top: 0;
@@ -63,9 +58,9 @@ body {
   height: 100%;
   pointer-events: none;
   z-index: 50;
-  opacity: 0.03; /* Subconscious texture */
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.08; /* Balanced for premium feel */
+  mix-blend-mode: soft-light; /* Smoother integration than overlay */
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
 }
 
 /* Custom Scrollbar */

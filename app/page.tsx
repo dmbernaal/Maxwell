@@ -65,10 +65,13 @@ export default function Home() {
   const currentLayout = hasMessages ? 'active' : 'relaxed';
 
   return (
-    <main className="relative min-h-screen w-full bg-[#0D0B14] overflow-hidden selection:bg-purple-500/30 font-sans">
+    <main className="relative min-h-screen w-full bg-[#0f0f11] overflow-hidden selection:bg-brand-accent/30 font-sans">
       
       {/* GLOBAL EFFECTS */}
       <div className="bg-grain" />
+      
+      {/* VIGNETTE - Kaiyros Aesthetic */}
+      <div className="fixed inset-0 pointer-events-none z-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_#0f0f11_100%),_radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.4)_100%)]" />
       
       {/* LAYOUT TRANSITIONS */}
       <LayoutGroup>
@@ -119,9 +122,9 @@ export default function Home() {
         )}
       </LayoutGroup>
 
-      {/* AMBIENT HEADER MASK - UPDATED TO NEW BG COLOR */}
+      {/* AMBIENT HEADER MASK - UPDATED TO NEW KAIYROS OBSIDIAN */}
       <motion.div 
-        className="fixed top-0 left-0 w-full h-[200px] z-10 pointer-events-none bg-gradient-to-b from-[#0D0B14] via-[#0D0B14]/80 to-transparent"
+        className="fixed top-0 left-0 w-full h-[200px] z-10 pointer-events-none bg-gradient-to-b from-[#0f0f11] via-[#0f0f11]/80 to-transparent"
         variants={blurVariants}
         initial="relaxed"
         animate={currentLayout}
