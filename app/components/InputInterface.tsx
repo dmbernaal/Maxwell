@@ -66,6 +66,7 @@ export default function InputInterface({ state, onQuery }: InputInterfaceProps) 
     e.preventDefault();
     if (query.trim()) {
       onQuery(query);
+      setQuery('');
     }
   };
 
