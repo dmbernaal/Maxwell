@@ -8,40 +8,56 @@
 maxwell-v2/
 ├── app/                          # Next.js App Router
 │   ├── api/
-│   │   └── chat/
-│   │       └── route.ts          # POST /api/chat - streaming endpoint
+│   │   ├── chat/
+│   │   │   └── route.ts          # POST /api/chat - streaming endpoint
+│   │   └── maxwell/              # Maxwell API (Phase 9)
+│   │       └── route.ts          # SSE streaming endpoint
 │   ├── components/               # React components
 │   │   ├── AgentSphere.tsx       # 3D animated sphere (R3F)
 │   │   ├── ChatHistory.tsx       # Session sidebar
 │   │   ├── InputInterface.tsx    # Chat input UI
 │   │   ├── ResponseDisplay.tsx   # Agent message + sources panel
 │   │   ├── SmallGhostLogo.tsx    # Animated ghost logo
-│   │   └── UserMessage.tsx       # User message bubble
+│   │   ├── UserMessage.tsx       # User message bubble
+│   │   └── maxwell/              # Maxwell UI components (Phase 11)
 │   ├── hooks/
-│   │   └── use-chat-api.ts       # Streaming API hook with source parsing
+│   │   ├── use-chat-api.ts       # Streaming API hook with source parsing
+│   │   └── use-maxwell.ts        # Maxwell hook (Phase 10)
 │   ├── lib/                      # Core business logic
 │   │   ├── agent.ts              # LLM orchestration (streamAgentWithSources)
 │   │   ├── env.ts                # Environment variable validation
 │   │   ├── models.ts             # Model registry + metadata
 │   │   ├── prompts.ts            # System prompts
-│   │   └── tools.ts              # Tool definitions (Tavily search)
+│   │   ├── tools.ts              # Tool definitions (Tavily search)
+│   │   └── maxwell/              # Maxwell verified search agent
+│   │       ├── types.ts          # All Maxwell TypeScript interfaces
+│   │       ├── env.ts            # Maxwell environment validation
+│   │       ├── constants.ts      # Configuration, thresholds, models
+│   │       ├── prompts.ts        # LLM prompts (Phase 1)
+│   │       ├── decomposer.ts     # Query decomposition (Phase 2)
+│   │       ├── searcher.ts       # Parallel search (Phase 3)
+│   │       ├── synthesizer.ts    # Answer synthesis (Phase 4)
+│   │       ├── embeddings.ts     # Embedding utilities (Phase 5)
+│   │       ├── verifier.ts       # Multi-signal verification (Phase 6-8)
+│   │       └── index.ts          # Main orchestrator (Phase 9)
 │   ├── types.ts                  # Shared TypeScript types
 │   ├── globals.css               # Global styles
 │   ├── layout.tsx                # Root layout
 │   ├── page.tsx                  # Home page (main UI)
 │   └── store.ts                  # Zustand state store
+├── tests/                        # Test files
+│   └── test-foundation.ts        # Phase 0 foundation test
 ├── documentation/                # LLM-friendly docs (you are here)
 │   ├── README.md                 # Index + rules for LLMs
 │   ├── ARCHITECTURE.md           # System design, data flow
 │   ├── FILE-MAP.md               # This file
+│   ├── CHANGELOG.md              # Phase completion log
 │   ├── CONVENTIONS.md            # Coding patterns, style rules
 │   ├── PARAMETERS.md             # Configurable values
 │   ├── TYPES.md                  # TypeScript interfaces
 │   ├── API.md                    # API endpoint reference
 │   └── PROMPTS.md                # System prompts guide
 ├── confluence/                   # External API documentation
-│   ├── tavily.md                 # Tavily API reference
-│   └── design-guide.md           # UI design guide
 ├── public/                       # Static assets
 ├── .env.local                    # Environment variables (not committed)
 ├── env.sample                    # Example env file
@@ -69,6 +85,21 @@ maxwell-v2/
 | `models.ts` | Model registry | `AVAILABLE_MODELS`, `DEFAULT_MODEL`, `getToolsForModel()` |
 | `prompts.ts` | System prompts | `SYSTEM_PROMPT` |
 | `tools.ts` | Tool definitions | `searchTool`, `searchToolGemini`, `getToolsForModel()` |
+
+### Maxwell Verified Search (`app/lib/maxwell/`)
+
+| File | Purpose | Key Exports |
+|------|---------|-------------|
+| `types.ts` | All Maxwell interfaces | `SubQuery`, `MaxwellSource`, `VerifiedClaim`, `MaxwellState`, etc. |
+| `env.ts` | Environment validation | `getMaxwellEnvConfig()`, `validateMaxwellEnv()` |
+| `constants.ts` | Config values | `DECOMPOSITION_MODEL`, `EMBEDDING_MODEL`, thresholds |
+| `prompts.ts` | LLM prompts | (Phase 1) |
+| `decomposer.ts` | Query → sub-queries | (Phase 2) |
+| `searcher.ts` | Parallel search | (Phase 3) |
+| `synthesizer.ts` | Answer synthesis | (Phase 4) |
+| `embeddings.ts` | Embedding utilities | (Phase 5) |
+| `verifier.ts` | Multi-signal verification | (Phases 6-8) |
+| `index.ts` | Main orchestrator | (Phase 9) |
 
 ### Hooks (`app/hooks/`)
 

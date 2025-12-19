@@ -259,3 +259,96 @@ interface ChatHistoryProps {
     onNewSession: () => void;
 }
 ```
+
+---
+
+## Maxwell Verified Search Types (`app/lib/maxwell/types.ts`)
+
+> Types for the multi-signal verification search agent.
+
+### SubQuery
+
+A decomposed search query.
+
+```typescript
+interface SubQuery {
+    id: string;       // "q1", "q2"
+    query: string;    // Search query text
+    purpose: string;  // Why this query is needed
+}
+```
+
+### MaxwellSource
+
+A search result source (distinct from chat `Source`).
+
+```typescript
+interface MaxwellSource {
+    id: string;        // "s1", "s2" (1-indexed)
+    url: string;       // Full URL
+    title: string;     // Page title
+    snippet: string;   // Text content
+    fromQuery: string; // Which sub-query found this
+}
+```
+
+### VerifiedClaim
+
+A claim that has been through multi-signal verification.
+
+```typescript
+interface VerifiedClaim {
+    id: string;
+    text: string;
+    confidence: number;          // 0.0 - 1.0
+    confidenceLevel: 'high' | 'medium' | 'low';
+    entailment: 'SUPPORTED' | 'CONTRADICTED' | 'NEUTRAL';
+    entailmentReasoning: string;
+    bestMatchingSource: {
+        sourceId: string;
+        sourceTitle: string;
+        sourceIndex: number;
+        passage: string;
+        similarity: number;
+        isCitedSource: boolean;
+    };
+    citationMismatch: boolean;
+    numericCheck: NumericCheck | null;
+    issues: string[];
+}
+```
+
+### MaxwellState
+
+Frontend state for the Maxwell UI.
+
+```typescript
+interface MaxwellState {
+    phase: ExecutionPhase;          // 'idle' | 'decomposition' | ...
+    subQueries: SubQuery[];
+    searchMetadata: SearchMetadata[];
+    sources: MaxwellSource[];
+    answer: string;
+    verification: VerificationOutput | null;
+    error: string | null;
+    phaseDurations: PhaseDurations;
+}
+```
+
+### MaxwellEvent
+
+Union type for SSE streaming events.
+
+```typescript
+type MaxwellEvent =
+    | PhaseStartEvent
+    | PhaseCompleteEvent
+    | SearchProgressEvent
+    | SynthesisChunkEvent
+    | VerificationProgressEvent
+    | CompleteEvent
+    | ErrorEvent;
+```
+
+See `app/lib/maxwell/types.ts` for complete definitions.
+
