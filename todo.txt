@@ -1,0 +1,7 @@
+
+- [x] initial front-end scaffold
+- [x] font-end scaffold refined
+- [x] agent base (backend implementation)
+- [] front-end agent integration
+- [] agent loop / optimizations (system prompts, etc)
+- [] killer feature implementation
