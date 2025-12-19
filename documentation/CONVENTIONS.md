@@ -1,75 +1,138 @@
 # Maxwell Coding Conventions
 
-> Rules and patterns to follow when working on this codebase.
+> Rules and patterns for consistent code.
 
-## TypeScript Rules
+## TypeScript
 
-### Strict Typing
-- **NO `any`** unless absolutely necessary and documented
-- Use `unknown` + type guards instead of `any`
-- Define interfaces for all data structures
+### Strict Mode
 
-```typescript
-// ❌ Bad
-const data: any = await response.json();
+All code must pass TypeScript strict mode.
 
-// ✅ Good
-interface SearchResult {
-    title: string;
-    url: string;
+```json
+// tsconfig.json
+{
+    "compilerOptions": {
+        "strict": true
+    }
 }
-const data = await response.json() as SearchResult;
 ```
 
-### Explicit Return Types
-Always type function return values for public functions:
+### Type Imports
+
+Use `type` keyword for type-only imports:
 
 ```typescript
-// ❌ Bad
-export async function getData() { ... }
-
 // ✅ Good
-export async function getData(): Promise<SearchResult[]> { ... }
+import type { Source, Message } from '@/app/types';
+
+// ❌ Avoid (works but less clear)
+import { Source, Message } from '@/app/types';
+```
+
+### Avoid `any`
+
+Use proper types or `unknown`:
+
+```typescript
+// ✅ Good
+const response = await fetch(...);
+const data = await response.json() as SearchResponse;
+
+// ❌ Bad
+const data: any = await response.json();
+```
+
+Exception: Complex AI SDK types that require `as unknown as`:
+
+```typescript
+// Acceptable when AI SDK types are complex
+const toolResult = event as unknown as { output: { results?: Source[] } };
 ```
 
 ---
 
 ## File Naming
 
-| Type | Convention | Example |
-|------|------------|---------|
-| Components | PascalCase | `UserMessage.tsx` |
-| Lib files | kebab-case or camelCase | `prompts.ts`, `agent.ts` |
-| Types | index.ts in `/types` folder | `app/types/index.ts` |
-| API routes | `route.ts` in folder | `api/chat/route.ts` |
+| Type | Pattern | Example |
+|------|---------|---------|
+| Component | PascalCase.tsx | `ResponseDisplay.tsx` |
+| Hook | kebab-case.ts | `use-chat-api.ts` |
+| Utility | kebab-case.ts | `models.ts` |
+| Types | kebab-case or types.ts | `app/types.ts` |
+| API Route | route.ts | `app/api/chat/route.ts` |
 
 ---
 
 ## Component Patterns
 
 ### Client Components
-Mark with `'use client'` directive at top:
+
+Mark explicitly:
 
 ```typescript
 'use client';
 
-import React from 'react';
+import { useState } from 'react';
 
 export default function MyComponent() { ... }
 ```
 
-### Props Interface
-Define props interface above component:
+### Server Components
+
+No directive needed (default in App Router):
 
 ```typescript
-interface UserMessageProps {
-    content: string;
-    timestamp?: Date;
+// No 'use client' = Server Component
+export default async function Page() {
+    const data = await fetchData();
+    return <div>{data}</div>;
+}
+```
+
+### Props Interface
+
+Define close to component:
+
+```typescript
+interface ResponseDisplayProps {
+    message: Message | null;
+    isHistory?: boolean;
 }
 
-export default function UserMessage({ content, timestamp }: UserMessageProps) {
+export default function ResponseDisplay({ message, isHistory = false }: ResponseDisplayProps) {
     // ...
 }
+```
+
+---
+
+## Hook Patterns
+
+### Naming
+
+Prefix with `use`:
+
+```typescript
+export function useChatApi(options = {}) { ... }
+export function useChatStore() { ... }
+```
+
+### Return Shape
+
+Use object for flexibility:
+
+```typescript
+// ✅ Good - easy to extend
+return {
+    sendMessage,
+    isStreaming,
+    error,
+    currentModel,
+    setModel,
+};
+
+// ❌ Avoid arrays for complex returns
+return [sendMessage, isStreaming, error];
 ```
 
 ---
@@ -77,146 +140,185 @@ export default function UserMessage({ content, timestamp }: UserMessageProps) {
 ## AI SDK v5 Patterns
 
 ### Tool Definition
-Use `inputSchema` (not `parameters`):
 
 ```typescript
 import { tool } from 'ai';
 import { z } from 'zod';
 
-export const myTool = tool({
-    description: 'What this tool does',
+export const searchTool = tool({
+    description: 'Search the web...',
     inputSchema: z.object({
-        param: z.string().describe('What this param is'),
+        query: z.string().describe('Search query'),
     }),
-    execute: async ({ param }) => {
-        // Implementation
+    execute: async ({ query }) => {
+        // Return typed response
+        return { results: [...] };
     },
 });
 ```
 
-### Agent Loop
-Use `stopWhen` (not `maxSteps`):
+### Streaming
 
 ```typescript
 import { streamText, stepCountIs } from 'ai';
 
-streamText({
-    model,
+const result = streamText({
+    model: openrouter(modelId),
+    system: SYSTEM_PROMPT,
     messages,
     tools,
-    stopWhen: stepCountIs(5),  // Max 5 steps
+    stopWhen: stepCountIs(5),  // v5 syntax
 });
 ```
 
-### Streaming Response
-Use `toTextStreamResponse()`:
+### Consuming fullStream
 
 ```typescript
-const result = await runAgent(messages);
-return result.toTextStreamResponse();
+for await (const event of result.fullStream) {
+    if (event.type === 'text-delta') {
+        // event.text (not event.textDelta in v5)
+    } else if (event.type === 'tool-result') {
+        // event.output (not event.result in v5)
+    }
+}
 ```
 
 ---
 
 ## Error Handling
 
-### API Routes
-Always catch and return proper error responses:
+### Try-Catch Pattern
 
 ```typescript
 try {
-    // Logic
-} catch (error) {
-    console.error('[API Error]', error);
-    return new Response(
-        JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
-        { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
-}
-```
-
-### Tools
-Return error in result, don't throw:
-
-```typescript
-execute: async ({ query }) => {
-    if (!query) {
-        return { error: 'No query provided', results: [] };
+    const response = await fetch(...);
+    if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
     }
-    // ...
+    return await response.json();
+} catch (error) {
+    console.error('[Module] Error:', error);
+    // Return safe default or rethrow
+    return { error: String(error), results: [] };
 }
 ```
 
----
+### Logging Prefix
 
-## Logging
-
-### Prefix with Context
-Always prefix logs for easy filtering:
+Use `[Module]` prefix for easy filtering:
 
 ```typescript
 console.log('[Agent] Starting with model:', modelId);
-console.log('[Search] Executing search for:', query);
-console.error('[API Error]', error);
+console.error('[Search] API error:', error);
+console.log('[API] Request received');
 ```
-
-### Log Levels
-- `console.log` - Info, flow tracking
-- `console.error` - Errors
-- Don't use `console.warn` or `console.debug`
 
 ---
 
 ## Environment Variables
 
 ### Access Pattern
-Use the `env` helper, never `process.env` directly:
+
+Never access `process.env` directly. Use `env.ts`:
 
 ```typescript
-// ❌ Bad
-const key = process.env.OPENROUTER_API_KEY;
-
 // ✅ Good
-import { env } from './env';
-const key = env.openRouterApiKey();
+import { env } from '@/app/lib/env';
+const apiKey = env.openRouterApiKey();
+
+// ❌ Bad
+const apiKey = process.env.OPENROUTER_API_KEY;
 ```
 
-### Required Variables
-Document in `env.sample`:
+### Validation
 
-```
-OPENROUTER_API_KEY=your_key_here
-TAVILY_API_KEY=your_key_here
+```typescript
+// app/lib/env.ts
+export const env = {
+    openRouterApiKey: () => {
+        const key = process.env.OPENROUTER_API_KEY;
+        if (!key) throw new Error('Missing OPENROUTER_API_KEY');
+        return key;
+    },
+};
 ```
 
 ---
 
 ## Git Commit Messages
 
-Follow Conventional Commits:
+### Format
 
 ```
-feat(scope): add new feature
-fix(scope): fix bug
-docs(scope): update documentation
-refactor(scope): refactor code
-chore(scope): maintenance tasks
+type: short description
+
+Longer explanation if needed.
 ```
 
-Examples:
+### Types
+
+| Type | Use For |
+|------|---------|
+| `feat` | New feature |
+| `fix` | Bug fix |
+| `docs` | Documentation |
+| `refactor` | Code restructure |
+| `chore` | Build, deps, config |
+
+### Examples
+
 ```
-feat(agent): add multi-step tool execution
-fix(tools): handle Gemini array input format
-docs(readme): add setup instructions
+feat: add source extraction from tool results
+fix: use event.output instead of event.result for AI SDK v5
+docs: update ARCHITECTURE with source flow diagram
+refactor: extract streaming logic to generator function
 ```
 
 ---
 
-## Testing Before Commit
+## Import Order
 
-Always run before committing:
+```typescript
+// 1. React/Next
+import React, { useState, useCallback } from 'react';
+import { motion } from 'framer-motion';
 
-```bash
-npm run build    # TypeScript check + build
-npm run lint     # ESLint check
+// 2. External packages
+import ReactMarkdown from 'react-markdown';
+import { z } from 'zod';
+
+// 3. Internal - lib
+import { useChatStore } from '@/app/store';
+import { env } from '@/app/lib/env';
+
+// 4. Internal - components
+import ResponseDisplay from '@/app/components/ResponseDisplay';
+
+// 5. Types
+import type { Source, Message } from '@/app/types';
+```
+
+---
+
+## Comments
+
+### When to Comment
+
+- Complex algorithms
+- Non-obvious workarounds
+- AI SDK quirks
+
+### Style
+
+```typescript
+// Single line for brief notes
+
+/**
+ * Multi-line for function documentation
+ * @param messages Chat history
+ * @param modelId Model to use
+ */
+export async function runAgent(messages: CoreMessage[], modelId: string) {
+    // ...
+}
 ```

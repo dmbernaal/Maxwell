@@ -1,56 +1,84 @@
-# Maxwell Prompt Engineering
+# Maxwell System Prompts
 
-> System prompts and guidance for LLM behavior.
+> Guide to the agent's instructions and behavior.
 
-## Current System Prompt
+## Main System Prompt
 
-**Location:** `app/lib/prompts.ts`
+### Location
+
+`app/lib/prompts.ts`
+
+### Current Prompt
 
 ```typescript
 export const SYSTEM_PROMPT = `You are a helpful search assistant that provides accurate, well-sourced answers.
 
-## When to Search
-- DO search for: current events, recent news, real-time data (prices, weather, sports scores), specific facts that need verification
-- Do NOT search for: basic math, general knowledge, opinions, creative writing
+## Instructions
+
+1. **Always search for current information** when the user asks about:
+   - Current events, news, or recent developments
+   - Prices (stocks, crypto, commodities)
+   - Weather
+   - Sports scores or results
+   - Any data that changes frequently
+
+2. **Use citations** in your responses:
+   - Reference sources using [1], [2], etc.
+   - Match the number to the order of search results
+   - Place citations immediately after the relevant statement
+
+3. **Be concise but thorough**:
+   - Provide direct answers first
+   - Add relevant context and details
+   - Format with markdown for readability
+
+4. **Handle uncertainty honestly**:
+   - If search results conflict, mention the discrepancy
+   - If data might be outdated, note when it was current
+   - Don't make claims beyond what sources support
 
 ## Citation Format
-- ALWAYS cite sources using bracketed numbers: [1], [2], [3]
-- Place citations IMMEDIATELY after the relevant claim
-- Example: "Bitcoin is currently trading at $X [1]."
 
-## Response Guidelines
-- Lead with a direct answer to the question
-- Be concise but thorough`;
+Correct: "Bitcoin is currently trading at $88,429 [1]."
+Correct: "The price varies by exchange: $88,320 [1], $88,429 [2]."
+Incorrect: "Bitcoin is at $88,429." (missing citation)
+`;
 ```
 
 ---
 
 ## Prompt Design Principles
 
-### 1. Clear Role Definition
-Tell the model exactly what it is:
+### 1. Search Trigger
+
+The prompt tells the LLM when to search:
+
 ```
-You are a helpful search assistant that provides accurate, well-sourced answers.
+when the user asks about:
+- Current events, news
+- Prices
+- Weather
+- Sports scores
+- Any data that changes frequently
 ```
 
-### 2. Decision Criteria
-Guide when to use tools:
+### 2. Citation Format
+
+Ensures consistent citation style:
+
 ```
-DO search for: current events, real-time data...
-Do NOT search for: basic math, general knowledge...
+Reference sources using [1], [2], etc.
+Match the number to the order of search results
 ```
 
-### 3. Output Format
-Specify exact formatting:
-```
-ALWAYS cite sources using bracketed numbers: [1], [2], [3]
-```
+### 3. Behavior Guidelines
 
-### 4. Behavior Guidelines
-Shape response style:
+Sets expectations for response quality:
+
 ```
-Lead with a direct answer
-Be concise but thorough
+- Be concise but thorough
+- Provide direct answers first
+- Handle uncertainty honestly
 ```
 
 ---
@@ -59,133 +87,156 @@ Be concise but thorough
 
 ### How It Works
 
-1. **Tavily returns sources** with title, URL, content
-2. **LLM references sources** using `[1]`, `[2]`
-3. **Frontend parses** citations and creates links
+1. **Search returns results** in order (most relevant first)
+2. **LLM writes** `[1]`, `[2]` matching result order
+3. **Frontend parses** and makes citations clickable
+4. **Sources panel** displays the full list
 
-### Expected Output Format
-
-```
-The current price of Bitcoin is approximately $85,400 [1]. 
-
-It has declined about 1% in the last 24 hours [2], down from 
-a high of $91,000 last week [3].
-```
-
-### What to Avoid
+### Citation to Source Mapping
 
 ```
-❌ In-text URLs: "According to CoinMarketCap (https://...)"
-❌ Footnote style: "Bitcoin is $85,400¹"
-❌ No citations: "Bitcoin is around $85,000"
+Text: "Bitcoin is $88,429 [1] or $88,320 [2]."
+
+Sources Array:
+[0] → [1] in text → "CoinDesk - Bitcoin Price"
+[1] → [2] in text → "Kraken - BTC/USD"
+```
+
+### Frontend Processing
+
+```typescript
+// ResponseDisplay.tsx
+function processCitations(content: string, sources: Source[]): string {
+    return content.replace(/\[(\d+)\]/g, (match, num) => {
+        const index = parseInt(num, 10) - 1;
+        const source = sources[index];
+        if (source?.url) {
+            return `[^${num}^](${source.url})`;
+        }
+        return `^${num}^`;
+    });
+}
 ```
 
 ---
 
 ## Modifying the Prompt
 
-### To Make Responses Longer
+### When to Modify
 
-Add:
-```
-## Response Length
-Provide detailed explanations with multiple paragraphs.
-Include relevant context and background information.
-```
+- Change response style or tone
+- Add new search trigger conditions
+- Modify citation format
+- Add domain-specific instructions
 
-### To Make Responses Shorter
+### How to Modify
 
-Modify:
-```
-## Response Guidelines
-- Answer in 2-3 sentences maximum
-- Only include the most essential information
-```
+1. Edit `app/lib/prompts.ts`
+2. Test with various queries
+3. Check citations still work
+4. Update this documentation
 
-### To Change Citation Style
+### Example: Adding Finance Focus
 
-Modify the citation format section:
-```
-## Citation Format
-- Use superscript numbers: ¹ ² ³
-- Place at end of sentences: "fact here.¹"
-```
-
-### To Add Specific Behaviors
-
-```
-## Special Instructions
-- When discussing prices, always mention the source's timestamp
-- For weather queries, include both current conditions and forecast
-- Never speculate about future events
-```
-
----
-
-## Tool Integration
-
-The prompt should guide tool usage implicitly. The model sees:
-
-1. **System prompt** (our instructions)
-2. **Tool definitions** (from `tools.ts`)
-3. **User messages**
-
-The model decides to call tools based on:
-- The user's question
-- The "When to Search" guidelines
-- Tool availability and descriptions
-
----
-
-## Prompt Testing
-
-### Test Prompts
-
-Use these to verify prompt behavior:
-
-**Should trigger search:**
-- "What is the current price of Bitcoin?"
-- "What's the weather in New York?"
-- "Who won the game last night?"
-
-**Should NOT trigger search:**
-- "What is 2 + 2?"
-- "Write me a poem about cats"
-- "Explain how photosynthesis works"
-
-### Debugging
-
-If the model behaves unexpectedly:
-
-1. Check server logs for `[Search]` entries
-2. Verify tool is being called
-3. Check if prompt wording is ambiguous
-4. Test with different models (Gemini vs Claude)
-
----
-
-## Future Enhancements
-
-### Context-Aware Prompting
 ```typescript
-// Dynamic prompt based on query type
-function getPrompt(query: string) {
-    if (isPriceQuery(query)) return PRICE_PROMPT;
-    if (isWeatherQuery(query)) return WEATHER_PROMPT;
-    return DEFAULT_PROMPT;
-}
+export const SYSTEM_PROMPT = `You are a finance-focused search assistant...
+
+When discussing financial data:
+- Always note the timestamp of price data
+- Mention 24h change when available
+- Include market cap for crypto/stocks
+...
+`;
 ```
 
-### Multi-Language Support
+---
+
+## Tool Instructions
+
+Tools are implicitly available to the LLM. The system prompt guides when to use them.
+
+### Search Tool Behavior
+
+The search tool automatically executes when the LLM decides to search. The prompt guides this decision:
+
 ```
-## Language
-Respond in the same language as the user's query.
-If the query is in Spanish, respond in Spanish.
+Always search for current information when the user asks about:
+- Current events, news, or recent developments
+- Prices (stocks, crypto, commodities)
 ```
 
-### Confidence Levels
+The LLM sees the tool description:
+
+```typescript
+// tools.ts
+description: 'Search the web for current information, news, prices, weather, and facts that require real-time data'
 ```
-## Confidence
-- If information may be outdated, indicate uncertainty
-- Use phrases like "as of [date]" when citing time-sensitive data
+
+---
+
+## Testing Prompts
+
+### Basic Test Cases
+
+| Query | Expected Behavior |
+|-------|-------------------|
+| "What is 2+2?" | No search, direct answer |
+| "What is the price of Bitcoin?" | Search, citations, sources |
+| "Tell me about Einstein" | May search, factual response |
+| "What's the weather in Tokyo?" | Search, current conditions |
+
+### Citation Test
+
+```bash
+curl -X POST http://localhost:3000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"role":"user","content":"What is the price of gold?"}]}'
+```
+
+Check response contains:
+- `[1]`, `[2]` citations
+- `---SOURCES_JSON---` delimiter
+- Parseable JSON sources
+
+---
+
+## Prompt Versions
+
+Keep track of significant prompt changes:
+
+| Date | Change | Reason |
+|------|--------|--------|
+| 2024-12-19 | Initial prompt | Base behavior |
+
+---
+
+## Common Issues
+
+### LLM Not Searching
+
+**Symptom:** Answer without citations for current data
+
+**Fix:** Make search triggers more explicit in prompt:
+```
+ALWAYS search for: prices, weather, news, current events
+```
+
+### Wrong Citation Numbers
+
+**Symptom:** `[3]` when only 2 sources
+
+**Fix:** Clarify in prompt:
+```
+Only cite sources that exist in search results
+Maximum citation number = number of results
+```
+
+### Verbose Responses
+
+**Symptom:** Overly long answers
+
+**Fix:** Add conciseness instruction:
+```
+Keep responses under 200 words unless more detail is needed
+Lead with the direct answer
 ```

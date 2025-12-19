@@ -1,172 +1,239 @@
 # Maxwell Configurable Parameters
 
-> All tweakable values in one place.
+> All tunable values in the system.
 
 ## Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `OPENROUTER_API_KEY` | ✅ Yes | - | API key for OpenRouter model access |
-| `TAVILY_API_KEY` | ✅ Yes | - | API key for Tavily web search |
+### Required
 
-**Location:** `.env.local` (not committed to git)
+| Variable | Purpose | Example |
+|----------|---------|---------|
+| `OPENROUTER_API_KEY` | API key for OpenRouter | `sk-or-v1-...` |
+| `TAVILY_API_KEY` | API key for Tavily Search | `tvly-...` |
 
----
+### Location
 
-## Agent Configuration
+File: `.env.local` (not committed)
 
-**File:** `app/lib/agent.ts`
+Template: `env.sample`
 
-| Parameter | Current Value | Description |
-|-----------|---------------|-------------|
-| `stopWhen` | `stepCountIs(5)` | Max steps in agent loop |
-
-```typescript
-// Increase for more complex multi-tool workflows
-stopWhen: stepCountIs(5)
+```bash
+# Copy and edit
+cp env.sample .env.local
 ```
 
 ---
 
 ## Model Configuration
 
-**File:** `app/lib/models.ts`
+### File: `app/lib/models.ts`
 
-| Parameter | Current Value | Description |
-|-----------|---------------|-------------|
-| `DEFAULT_MODEL` | `google/gemini-3-flash-preview` | Default model when none specified |
+### DEFAULT_MODEL
 
-### Available Models
+```typescript
+export const DEFAULT_MODEL = 'google/gemini-3-flash-preview';
+```
 
-| Model ID | Context Window | Tier |
-|----------|----------------|------|
-| `google/gemini-3-flash-preview` | 1,000,000 | default |
-| `google/gemini-3-pro-preview` | 1,000,000 | standard |
-| `anthropic/claude-haiku-4.5` | 200,000 | standard |
-| `anthropic/claude-sonnet-4.5` | 200,000 | standard |
+### AVAILABLE_MODELS
+
+```typescript
+export const AVAILABLE_MODELS = [
+    {
+        id: 'google/gemini-3-flash-preview',
+        name: 'Gemini 3 Flash',
+        provider: 'google',
+        enabled: true,
+        toolsSupported: true,
+    },
+    {
+        id: 'google/gemini-3-pro-preview',
+        name: 'Gemini 3 Pro',
+        provider: 'google',
+        enabled: true,
+        toolsSupported: true,
+    },
+    {
+        id: 'anthropic/claude-haiku-4.5',
+        name: 'Claude Haiku 4.5',
+        provider: 'anthropic',
+        enabled: true,
+        toolsSupported: true,
+    },
+    {
+        id: 'anthropic/claude-sonnet-4.5',
+        name: 'Claude Sonnet 4.5',
+        provider: 'anthropic',
+        enabled: true,
+        toolsSupported: true,
+    },
+    // Disabled models (tool calling issues)
+    // 'anthropic/claude-opus-4.5' - Empty tool inputs
+    // 'openai/gpt-4o' - JSON schema serialization
+];
+```
 
 ---
 
-## Search Tool Configuration
+## Agent Settings
 
-**File:** `app/lib/tools.ts`
+### File: `app/lib/agent.ts`
 
-### Tavily API Parameters
-
-| Parameter | Current Value | Options |
-|-----------|---------------|---------|
-| `max_results` | `5` | 1-10 |
-| `search_depth` | `basic` | `basic`, `advanced` |
-| `include_answer` | `true` | `true`, `false` |
+### Max Steps
 
 ```typescript
-body: JSON.stringify({
+stopWhen: stepCountIs(5)  // Maximum tool call loops
+```
+
+Change this to allow more search iterations.
+
+---
+
+## Search Tool Settings
+
+### File: `app/lib/tools.ts`
+
+### Search Parameters
+
+```typescript
+{
     api_key: env.tavilyApiKey(),
     query: searchQuery,
-    max_results: 5,           // ← Tweak this
-    search_depth: 'basic',    // ← Or 'advanced' for deeper search
-    include_answer: true,     // ← Pre-summarized answer
-}),
+    max_results: 5,           // Number of sources
+    search_depth: 'basic',    // 'basic' or 'advanced'
+    include_answer: true,     // Tavily's pre-generated answer
+}
+```
+
+| Parameter | Value | Notes |
+|-----------|-------|-------|
+| `max_results` | 5 | Increase for more sources |
+| `search_depth` | `'basic'` | `'advanced'` costs 2 credits |
+| `include_answer` | `true` | Provides quick answer |
+
+### Advanced Options (not currently used)
+
+```typescript
+{
+    topic: 'general',         // or 'news', 'finance'
+    time_range: 'day',        // 'day', 'week', 'month', 'year'
+    include_raw_content: true, // Full page content
+    include_images: true,      // Image URLs
+    include_domains: [],       // Whitelist
+    exclude_domains: [],       // Blacklist
+}
 ```
 
 ---
 
 ## System Prompt
 
-**File:** `app/lib/prompts.ts`
+### File: `app/lib/prompts.ts`
 
-The system prompt controls:
-- When to search vs answer directly
-- Citation format (`[1]`, `[2]`)
-- Response style
+```typescript
+export const SYSTEM_PROMPT = `You are a helpful search assistant...`;
+```
 
-**To modify:** Edit `SYSTEM_PROMPT` constant.
+Key instructions in prompt:
+- Use search for real-time data
+- Add citations as `[1]`, `[2]`
+- Be concise and accurate
 
 ---
 
-## API Configuration
+## API Settings
 
-**File:** `app/api/chat/route.ts`
+### File: `app/api/chat/route.ts`
 
-| Parameter | Current Value | Description |
-|-----------|---------------|-------------|
-| `maxDuration` | `60` | Vercel serverless timeout (seconds) |
+### Request Timeout
 
 ```typescript
-export const maxDuration = 60;
+export const maxDuration = 60;  // Vercel timeout in seconds
+```
+
+### Sources Delimiter
+
+```typescript
+const SOURCES_DELIMITER = '\n\n---SOURCES_JSON---\n';
 ```
 
 ---
 
-## OpenRouter Provider
+## Frontend Settings
 
-**File:** `app/lib/agent.ts`
+### File: `app/hooks/use-chat-api.ts`
+
+### Sources Delimiter (must match backend)
 
 ```typescript
-const openrouter = createOpenRouter({
-    apiKey: env.openRouterApiKey(),
-});
+const SOURCES_DELIMITER = '\n\n---SOURCES_JSON---\n';
 ```
 
-Additional options available:
+### Update Frequency
+
 ```typescript
-const openrouter = createOpenRouter({
-    apiKey: env.openRouterApiKey(),
-    baseURL: 'https://openrouter.ai/api/v1',  // Default
-    headers: {
-        'HTTP-Referer': 'https://your-site.com',  // Optional: attribution
-        'X-Title': 'Your App Name',               // Optional: dashboard label
-    },
-});
+// Update UI every N chunks for performance
+if (updateCount % 3 === 0) {
+    updateMessage(agentMessageId, displayText, undefined, sessionId);
+}
 ```
 
 ---
 
-## Streaming Configuration
+## Store Settings
 
-**File:** `app/lib/agent.ts`
+### File: `app/store.ts`
 
-The `streamText()` function accepts additional options:
+### Persistence Key
 
 ```typescript
-streamText({
-    model,
-    messages,
-    tools,
-    stopWhen: stepCountIs(5),
-    
-    // Optional parameters:
-    temperature: 0.7,        // Creativity (0-2)
-    topP: 1,                 // Nucleus sampling
-    maxTokens: 4096,         // Max output tokens
-    abortSignal: signal,     // For request cancellation
-})
+persist(
+    // ...
+    {
+        name: 'maxwell-chat-storage',  // localStorage key
+        storage: createJSONStorage(() => localStorage),
+    }
+)
+```
+
+---
+
+## UI Animation Timings
+
+### File: `app/page.tsx`
+
+```typescript
+const spacerVariants = {
+    relaxed: { height: '30vh' },
+    active: { height: '150px' }
+};
+```
+
+### File: `app/components/ResponseDisplay.tsx`
+
+```typescript
+const container = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.01,
+            delayChildren: 0.2
+        }
+    }
+};
 ```
 
 ---
 
 ## Quick Reference
 
-### To make responses more creative:
-```typescript
-// In agent.ts streamText call
-temperature: 1.0,  // Default is ~0.7
-```
-
-### To get more search results:
-```typescript
-// In tools.ts executeSearch
-max_results: 10,  // Default is 5
-```
-
-### To enable deeper search:
-```typescript
-// In tools.ts executeSearch
-search_depth: 'advanced',  // Default is 'basic'
-```
-
-### To change default model:
-```typescript
-// In models.ts
-export const DEFAULT_MODEL = 'anthropic/claude-sonnet-4.5';
-```
+| What to Change | File | Variable |
+|----------------|------|----------|
+| Default model | `models.ts` | `DEFAULT_MODEL` |
+| Available models | `models.ts` | `AVAILABLE_MODELS` |
+| Search results count | `tools.ts` | `max_results` |
+| Search depth | `tools.ts` | `search_depth` |
+| Max steps | `agent.ts` | `stepCountIs(N)` |
+| System prompt | `prompts.ts` | `SYSTEM_PROMPT` |
+| API timeout | `route.ts` | `maxDuration` |
+| Storage key | `store.ts` | `name` |

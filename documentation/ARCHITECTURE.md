@@ -1,33 +1,33 @@
 # Maxwell Architecture
 
-> **Last Updated:** December 19, 2025  
-> **Status:** Production-ready backend, frontend in progress
+> **Last Updated:** December 19, 2024  
+> **Status:** Production-ready with search + citations
 
 ## Overview
 
 Maxwell is a **search-augmented AI assistant** (similar to Perplexity) that:
 1. Takes user questions
-2. Searches the web for real-time information
-3. Returns answers with citations
+2. Searches the web for real-time information via Tavily
+3. Returns answers with clickable citations `[1]`, `[2]`
+4. Shows sources panel below responses
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         MAXWELL SYSTEM                               │
 │                                                                       │
-│  ┌──────────┐     ┌─────────────┐     ┌──────────────────────────┐  │
-│  │  Next.js │     │   AI SDK    │     │     OpenRouter API       │  │
-│  │  Frontend│────▶│  (ai pkg)   │────▶│  (model routing)         │  │
-│  │          │     │             │     │                          │  │
-│  │  useChat │     │ streamText  │     │  ┌─────┐ ┌──────┐ ┌───┐ │  │
-│  │  hook    │     │ stopWhen    │     │  │Gemini│ │Claude│ │...│ │  │
-│  └──────────┘     │ tools       │     │  └─────┘ └──────┘ └───┘ │  │
-│                   └──────┬──────┘     └──────────────────────────┘  │
-│                          │                                           │
-│                          ▼                                           │
-│                   ┌─────────────┐                                    │
-│                   │ Tavily API  │                                    │
-│                   │ (web search)│                                    │
-│                   └─────────────┘                                    │
+│  ┌──────────────┐     ┌─────────────────┐     ┌──────────────────┐  │
+│  │   Frontend   │     │   API Route     │     │  OpenRouter API  │  │
+│  │              │────▶│  /api/chat      │────▶│  (model routing) │  │
+│  │  useChatApi  │     │                 │     │                  │  │
+│  │  hook        │     │ streamAgent     │     │  ┌────┐ ┌─────┐  │  │
+│  │              │◀────│ WithSources()   │◀────│  │Gem│ │Claude│  │  │
+│  └──────────────┘     └────────┬────────┘     └──┴────┴─┴─────┴──┘  │
+│                                │                                     │
+│                                ▼                                     │
+│                        ┌─────────────┐                              │
+│                        │ Tavily API  │                              │
+│                        │ (web search)│                              │
+│                        └─────────────┘                              │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -35,21 +35,25 @@ Maxwell is a **search-augmented AI assistant** (similar to Perplexity) that:
 
 ## Core Components
 
-### 1. API Layer (`/app/api/chat/route.ts`)
+### 1. API Route (`/app/api/chat/route.ts`)
 
-**Purpose:** HTTP endpoint for chat requests
+**Purpose:** Streaming HTTP endpoint for chat
 
-**Flow:**
+**Key Feature:** Appends sources JSON at end of stream
+
+```typescript
+// Delimiter for sources (parsed by frontend)
+const SOURCES_DELIMITER = '\n\n---SOURCES_JSON---\n';
+
+// Uses generator for streaming
+for await (const event of streamAgentWithSources(messages, modelId)) {
+    if (event.type === 'text') {
+        controller.enqueue(encoder.encode(event.content));
+    } else if (event.type === 'sources') {
+        controller.enqueue(encoder.encode(SOURCES_DELIMITER + JSON.stringify(event.sources)));
+    }
+}
 ```
-POST /api/chat
-  → Parse messages + model from request body
-  → Call runAgent() with messages
-  → Return streaming response via toTextStreamResponse()
-```
-
-**Key Points:**
-- Uses `export const maxDuration = 60` for Vercel timeout
-- Returns SSE (Server-Sent Events) stream
 
 ---
 
@@ -57,21 +61,35 @@ POST /api/chat
 
 **Purpose:** Orchestrates LLM and tools
 
-**Key Function:** `runAgent(messages, modelId)`
+**Key Functions:**
 
-**AI SDK v5 Configuration:**
+| Function | Purpose |
+|----------|---------|
+| `runAgent()` | Basic streaming (legacy) |
+| `streamAgentWithSources()` | Generator that yields text + sources |
+
+**Why Generator Pattern:**
+The `fullStream` from AI SDK v5 provides all events (text-delta, tool-result) in order. We consume it to collect sources during streaming.
+
 ```typescript
-streamText({
-    model: openrouter(modelId),     // OpenRouter provider
-    system: SYSTEM_PROMPT,          // From prompts.ts
-    messages,                       // User conversation
-    tools,                          // From tools.ts (search)
-    stopWhen: stepCountIs(5),       // Multi-step loop control
-})
+export async function* streamAgentWithSources(messages, modelId) {
+    const result = streamText({ ... });
+    
+    for await (const event of result.fullStream) {
+        if (event.type === 'text-delta') {
+            yield { type: 'text', content: event.text };
+        } else if (event.type === 'tool-result') {
+            // AI SDK v5 uses 'output' property
+            const searchResults = event.output?.results;
+            if (searchResults) {
+                collectedSources.push(...searchResults);
+            }
+        }
+    }
+    
+    yield { type: 'sources', sources: collectedSources };
+}
 ```
-
-**Why `stopWhen` not `maxSteps`:**
-AI SDK v5 changed the API. `maxSteps` is deprecated in favor of `stopWhen: stepCountIs(n)`.
 
 ---
 
@@ -79,52 +97,69 @@ AI SDK v5 changed the API. `maxSteps` is deprecated in favor of `stopWhen: stepC
 
 **Purpose:** Define executable functions the LLM can call
 
-**Current Tools:**
-| Tool | Description | Provider |
-|------|-------------|----------|
-| `searchTool` | Web search via Tavily | OpenAI, Anthropic |
-| `searchToolGemini` | Web search (array input) | Google |
+**Search Tool:**
+- Calls Tavily API with query
+- Returns `{ answer, results: [...sources...] }`
 
-**Why Two Versions:**
-Gemini sends `{ queries: ["..."] }`, others send `{ query: "..." }`. Different schema requirements.
+**Model-Specific Schemas:**
+| Model Provider | Input Schema |
+|---------------|--------------|
+| Google (Gemini) | `{ queries: string[] }` |
+| Anthropic (Claude) | `{ query: string }` |
+| OpenAI | `{ query: string }` |
 
-**AI SDK v5 Tool Signature:**
+---
+
+### 4. Frontend Hook (`/app/hooks/use-chat-api.ts`)
+
+**Purpose:** Client-side streaming + source extraction
+
+**Key Features:**
+1. Streams response via `ReadableStream`
+2. Parses `---SOURCES_JSON---` delimiter
+3. Updates Zustand store with content + sources
+4. Manages agent state transitions
+
 ```typescript
-tool({
-    description: 'What this tool does',
-    inputSchema: z.object({ ... }),  // NOT 'parameters'
-    execute: async ({ ... }) => { ... }
-})
+// Parse sources from stream
+const { content, sources } = parseSourcesFromText(accumulatedText);
+updateMessage(agentMessageId, content, sources, sessionId);
 ```
 
 ---
 
-### 4. Models (`/app/lib/models.ts`)
+### 5. Store (`/app/store.ts`)
 
-**Purpose:** Model registry with metadata
+**Purpose:** Zustand state with persistence
 
-**Available Models:**
-| Model ID | Provider | Status |
-|----------|----------|--------|
-| `google/gemini-3-flash-preview` | Google | ✅ Default |
-| `google/gemini-3-pro-preview` | Google | ✅ |
-| `anthropic/claude-haiku-4.5` | Anthropic | ✅ |
-| `anthropic/claude-sonnet-4.5` | Anthropic | ✅ |
+**Key Actions:**
+| Action | Purpose |
+|--------|---------|
+| `addMessage()` | Add message, returns ID |
+| `updateMessage()` | Update content + sources during streaming |
+| `setAgentState()` | Transition visual states |
 
-**Disabled Models (provider bugs):**
-- OpenAI GPT-5.x: Tool schema serialization fails
-- Claude Opus 4.5: Sends empty tool inputs
+**Message Type:**
+```typescript
+interface Message {
+    id: string;
+    role: 'user' | 'agent';
+    content: string;
+    sources?: Source[];  // From search results
+    timestamp: number;
+}
+```
 
 ---
 
-### 5. Prompts (`/app/lib/prompts.ts`)
+### 6. ResponseDisplay (`/app/components/ResponseDisplay.tsx`)
 
-**Purpose:** System prompts that guide LLM behavior
+**Purpose:** Renders agent messages with citations + sources
 
-**Current Prompt:** Instructs LLM to:
-- Search for real-time information
-- Cite sources using `[1]`, `[2]` format
-- Be concise but thorough
+**Features:**
+- ReactMarkdown for formatting
+- Citation parsing: `[1]` → clickable superscript
+- Dynamic sources panel with favicons
 
 ---
 
@@ -132,51 +167,74 @@ tool({
 
 ### Request Flow
 ```
-1. User sends message via frontend
-2. POST /api/chat receives { messages, model }
-3. runAgent() calls streamText()
-4. LLM receives system prompt + messages + tool definitions
-5. LLM decides: respond OR call tool
-   └─ If tool: Execute search → return results → LLM continues
-6. Stream response back to frontend
+1. User types message in InputInterface
+2. handleQuery() calls useChatApi.sendMessage()
+3. Hook adds user message to store
+4. Hook sets agentState: 'thinking'
+5. POST /api/chat with { messages, model }
+6. API calls streamAgentWithSources()
+7. Generator yields text chunks
+8. If search tool called:
+   - Tavily API returns results
+   - Sources collected from tool-result event
+9. Generator yields sources at end
+10. API appends sources JSON to stream
+11. Hook parses delimiter, extracts sources
+12. Hook calls updateMessage(id, content, sources)
+13. ResponseDisplay renders with sources panel
 ```
 
-### Multi-Step Example
+### Source Extraction Flow
 ```
-Step 1: User asks "What's Bitcoin's price?"
-Step 2: LLM calls search({ query: "bitcoin price usd" })
-Step 3: Tavily returns 5 results
-Step 4: LLM generates answer with citations [1][2][3]
-Step 5: Stream complete (finishReason: 'stop')
+streamText() → fullStream events:
+  ├─ text-delta → yield to client
+  ├─ tool-result → extract sources from event.output.results
+  └─ finish → yield collected sources
+
+API Route:
+  ├─ Stream text chunks
+  └─ Append: ---SOURCES_JSON---[{title, url, ...}]
+
+Frontend Hook:
+  ├─ Accumulate text
+  ├─ On complete: split by delimiter
+  └─ Parse JSON, call updateMessage(id, content, sources)
 ```
 
 ---
 
-## Key Decisions & Rationale
+## Key Technical Decisions
 
-### Why OpenRouter + AI SDK?
+### Why Custom Streaming Instead of useChat?
 
-| Component | Role |
-|-----------|------|
-| AI SDK | Streaming, tools, agent loops (framework) |
-| OpenRouter | Model routing, single API key (provider) |
+| useChat (AI SDK) | useChatApi (Custom) |
+|-----------------|---------------------|
+| Manages own state | Uses existing Zustand store |
+| Single conversation | Multi-session with persistence |
+| Limited source control | Full control over source extraction |
 
-**They're complementary, not redundant.** AI SDK needs a provider; OpenRouter is that provider.
+### Why Delimiter for Sources?
 
-### Why Tavily for Search?
+AI SDK v5's `toTextStreamResponse()` only streams text. Tool results aren't included. Options:
 
-- Purpose-built for LLM consumption
-- Returns clean, structured results
-- Includes `answer` field (pre-summarized)
-- Better than scraping or Google API
+1. ~~`toDataStreamResponse()`~~ - Not available in v5
+2. **Consume fullStream, append JSON** ✓
 
-### Why Model-Specific Tool Schemas?
+The delimiter approach:
+- Simple to implement
+- Works with text streaming
+- Frontend can parse reliably
 
-Different LLMs send tool inputs differently:
-- **Gemini:** `{ queries: ["..."] }` (array)
-- **Claude/OpenAI:** `{ query: "..." }` (string)
+### Why `event.output` not `event.result`?
 
-We detect provider and select appropriate schema.
+AI SDK v5 changed the property name for tool execution results. The `tool-result` event has:
+```typescript
+{
+    type: 'tool-result',
+    toolName: 'search',
+    output: { results: [...sources...] }  // ← Not 'result'
+}
+```
 
 ---
 
@@ -193,15 +251,10 @@ We detect provider and select appropriate schema.
 
 ### Adding a New Tool
 1. Define tool in `tools.ts` with `inputSchema`
-2. Add to tools registry
-3. Update `getToolsForModel()` if model-specific
+2. Return structured data in `execute()`
+3. Update `streamAgentWithSources` to extract results
 
 ### Adding a New Model
 1. Add to `AVAILABLE_MODELS` in `models.ts`
-2. Set `toolsSupported: true/false`
-3. Test with curl before enabling
-
-### Changing Behavior
-- Edit `SYSTEM_PROMPT` in `prompts.ts`
-- Adjust `stopWhen(stepCountIs(n))` for more/fewer steps
-- Modify Tavily params (`max_results`, `search_depth`)
+2. Test tool calling works
+3. Add to `getToolsForModel()` if schema differs

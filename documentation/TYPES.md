@@ -1,243 +1,261 @@
 # Maxwell Type Definitions
 
-> TypeScript interfaces and types used across the codebase.
+> Complete TypeScript type reference.
 
-## Core Types
+## Core Types (`app/types.ts`)
 
-### From `app/types/index.ts`
+### AgentState
+
+Visual state of the assistant for UI animations.
 
 ```typescript
-/**
- * Agent visual states for the animated sphere
- */
 export type AgentState = 
-    | 'relaxed'       // Idle, slow animation
-    | 'thinking'      // Processing, medium animation
-    | 'orchestrating' // Calling tools, active animation
-    | 'synthesizing'  // Generating response, fast animation
-    | 'complete';     // Done, settling animation
+    | 'relaxed'       // Initial/idle state
+    | 'thinking'      // Processing user input
+    | 'orchestrating' // Executing tools
+    | 'synthesizing'  // Generating response
+    | 'complete';     // Response finished
+```
 
-/**
- * A source returned from web search
- */
+### Source
+
+A search result from Tavily.
+
+```typescript
 export interface Source {
-    title: string;
-    url: string;
-    content: string;
-    score?: number;  // Relevance score from Tavily
+    title: string;      // Page title
+    url: string;        // Full URL
+    content: string;    // Text snippet
+    score?: number;     // Relevance 0-1
 }
+```
 
-/**
- * A citation reference in the response
- */
-export interface Citation {
-    index: number;   // [1], [2], etc.
-    source: Source;
+### Message
+
+A single chat message.
+
+```typescript
+export interface Message {
+    id: string;                   // UUID
+    role: 'user' | 'agent';       // Who sent it
+    content: string;              // Message text
+    verified?: boolean;           // Deprecated
+    timestamp: number;            // Unix ms
+    sources?: Source[];           // From search (agent only)
+}
+```
+
+### ChatSession
+
+A conversation thread.
+
+```typescript
+export interface ChatSession {
+    id: string;                   // UUID
+    title: string;                // Display title
+    createdAt: number;            // Unix ms
+    updatedAt: number;            // Unix ms
+    messages: Message[];          // Ordered by time
+    agentState: AgentState;       // Current state
 }
 ```
 
 ---
 
-## Model Types
+## Store Types (`app/store.ts`)
 
-### From `app/lib/models.ts`
+### ChatStore
+
+Zustand store interface.
 
 ```typescript
-/**
- * Configuration for an available model
- */
-export interface ModelConfig {
-    /** OpenRouter model ID (exact string required) */
-    id: string;
-    
-    /** Display name for UI */
-    name: string;
-    
-    /** Maximum context window in tokens */
-    contextWindow: number;
-    
-    /** Short description for model selector */
-    description: string;
-    
-    /** Pricing/capability tier */
-    tier: 'default' | 'standard' | 'premium';
-    
-    /** Provider family for tool schema selection */
-    provider: 'google' | 'anthropic' | 'openai';
-    
-    /** Whether tools work with this model */
-    toolsSupported: boolean;
+interface ChatStore {
+    // State
+    sessions: Record<string, ChatSession>;
+    activeSessionId: string | null;
+    hasHydrated: boolean;
+
+    // Actions
+    createSession: () => string;
+    switchSession: (sessionId: string) => void;
+    deleteSession: (sessionId: string) => void;
+    addMessage: (
+        content: string, 
+        role: 'user' | 'agent', 
+        verified?: boolean, 
+        sessionId?: string, 
+        sources?: Source[]
+    ) => string;  // Returns message ID
+    updateMessage: (
+        messageId: string, 
+        content: string, 
+        sources?: Source[], 
+        sessionId?: string
+    ) => void;
+    setAgentState: (state: AgentState, sessionId?: string) => void;
+    setHasHydrated: (state: boolean) => void;
+
+    // Computed Helpers
+    getActiveSession: () => ChatSession | undefined;
 }
 ```
 
 ---
 
-## Tool Types
+## Model Types (`app/lib/models.ts`)
 
-### From `app/lib/tools.ts`
+### ModelConfig
+
+Configuration for an LLM model.
 
 ```typescript
-/**
- * Result from Tavily API
- */
-interface TavilyResult {
-    title: string;
-    url: string;
-    content: string;
-    score?: number;
+interface ModelConfig {
+    id: string;              // e.g., "google/gemini-3-flash-preview"
+    name: string;            // Display name
+    provider: string;        // e.g., "google"
+    contextWindow?: number;  // Max tokens
+    enabled: boolean;        // Available for use
+    toolsSupported: boolean; // Can use tools
 }
+```
 
-/**
- * Normalized search result
- */
+### AVAILABLE_MODELS
+
+```typescript
+export const AVAILABLE_MODELS: ModelConfig[] = [
+    {
+        id: 'google/gemini-3-flash-preview',
+        name: 'Gemini 3 Flash',
+        provider: 'google',
+        enabled: true,
+        toolsSupported: true,
+    },
+    // ... more models
+];
+```
+
+---
+
+## Tool Types (`app/lib/tools.ts`)
+
+### SearchResponse
+
+Return type from search tools.
+
+```typescript
+interface SearchResponse {
+    answer?: string;          // Tavily's generated answer
+    results: SearchResult[];  // Source array
+    error?: string;           // If search failed
+}
+```
+
+### SearchResult
+
+Individual search result (same as Source).
+
+```typescript
 interface SearchResult {
     title: string;
     url: string;
     content: string;
     score?: number;
 }
+```
 
-/**
- * Response from search tool
- */
-interface SearchResponse {
-    answer?: string;      // Pre-summarized answer from Tavily
-    results: SearchResult[];
-    error?: string;
+---
+
+## Hook Types (`app/hooks/use-chat-api.ts`)
+
+### UseChatApiOptions
+
+```typescript
+interface UseChatApiOptions {
+    model?: string;  // Initial model ID
+}
+```
+
+### UseChatApiReturn
+
+```typescript
+interface UseChatApiReturn {
+    sendMessage: (content: string) => Promise<void>;
+    isStreaming: boolean;
+    error: string | null;
+    currentModel: string;
+    setModel: (model: string) => void;
 }
 ```
 
 ---
 
-## AI SDK Types (from `ai` package)
+## Agent Types (`app/lib/agent.ts`)
 
-### Commonly Used
+### StreamEvent (yielded by generator)
 
 ```typescript
-import type { 
-    CoreMessage,           // Message in LLM format
-    StreamTextResult,      // Result from streamText()
-    Tool,                  // Tool definition type
-} from 'ai';
-
-/**
- * CoreMessage structure
- */
-interface CoreMessage {
-    role: 'user' | 'assistant' | 'system' | 'tool';
-    content: string | ContentPart[];
-}
+type StreamEvent = 
+    | { type: 'text'; content: string }
+    | { type: 'sources'; sources: Source[] };
 ```
 
 ---
 
-## API Types
+## API Request/Response
 
-### Request/Response for `/api/chat`
+### ChatRequest
 
 ```typescript
-/**
- * Request body for POST /api/chat
- */
 interface ChatRequest {
     messages: Array<{
         role: 'user' | 'assistant';
         content: string;
     }>;
-    model?: string;  // Optional, defaults to DEFAULT_MODEL
+    model?: string;
 }
+```
 
-/**
- * Response is a text stream (SSE)
- * Content-Type: text/plain; charset=utf-8
- */
+### ChatResponse
+
+Text stream with optional sources JSON appended.
+
+```
+[text content]
+
+---SOURCES_JSON---
+[{...}, {...}]
 ```
 
 ---
 
 ## Component Props
 
-### InputInterface
-
-```typescript
-interface InputInterfaceProps {
-    onSubmit: (message: string) => void;
-    isLoading?: boolean;
-    placeholder?: string;
-}
-```
-
-### ResponseDisplay
+### ResponseDisplayProps
 
 ```typescript
 interface ResponseDisplayProps {
-    content: string;
-    sources?: Source[];
-    isStreaming?: boolean;
+    message: Message | null;
+    isHistory?: boolean;  // Skip animations
 }
 ```
 
-### AgentSphere
+### InputInterfaceProps
 
 ```typescript
-interface AgentSphereProps {
-    state: AgentState;
-    isActive?: boolean;
+interface InputInterfaceProps {
+    onQuery: (query: string) => void;
+    isRelaxed?: boolean;
 }
 ```
 
----
-
-## Zustand Store Types
-
-### From `app/store.ts`
+### ChatHistoryProps
 
 ```typescript
-interface AppState {
-    // Messages
-    messages: Message[];
-    addMessage: (message: Message) => void;
-    clearMessages: () => void;
-    
-    // Agent state
-    agentState: AgentState;
-    setAgentState: (state: AgentState) => void;
-    
-    // Model selection
-    selectedModel: string;
-    setSelectedModel: (model: string) => void;
-    
-    // Loading state
-    isLoading: boolean;
-    setIsLoading: (loading: boolean) => void;
-}
-
-interface Message {
-    id: string;
-    role: 'user' | 'assistant';
-    content: string;
-    sources?: Source[];
-    timestamp: Date;
-}
-```
-
----
-
-## Type Guards
-
-Useful type guards for runtime checking:
-
-```typescript
-function isSource(obj: unknown): obj is Source {
-    return (
-        typeof obj === 'object' &&
-        obj !== null &&
-        'title' in obj &&
-        'url' in obj
-    );
-}
-
-function isAgentState(value: string): value is AgentState {
-    return ['relaxed', 'thinking', 'orchestrating', 'synthesizing', 'complete'].includes(value);
+interface ChatHistoryProps {
+    sessions: ChatSession[];
+    activeSessionId: string | null;
+    onSessionSelect: (id: string) => void;
+    onSessionDelete: (id: string) => void;
+    onNewSession: () => void;
 }
 ```

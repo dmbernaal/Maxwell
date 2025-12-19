@@ -60,17 +60,53 @@ curl -X POST http://localhost:3000/api/chat \
 
 **Content-Type:** `text/plain; charset=utf-8`
 
-Response is a **text stream** (SSE format).
+Response is a **text stream** with sources appended at the end.
 
+**Format:**
 ```
-The current price of Bitcoin is approximately $85,400 [1].
+[Streamed text response with citations like [1], [2]]
 
-Bitcoin has seen a slight decline of about 1% in the last 24 hours [2].
-
-Sources:
-[1] CoinMarketCap - https://coinmarketcap.com
-[2] CoinGecko - https://coingecko.com
+---SOURCES_JSON---
+[{"title":"...","url":"...","content":"...","score":0.89}]
 ```
+
+**Example:**
+```
+The current price of Bitcoin is approximately $88,429 [1].
+
+Prices vary across exchanges:
+*   **CoinDesk:** $88,428.96 [2]
+*   **Kraken:** $88,320.00 [1]
+
+---SOURCES_JSON---
+[{"title":"Kraken - Bitcoin Price","url":"https://www.kraken.com/prices/bitcoin","content":"...","score":0.91},{"title":"CoinDesk BTC","url":"https://www.coindesk.com/price/bitcoin/","content":"...","score":0.88}]
+```
+
+### Sources Delimiter
+
+The delimiter `---SOURCES_JSON---` separates the text response from the sources JSON array.
+
+**Frontend Parsing:**
+```typescript
+const SOURCES_DELIMITER = '\n\n---SOURCES_JSON---\n';
+const [content, sourcesJson] = text.split(SOURCES_DELIMITER);
+const sources = JSON.parse(sourcesJson);
+```
+
+### Source Object
+
+Each source in the array has:
+
+```typescript
+interface Source {
+    title: string;    // Page title
+    url: string;      // Source URL
+    content: string;  // Snippet from page
+    score?: number;   // Relevance score (0-1)
+}
+```
+
+---
 
 ### Error (400)
 
@@ -109,80 +145,37 @@ Use these exact IDs in the `model` field:
 
 ## Streaming Behavior
 
-The response is streamed in real-time:
+The response streams in real-time:
 
-1. **Tool Invocation:** When the agent calls search, there may be a brief pause
-2. **Text Generation:** Response text streams token by token
-3. **Completion:** Stream ends when generation is complete
+1. **Tool Invocation:** Brief pause while search executes (~1-2s)
+2. **Text Generation:** Response streams token by token
+3. **Sources:** JSON appended after text completes
+4. **Completion:** Stream closes
 
 ### Detecting Stream End
 
-The stream will close naturally when complete. In JavaScript:
-
 ```javascript
-const response = await fetch('/api/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages }),
-});
-
+const response = await fetch('/api/chat', { ... });
 const reader = response.body.getReader();
 const decoder = new TextDecoder();
+let fullText = '';
 
 while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-    
-    const text = decoder.decode(value);
-    console.log(text);
+    fullText += decoder.decode(value, { stream: true });
 }
-```
 
----
-
-## Rate Limits
-
-Rate limits are enforced by OpenRouter, not this API.
-
-| Tier | Requests/min | Notes |
-|------|-------------|-------|
-| Free | 10-20 | Varies by model |
-| Paid | 60+ | Based on plan |
-
----
-
-## Error Handling
-
-### Common Errors
-
-| Error | Cause | Solution |
-|-------|-------|----------|
-| `Missing required environment variable` | API keys not set | Set `OPENROUTER_API_KEY` and `TAVILY_API_KEY` |
-| `Provider returned error` | OpenRouter/model issue | Check model ID, try different model |
-| `Search API error: 422` | Invalid Tavily request | Check query isn't empty |
-
-### Retry Logic
-
-The API does NOT implement retries. Client should handle:
-
-```javascript
-async function chatWithRetry(messages, maxRetries = 3) {
-    for (let i = 0; i < maxRetries; i++) {
-        try {
-            return await fetch('/api/chat', { ... });
-        } catch (error) {
-            if (i === maxRetries - 1) throw error;
-            await new Promise(r => setTimeout(r, 1000 * (i + 1)));
-        }
-    }
-}
+// Parse sources
+const [content, sourcesJson] = fullText.split('\n\n---SOURCES_JSON---\n');
+const sources = sourcesJson ? JSON.parse(sourcesJson) : [];
 ```
 
 ---
 
 ## Testing
 
-### Health Check
+### Health Check (No Search)
 
 ```bash
 curl -X POST http://localhost:3000/api/chat \
@@ -190,14 +183,28 @@ curl -X POST http://localhost:3000/api/chat \
   -d '{"messages": [{"role": "user", "content": "Hello"}]}'
 ```
 
-Expected: Quick response without tool call.
+Expected: Quick greeting without sources.
 
-### Tool Execution Check
+### Search Execution Check
 
 ```bash
 curl -X POST http://localhost:3000/api/chat \
   -H "Content-Type: application/json" \
-  -d '{"messages": [{"role": "user", "content": "What is the weather in New York?"}]}'
+  -d '{"messages": [{"role": "user", "content": "What is the weather in Tokyo?"}]}'
 ```
 
-Expected: Response with citations `[1]`, `[2]`, etc.
+Expected:
+- Response with citations `[1]`, `[2]`
+- `---SOURCES_JSON---` delimiter
+- JSON array of sources
+
+### Verify Sources Present
+
+```bash
+curl -s -X POST http://localhost:3000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "What is the price of gold?"}]}' \
+  | grep "SOURCES_JSON"
+```
+
+Expected: Should find the delimiter in output.
