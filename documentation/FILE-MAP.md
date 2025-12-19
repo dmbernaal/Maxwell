@@ -95,7 +95,7 @@ maxwell-v2/
 | `constants.ts` | Config values | `DECOMPOSITION_MODEL`, `EMBEDDING_MODEL`, thresholds |
 | `prompts.ts` | LLM prompts | `DECOMPOSITION_PROMPT`, `SYNTHESIS_PROMPT`, `createDecompositionPrompt()`, etc. |
 | `decomposer.ts` | Query → sub-queries | `decomposeQuery()`, `validateDecompositionOutput()` |
-| `searcher.ts` | Parallel search | (Phase 3) |
+| `searcher.ts` | Parallel search | `parallelSearch()`, `getSearchStats()`, `validateSearchOutput()` |
 | `synthesizer.ts` | Answer synthesis | (Phase 4) |
 | `embeddings.ts` | Embedding utilities | (Phase 5) |
 | `verifier.ts` | Multi-signal verification | (Phases 6-8) |
