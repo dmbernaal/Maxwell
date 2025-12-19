@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import { AgentState, Message, ChatSession } from './types';
+import { AgentState, Message, ChatSession, Source } from './types';
 
 interface ChatStore {
   // State
@@ -13,7 +13,8 @@ interface ChatStore {
   createSession: () => string;
   switchSession: (sessionId: string) => void;
   deleteSession: (sessionId: string) => void;
-  addMessage: (content: string, role: 'user' | 'agent', verified?: boolean, sessionId?: string) => void;
+  addMessage: (content: string, role: 'user' | 'agent', verified?: boolean, sessionId?: string, sources?: Source[]) => string;
+  updateMessage: (messageId: string, content: string, sources?: Source[], sessionId?: string) => void;
   setAgentState: (state: AgentState, sessionId?: string) => void;
   setHasHydrated: (state: boolean) => void;
 
@@ -68,7 +69,8 @@ export const useChatStore = create<ChatStore>()(
         });
       },
 
-      addMessage: (content, role, verified = false, sessionId) => {
+      addMessage: (content, role, verified = false, sessionId, sources) => {
+        const messageId = uuidv4();
         set((state) => {
           // Use provided sessionId or fallback to activeSessionId
           const targetId = sessionId || state.activeSessionId;
@@ -77,11 +79,12 @@ export const useChatStore = create<ChatStore>()(
 
           const session = state.sessions[targetId];
           const newMessage: Message = {
-            id: uuidv4(),
+            id: messageId,
             role,
             content,
             verified,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            sources,
           };
 
           // Auto-generate title from first user message if it's "New Conversation"
@@ -98,6 +101,36 @@ export const useChatStore = create<ChatStore>()(
                 messages: [...session.messages, newMessage],
                 updatedAt: Date.now(),
                 title
+              }
+            }
+          };
+        });
+        return messageId;
+      },
+
+      updateMessage: (messageId, content, sources, sessionId) => {
+        set((state) => {
+          const targetId = sessionId || state.activeSessionId;
+          if (!targetId || !state.sessions[targetId]) return state;
+
+          const session = state.sessions[targetId];
+          const messageIndex = session.messages.findIndex(m => m.id === messageId);
+          if (messageIndex === -1) return state;
+
+          const updatedMessages = [...session.messages];
+          updatedMessages[messageIndex] = {
+            ...updatedMessages[messageIndex],
+            content,
+            sources: sources ?? updatedMessages[messageIndex].sources,
+          };
+
+          return {
+            sessions: {
+              ...state.sessions,
+              [targetId]: {
+                ...session,
+                messages: updatedMessages,
+                updatedAt: Date.now(),
               }
             }
           };
