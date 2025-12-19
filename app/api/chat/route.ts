@@ -2,13 +2,17 @@
  * Chat API Route
  * 
  * Handles POST requests from the chat interface
- * Streams responses back to the client using AI SDK format
+ * Streams responses back to the client
+ * Appends sources as JSON at the end for extraction
  */
 
-import { runAgent } from '../../lib/agent';
+import { streamAgentWithSources } from '../../lib/agent';
 
 // Vercel serverless function timeout
 export const maxDuration = 60;
+
+// Delimiter for sources section (must be unique and unlikely in normal text)
+export const SOURCES_DELIMITER = '\n\n---SOURCES_JSON---\n';
 
 export async function POST(req: Request) {
     try {
@@ -33,11 +37,37 @@ export async function POST(req: Request) {
         const modelId = body.model;
         console.log('[API] Using model:', modelId || 'default');
 
-        // Run the agent and get streaming result
-        const result = await runAgent(messages, modelId);
+        // Create streaming response
+        const encoder = new TextEncoder();
 
-        // Return streaming response
-        return result.toTextStreamResponse();
+        const stream = new ReadableStream({
+            async start(controller) {
+                try {
+                    // Stream from the agent generator
+                    for await (const event of streamAgentWithSources(messages, modelId)) {
+                        if (event.type === 'text') {
+                            controller.enqueue(encoder.encode(event.content));
+                        } else if (event.type === 'sources') {
+                            // Append sources at the end
+                            console.log('[API] Appending sources:', event.sources.length);
+                            const sourcesJson = JSON.stringify(event.sources);
+                            controller.enqueue(encoder.encode(SOURCES_DELIMITER + sourcesJson));
+                        }
+                    }
+
+                    controller.close();
+                } catch (error) {
+                    console.error('[API] Stream error:', error);
+                    controller.error(error);
+                }
+            }
+        });
+
+        return new Response(stream, {
+            headers: {
+                'Content-Type': 'text/plain; charset=utf-8',
+            },
+        });
 
     } catch (error) {
         console.error('[Chat API Error]', error);
