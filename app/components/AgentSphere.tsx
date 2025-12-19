@@ -187,14 +187,16 @@ const AtmosphereMaterial = shaderMaterial(
 
 extend({ AgentMaterial, AtmosphereMaterial });
 
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      agentMaterial: ReactThreeFiber.Object3DNode<THREE.ShaderMaterial, typeof AgentMaterial>;
-      atmosphereMaterial: ReactThreeFiber.Object3DNode<THREE.ShaderMaterial, typeof AtmosphereMaterial>;
-    }
+// Type declarations for custom shader materials extended via drei's shaderMaterial
+// Using permissive types as R3F's internal typing for extended materials is complex
+/* eslint-disable @typescript-eslint/no-explicit-any */
+declare module '@react-three/fiber' {
+  interface ThreeElements {
+    agentMaterial: any;
+    atmosphereMaterial: any;
   }
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 interface AgentSphereProps {
   state: AgentState;
@@ -205,9 +207,9 @@ const AgentMesh = ({ state, isActive = false }: AgentSphereProps) => {
   const materialRef = useRef<THREE.ShaderMaterial>(null);
   const atmosphereRef = useRef<THREE.ShaderMaterial>(null);
   const meshRef = useRef<THREE.Mesh>(null);
-  
+
   const targetScale = isActive ? 0.6 : 1.5;
-  
+
   const targets = useMemo(() => {
     switch (state) {
       case 'relaxed':
@@ -264,22 +266,22 @@ const AgentMesh = ({ state, isActive = false }: AgentSphereProps) => {
       const newScale = THREE.MathUtils.lerp(currentScale, targetScale, delta * 3.0);
       meshRef.current.scale.setScalar(newScale);
     }
-    
+
     // Animate Main Sphere
     if (materialRef.current) {
       materialRef.current.uniforms.uTime.value += delta;
-      
+
       const lerpFactor = delta * 2.0;
-      
+
       materialRef.current.uniforms.uSpeed.value = THREE.MathUtils.lerp(materialRef.current.uniforms.uSpeed.value, targets.speed, lerpFactor);
       materialRef.current.uniforms.uNoiseStrength.value = THREE.MathUtils.lerp(materialRef.current.uniforms.uNoiseStrength.value, targets.noiseStrength, lerpFactor);
       materialRef.current.uniforms.uDisplacement.value = THREE.MathUtils.lerp(materialRef.current.uniforms.uDisplacement.value, targets.displacement, lerpFactor);
-      
+
       if (materialRef.current.uniforms.uColorA.value instanceof THREE.Color) {
-         materialRef.current.uniforms.uColorA.value.lerp(new THREE.Color(targets.colorA), lerpFactor);
+        materialRef.current.uniforms.uColorA.value.lerp(new THREE.Color(targets.colorA), lerpFactor);
       }
       if (materialRef.current.uniforms.uColorB.value instanceof THREE.Color) {
-         materialRef.current.uniforms.uColorB.value.lerp(new THREE.Color(targets.colorB), lerpFactor);
+        materialRef.current.uniforms.uColorB.value.lerp(new THREE.Color(targets.colorB), lerpFactor);
       }
     }
 
@@ -302,10 +304,10 @@ const AgentMesh = ({ state, isActive = false }: AgentSphereProps) => {
       {/* Atmosphere Glow (Backside for soft edge) */}
       <Sphere args={[1.2, 64, 64]}>
         {/* @ts-ignore */}
-        <atmosphereMaterial 
-          ref={atmosphereRef} 
-          transparent 
-          side={THREE.BackSide} 
+        <atmosphereMaterial
+          ref={atmosphereRef}
+          transparent
+          side={THREE.BackSide}
           blending={THREE.AdditiveBlending}
           depthWrite={false}
         />
