@@ -137,3 +137,36 @@ This file tracks the completion of each implementation phase.
 - [x] ID sequencing verified (s1, s2, s3...)
 - [x] Empty input throws error
 - [x] Stats calculation correct
+
+---
+
+## Phase 4: Synthesis
+**Status**: ✅ Complete  
+**Completed**: December 19, 2024
+
+### Files Created
+- `app/lib/maxwell/synthesizer.ts` - Answer synthesis with streaming
+
+### Functions Implemented
+| Function | Purpose |
+|----------|---------|
+| `synthesize(query, sources)` | Async generator for streaming response |
+| `synthesizeComplete(query, sources)` | Non-streaming wrapper |
+| `countCitations(text)` | Count `[n]` occurrences |
+| `validateSynthesisOutput(output)` | Validate output structure |
+
+### Key Features
+- **Streaming**: Async generator yields chunks for real-time UI (103 chunks in test)
+- **Citation Extraction**: Regex `/\[(\d+)\]/g` finds all citations, normalized to `s1`, `s2`
+- **Hallucination Detection**: Warns if LLM cites `[5]` when only 3 sources exist
+- **Date Injection**: Uses `createSynthesisPrompt()` from Phase 1
+- **Empty Source Handling**: Graceful "couldn't find sources" message
+- **AI SDK v5**: Uses `maxOutputTokens` parameter (not `maxTokens`)
+
+### Tests Passed
+- [x] Real streaming (103 chunks, 7020ms, 1333 chars)
+- [x] Citations detected (s1, s2 both used)
+- [x] Citation counting utility works
+- [x] Empty sources handled gracefully
+- [x] Output validation works
+

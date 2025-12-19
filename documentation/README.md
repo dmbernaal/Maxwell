@@ -57,7 +57,7 @@
 | 1 | Prompts (LLM instructions) | ✅ Complete |
 | 2 | Decomposition (query → sub-queries) | ✅ Complete |
 | 3 | Parallel Search | ✅ Complete |
-| 4 | Synthesis | 🔲 Pending |
+| 4 | Synthesis | ✅ Complete |
 | 5 | Embeddings | 🔲 Pending |
 | 6-8 | Verification | 🔲 Pending |
 | 9 | Orchestrator + API | 🔲 Pending |
