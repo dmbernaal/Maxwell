@@ -292,6 +292,20 @@ interface MaxwellSource {
 }
 ```
 
+### RetrievalResult
+
+Result from evidence retrieval for a single claim.
+
+```typescript
+interface RetrievalResult {
+    bestPassage: Passage;        // Best matching passage
+    retrievalSimilarity: number; // Similarity score of best match
+    citedSourceSupport: number;  // Best similarity from cited sources
+    globalBestSupport: number;   // Best similarity from all sources
+    citationMismatch: boolean;   // True if best evidence is uncited
+}
+```
+
 ### VerifiedClaim
 
 A claim that has been through multi-signal verification.

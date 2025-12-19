@@ -152,6 +152,22 @@ export interface NumericCheck {
 }
 
 /**
+ * Result from evidence retrieval for a single claim.
+ */
+export interface RetrievalResult {
+    /** Best matching passage across all sources */
+    bestPassage: Passage;
+    /** Similarity score of best match */
+    retrievalSimilarity: number;
+    /** Best similarity from cited sources only */
+    citedSourceSupport: number;
+    /** Best similarity from all sources */
+    globalBestSupport: number;
+    /** True if best evidence comes from uncited source */
+    citationMismatch: boolean;
+}
+
+/**
  * A fully verified claim with all signals.
  */
 export interface VerifiedClaim {

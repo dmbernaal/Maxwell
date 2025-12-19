@@ -201,4 +201,32 @@ This file tracks the completion of each implementation phase.
 - [x] Top matches (correct ranking by similarity)
 - [x] Empty input handling
 
+---
 
+## Phase 6: Verification Core
+**Status**: ✅ Complete  
+**Completed**: December 19, 2024
+
+### Files Created/Modified
+- `app/lib/maxwell/verifier.ts` - Core verification logic
+- `app/lib/maxwell/types.ts` - Added `RetrievalResult` interface
+
+### Functions Implemented
+| Function | Purpose |
+|----------|---------|
+| `extractClaims(answer)` | Extract factual claims from answer |
+| `chunkSourcesIntoPassages(sources)` | Split sources into sentence passages |
+| `retrieveEvidence(...)` | Find best matching passage for claim |
+
+### Key Features
+- **Intl.Segmenter**: Robust sentence splitting (handles "Mr.", "U.S.A." correctly)
+- **Sliding Windows**: Creates 1, 2, 3-sentence passages for context
+- **Citation Mismatch Detection**: Flags when best evidence comes from uncited source
+- **LLM Claim Extraction**: Uses Gemini Flash for structured claim output
+
+### Tests Passed
+- [x] Chunking handles abbreviations correctly (9 passages from 2 sources)
+- [x] Claim extraction returns valid schema with citations
+- [x] Evidence retrieval finds correct source (0.9825 similarity)
+- [x] Citation mismatch correctly detected
+- [x] Empty answer handling
