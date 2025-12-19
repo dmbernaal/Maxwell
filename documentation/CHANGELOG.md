@@ -42,3 +42,40 @@ This file tracks the completion of each implementation phase.
 - Using OpenRouter for embeddings (`qwen/qwen3-embedding-8b`) instead of OpenAI
 - No `OPENAI_API_KEY` required - all API calls go through OpenRouter
 - Named Maxwell source type `MaxwellSource` to avoid conflict with existing `Source` type
+
+---
+
+## Phase 1: Prompts
+**Status**: ✅ Complete  
+**Completed**: December 19, 2024
+
+### Files Created
+- `app/lib/maxwell/prompts.ts` - All LLM prompts and helper functions
+
+### Prompts Defined
+| Prompt | Purpose | Used In |
+|--------|---------|---------|
+| `DECOMPOSITION_PROMPT` | Break query into 3-5 sub-queries | Phase 2 |
+| `SYNTHESIS_PROMPT` | Generate answer with [n] citations | Phase 4 |
+| `CLAIM_EXTRACTION_PROMPT` | Extract verifiable factual claims | Phase 6 |
+| `NLI_PROMPT` | Determine SUPPORTED/CONTRADICTED/NEUTRAL | Phase 7 |
+
+### Helper Functions
+- `fillPromptTemplate()` - Replace `{key}` placeholders
+- `formatSourcesForPrompt()` - Format sources (NO truncation)
+- `createDecompositionPrompt()` - Fill with query + current date
+- `createSynthesisPrompt()` - Fill with sources + query + date
+- `createClaimExtractionPrompt()` - Fill with answer text
+- `createNLIPrompt()` - Fill with claim + evidence
+
+### Key Features
+- **Date Injection**: Decomposition and Synthesis prompts receive `currentDate` for temporal queries
+- **No Truncation**: `formatSourcesForPrompt` passes full source text to preserve quality
+- **Strict JSON Output**: Every prompt enforces structured output schemas
+
+### Tests Passed
+- [x] Date injection verified (current year in prompts)
+- [x] No truncation verified (2000+ char snippets preserved)
+- [x] Template filling verified for all prompt types
+- [x] Empty sources handling verified
+
