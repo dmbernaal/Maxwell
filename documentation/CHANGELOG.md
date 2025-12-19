@@ -170,3 +170,35 @@ This file tracks the completion of each implementation phase.
 - [x] Empty sources handled gracefully
 - [x] Output validation works
 
+---
+
+## Phase 5: Embeddings
+**Status**: ✅ Complete  
+**Completed**: December 19, 2024
+
+### Files Created
+- `app/lib/maxwell/embeddings.ts` - Vector embeddings via OpenRouter
+
+### Functions Implemented
+| Function | Purpose |
+|----------|---------|
+| `embedText(text)` | Single text → vector (4096 dimensions) |
+| `embedTexts(texts)` | Batch texts → vectors |
+| `cosineSimilarity(a, b)` | Compare two vectors (-1 to 1) |
+| `findTopMatches(query, items, topK)` | Find best matching items |
+
+### Key Features
+- **Native Fetch**: Direct call to OpenRouter API (no additional SDK)
+- **Model**: `qwen/qwen3-embedding-8b` (4096 dimensions)
+- **Batching**: Efficient batch embedding requests
+- **Math**: Proper cosine similarity implementation
+- **Top-K**: Utility to find best matching items
+
+### Tests Passed
+- [x] Single embedding (4096 dimensions)
+- [x] Batch embedding (3 vectors with consistent dimensions)
+- [x] Cosine similarity math (identical=1, orthogonal=0, opposite=-1)
+- [x] Top matches (correct ranking by similarity)
+- [x] Empty input handling
+
+

@@ -97,7 +97,7 @@ maxwell-v2/
 | `decomposer.ts` | Query → sub-queries | `decomposeQuery()`, `validateDecompositionOutput()` |
 | `searcher.ts` | Parallel search | `parallelSearch()`, `getSearchStats()`, `validateSearchOutput()` |
 | `synthesizer.ts` | Answer synthesis | `synthesize()`, `synthesizeComplete()`, `countCitations()` |
-| `embeddings.ts` | Embedding utilities | (Phase 5) |
+| `embeddings.ts` | Embedding utilities | `embedText()`, `embedTexts()`, `cosineSimilarity()`, `findTopMatches()` |
 | `verifier.ts` | Multi-signal verification | (Phases 6-8) |
 | `index.ts` | Main orchestrator | (Phase 9) |
 
