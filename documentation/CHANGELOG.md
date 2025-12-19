@@ -79,3 +79,31 @@ This file tracks the completion of each implementation phase.
 - [x] Template filling verified for all prompt types
 - [x] Empty sources handling verified
 
+---
+
+## Phase 2: Decomposition
+**Status**: ✅ Complete  
+**Completed**: December 19, 2024
+
+### Files Created
+- `app/lib/maxwell/decomposer.ts` - Query decomposition with structured output
+
+### Functions Implemented
+| Function | Purpose |
+|----------|---------|
+| `decomposeQuery(query)` | Breaks complex query into 3-5 focused sub-queries |
+| `validateDecompositionOutput(output)` | Validates output structure and IDs |
+
+### Key Features
+- **Structured Output**: Uses `generateObject` with Zod schema for guaranteed valid JSON
+- **Date Awareness**: Uses `createDecompositionPrompt()` to inject current date
+- **ID Normalization**: Ensures sub-queries are always `q1`, `q2`, `q3`...
+- **Validation**: Runtime checks for output integrity
+
+### Tests Passed
+- [x] Basic query decomposition ("Compare Tesla and BYD revenue growth")
+- [x] Temporal query decomposition (found "December 19 2025" in queries)
+- [x] Empty query error handling
+- [x] Whitespace-only query error handling
+
+

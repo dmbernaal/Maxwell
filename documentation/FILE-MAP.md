@@ -94,7 +94,7 @@ maxwell-v2/
 | `env.ts` | Environment validation | `getMaxwellEnvConfig()`, `validateMaxwellEnv()` |
 | `constants.ts` | Config values | `DECOMPOSITION_MODEL`, `EMBEDDING_MODEL`, thresholds |
 | `prompts.ts` | LLM prompts | `DECOMPOSITION_PROMPT`, `SYNTHESIS_PROMPT`, `createDecompositionPrompt()`, etc. |
-| `decomposer.ts` | Query → sub-queries | (Phase 2) |
+| `decomposer.ts` | Query → sub-queries | `decomposeQuery()`, `validateDecompositionOutput()` |
 | `searcher.ts` | Parallel search | (Phase 3) |
 | `synthesizer.ts` | Answer synthesis | (Phase 4) |
 | `embeddings.ts` | Embedding utilities | (Phase 5) |

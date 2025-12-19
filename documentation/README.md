@@ -49,6 +49,20 @@
 | Model Switching | ✅ Working |
 | Multi-Session Chat | ✅ Working |
 
+## Maxwell Verified Search (Feature)
+
+| Phase | Component | Status |
+|-------|-----------|--------|
+| 0 | Foundation (types, env, constants) | ✅ Complete |
+| 1 | Prompts (LLM instructions) | ✅ Complete |
+| 2 | Decomposition (query → sub-queries) | ✅ Complete |
+| 3 | Parallel Search | 🔲 Pending |
+| 4 | Synthesis | 🔲 Pending |
+| 5 | Embeddings | 🔲 Pending |
+| 6-8 | Verification | 🔲 Pending |
+| 9 | Orchestrator + API | 🔲 Pending |
+| 10-12 | Frontend | 🔲 Pending |
+
 ## Key Technical Details
 
 ### Source Flow
