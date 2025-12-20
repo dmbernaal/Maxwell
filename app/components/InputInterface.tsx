@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { motion, AnimatePresence, useMotionValue, useMotionTemplate } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 import { Mic, ArrowRight, Search, Zap, Globe, FileText, Plus, Paperclip } from 'lucide-react';
 import { AgentState } from '../types';
 import ModeDropdown, { SearchMode } from './ModeDropdown';
@@ -18,35 +18,16 @@ interface InputInterfaceProps {
 }
 
 function SpotlightPill({ icon: Icon, label, onClick }: { icon: any, label: string, onClick: () => void }) {
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
 
-  function handleMouseMove({ currentTarget, clientX, clientY }: React.MouseEvent) {
-    const { left, top } = currentTarget.getBoundingClientRect();
-    mouseX.set(clientX - left);
-    mouseY.set(clientY - top);
-  }
 
   return (
     <motion.button
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
-      onMouseMove={handleMouseMove}
       onClick={onClick}
       className="relative group rounded-full p-[1px] bg-white/5 overflow-hidden"
     >
-      <motion.div
-        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-        style={{
-          background: useMotionTemplate`
-            radial-gradient(
-              60px circle at ${mouseX}px ${mouseY}px,
-              rgba(255, 255, 255, 0.05),
-              transparent 80%
-            )
-          `,
-        }}
-      />
+
       <div className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#18151d] backdrop-blur-md border border-transparent">
         <Icon size={12} className="opacity-70 group-hover:opacity-100 transition-opacity text-white" />
         <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/40 group-hover:text-white transition-colors">{label}</span>
@@ -112,36 +93,23 @@ export default function InputInterface({
       <div className="relative w-full">
         <motion.form
           onSubmit={handleSubmit}
-          onMouseMove={handleMouseMove}
           className="relative group w-full p-[2px] rounded-[24px] bg-white/5"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          {/* Spotlight Glow - Border Layer */}
-          <motion.div
-            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
-            style={{
-              background: useMotionTemplate`
-                radial-gradient(
-                  300px circle at ${mouseX}px ${mouseY}px,
-                  rgba(255, 255, 255, 0.03),
-                  transparent 80%
-                )
-              `,
-            }}
-          />
-
           {/* Inner Container: Obsidian Surface */}
           <div
             className={`
               relative flex flex-col w-full rounded-[23px]
               bg-[#18151d] backdrop-blur-xl
-              transition-all duration-300 ease-out
+              transition-all duration-500 ease-out
               overflow-hidden
+              border
+              hover:border-white/10 hover:shadow-[0_0_30px_-10px_rgba(255,255,255,0.05)] hover:scale-[1.002]
               ${isFocused
-                ? 'border-brand-accent/30 shadow-[0_0_50px_-10px_rgba(111,59,245,0.1)]'
-                : 'shadow-2xl'
+                ? 'border-white/10 shadow-[0_0_30px_-5px_rgba(255,255,255,0.07)]'
+                : 'border-transparent shadow-2xl'
               }
             `}
           >
@@ -181,10 +149,7 @@ export default function InputInterface({
                   <Paperclip size={14} />
                   <span>Attach</span>
                 </button>
-              </div>
 
-              {/* Right: Actions */}
-              <div className="flex items-center gap-3">
                 {onModeChange && (
                   <ModeDropdown
                     mode={mode}
@@ -194,8 +159,10 @@ export default function InputInterface({
                     onViewResults={onViewResults}
                   />
                 )}
+              </div>
 
-                <div className="h-4 w-[1px] bg-white/10 mx-1 hidden md:block" />
+              {/* Right: Actions */}
+              <div className="flex items-center gap-3">
 
                 <button
                   type="button"

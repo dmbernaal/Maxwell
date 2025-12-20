@@ -12,7 +12,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronUp, Zap, Brain, Clock, LucideIcon, Sparkles } from 'lucide-react';
+import { ChevronUp, Zap, Brain, Clock, LucideIcon, Sparkles, MessageSquare } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
 export type SearchMode = 'normal' | 'maxwell-fast' | 'maxwell-medium' | 'maxwell-slow';
@@ -29,11 +29,11 @@ interface ModeOption {
     id: SearchMode;
     label: string;
     sublabel?: string;
-    icon?: LucideIcon;
+    icon: LucideIcon;
 }
 
 const MODE_OPTIONS: ModeOption[] = [
-    { id: 'normal', label: 'Normal' },
+    { id: 'normal', label: 'Normal', icon: MessageSquare },
     { id: 'maxwell-fast', label: 'Maxwell', sublabel: 'Fast', icon: Zap },
     { id: 'maxwell-medium', label: 'Maxwell', sublabel: 'Medium', icon: Brain },
     { id: 'maxwell-slow', label: 'Maxwell', sublabel: 'Slow', icon: Clock },
@@ -149,17 +149,9 @@ export default function ModeDropdown({
                     exit={{ opacity: 0, y: 8, scale: 0.95 }}
                     transition={{ duration: 0.15, ease: 'easeOut' }}
                     style={menuStyle}
-                    className="rounded-xl bg-[#18151d] border border-white/10 shadow-2xl overflow-hidden z-[9999]"
+                    className="w-full max-w-[200px] rounded-2xl bg-[#18151d] border border-white/5 shadow-2xl overflow-hidden z-[9999]"
                 >
-                    {/* Header */}
-                    <div className="px-4 py-3 border-b border-white/5">
-                        <span className="text-xs font-medium uppercase tracking-wider text-white/40">
-                            Search Mode
-                        </span>
-                    </div>
-
-                    {/* Options */}
-                    <div className="py-2 overflow-y-auto" style={{ maxHeight: 'calc(100% - 100px)' }}>
+                    <div className="p-1.5 flex flex-col gap-0.5">
                         {MODE_OPTIONS.map((option) => {
                             const isActive = option.id === mode;
                             const Icon = option.icon;
@@ -169,59 +161,47 @@ export default function ModeDropdown({
                                     key={option.id}
                                     onClick={() => handleSelect(option.id)}
                                     className={`
-                                        w-full flex items-center gap-3 px-4 py-3 text-left transition-colors
+                                        w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-all duration-200
                                         ${isActive
-                                            ? 'bg-brand-accent/10 text-white'
-                                            : 'text-white/60 hover:bg-white/5 hover:text-white'
+                                            ? 'bg-white/5 text-white'
+                                            : 'text-white/40 hover:bg-white/[0.02] hover:text-white/80'
                                         }
                                     `}
                                 >
-                                    {/* Radio indicator */}
-                                    <div className={`
-                                        w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0
-                                        ${isActive
-                                            ? 'border-brand-accent bg-brand-accent'
-                                            : 'border-white/30'
-                                        }
-                                    `}>
-                                        {isActive && (
-                                            <motion.div
-                                                initial={{ scale: 0 }}
-                                                animate={{ scale: 1 }}
-                                                className="w-2 h-2 rounded-full bg-white"
+                                    <div className="flex items-center gap-2.5">
+                                        {/* Icon */}
+                                        {Icon ? (
+                                            <Icon
+                                                size={14}
+                                                className={`transition-colors ${isActive ? 'text-white' : 'text-white/30'}`}
                                             />
+                                        ) : (
+                                            <div className="w-3.5 h-3.5 rounded-full border border-white/10" />
                                         )}
-                                    </div>
 
-                                    {/* Label */}
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm font-medium">{option.label}</span>
+                                        <div className="flex flex-col">
+                                            <span className="text-[13px] font-medium leading-none mb-0.5">
+                                                {option.sublabel || option.label}
+                                            </span>
                                             {option.sublabel && (
-                                                <span className="text-xs text-white/40">
-                                                    {option.sublabel}
+                                                <span className="text-[9px] text-white/20 uppercase tracking-wider font-medium">
+                                                    Maxwell
                                                 </span>
                                             )}
                                         </div>
                                     </div>
 
-                                    {/* Icon */}
-                                    {Icon && (
-                                        <Icon
-                                            size={16}
-                                            className={isActive ? 'text-brand-accent' : 'text-white/30'}
+                                    {/* Active Check */}
+                                    {isActive && (
+                                        <motion.div
+                                            initial={{ scale: 0 }}
+                                            animate={{ scale: 1 }}
+                                            className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.3)]"
                                         />
                                     )}
                                 </button>
                             );
                         })}
-                    </div>
-
-                    {/* Footer hint */}
-                    <div className="px-4 py-3 border-t border-white/5 bg-white/[0.02]">
-                        <span className="text-xs text-white/30">
-                            Maxwell modes verify claims with evidence
-                        </span>
                     </div>
                 </motion.div>
             )}
@@ -253,25 +233,21 @@ export default function ModeDropdown({
                 onClick={handleToggle}
                 disabled={disabled}
                 className={`
-                    hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full 
-                    border transition-all text-xs font-medium
+                    hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full 
+                    bg-[#18151d] hover:bg-[#231f29] border border-white/5 
+                    transition-all text-xs font-medium text-white/60
                     ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                    ${isMaxwell
-                        ? 'bg-brand-accent/10 border-brand-accent/30 text-brand-accent'
-                        : 'bg-[#18151d] border-white/5 text-white/50 hover:bg-[#231f29] hover:text-white/70'
-                    }
                 `}
             >
-                {CurrentIcon && (
-                    <CurrentIcon size={14} className={isMaxwell ? 'text-brand-accent' : 'text-white/50'} />
-                )}
+                {/* Icon */}
+                <CurrentIcon
+                    size={14}
+                    className="text-white/60"
+                />
+
                 <span>
                     {currentOption.sublabel ? currentOption.sublabel : currentOption.label}
                 </span>
-                <ChevronUp
-                    size={14}
-                    className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-                />
             </button>
 
             {/* Dropdown Menu - Rendered via Portal to document.body */}

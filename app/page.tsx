@@ -307,7 +307,7 @@ export default function Home() {
                 transition={{ duration: 0.4, ease: 'easeOut' }}
                 className="flex flex-col gap-6 w-full"
               >
-                {messages.map((msg) => {
+                {messages.map((msg, index) => {
                   // Check if this message is part of the "history" load
                   // If we just switched sessions, we want to treat existing messages as history
                   // New messages added *after* the switch will animate normally
@@ -318,7 +318,12 @@ export default function Home() {
                       {msg.role === 'user' ? (
                         <UserMessage content={msg.content} isHistory={isHistory} />
                       ) : (
-                        <ResponseDisplay message={msg} isHistory={isHistory} />
+                        <ResponseDisplay 
+                          message={msg} 
+                          isHistory={isHistory} 
+                          // Only pass active status if this is the latest message
+                          status={index === messages.length - 1 ? agentState : 'complete'}
+                        />
                       )}
                     </div>
                   );
@@ -326,26 +331,10 @@ export default function Home() {
               </motion.div>
             </AnimatePresence>
 
-            {/* Processing Indicator */}
-            <AnimatePresence>
-              {agentState !== 'relaxed' && agentState !== 'complete' && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="w-full max-w-3xl mx-auto mt-2 mb-12 flex items-center gap-3"
-                >
-                  <motion.div
-                    className="w-2 h-2 rounded-full bg-brand-accent shadow-[0_0_10px_rgba(111,59,245,0.5)]"
-                    animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  />
-                  <span className="text-[11px] font-medium text-white/40 uppercase tracking-[0.2em]">
-                    {agentState}...
-                  </span>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Show "Empty" ResponseDisplay if loading but no message yet */}
+            {agentState !== 'relaxed' && agentState !== 'complete' && (!messages.length || messages[messages.length - 1].role !== 'agent') && (
+               <ResponseDisplay message={null} status={agentState} />
+            )}
           </div>
         </div>
       </motion.div>
