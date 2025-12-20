@@ -97,13 +97,15 @@ export async function* streamAgentWithSources(messages: CoreMessage[], modelId: 
             yield { type: 'text', content: event.text };
         } else if (event.type === 'tool-call') {
             const toolName = event.toolName;
-            const args = event.args;
-            
+            // Handle potential 'args' vs 'input' property difference in types
+            const toolEvent = event as unknown as { args?: unknown; input?: unknown };
+            const args = toolEvent.args ?? toolEvent.input;
+
             if (toolName === 'search' && args && typeof args === 'object' && 'query' in args) {
-               const query = (args as { query: string }).query;
-               yield { type: 'debug', content: `Searching: "${query}"` };
+                const query = (args as { query: string }).query;
+                yield { type: 'debug', content: `Searching: "${query}"` };
             } else {
-               yield { type: 'debug', content: `Using tool: ${toolName}` };
+                yield { type: 'debug', content: `Using tool: ${toolName}` };
             }
         } else if (event.type === 'tool-result') {
             // Extract sources from tool result (AI SDK v5 uses 'output' property)
