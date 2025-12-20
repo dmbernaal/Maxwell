@@ -99,7 +99,7 @@ maxwell-v2/
 | `synthesizer.ts` | Answer synthesis | `synthesize()`, `synthesizeComplete()`, `countCitations()` |
 | `embeddings.ts` | Embedding utilities | `embedText()`, `embedTexts()`, `cosineSimilarity()`, `findTopMatches()` |
 | `verifier.ts` | Multi-signal verification | `verifyClaims()`, `extractClaims()`, `chunkSourcesIntoPassages()`, `checkEntailment()`, `aggregateSignals()` |
-| `index.ts` | Main orchestrator | (Phase 9) |
+| `index.ts` | Main orchestrator | `runMaxwell()`, `runMaxwellComplete()`, re-exports |
 
 ### Hooks (`app/hooks/`)
 

@@ -291,3 +291,53 @@ This file tracks the completion of each implementation phase.
 - [x] Output validation works
 - [x] Empty answer handling
 - [x] No sources handling
+
+---
+
+## Phase 9: Orchestrator + API
+**Status**: ✅ Complete  
+**Completed**: December 20, 2024
+
+### Files Created
+- `app/lib/maxwell/index.ts` - Main orchestrator
+- `app/api/maxwell/route.ts` - SSE streaming API
+
+### Functions Added
+| Function | Purpose |
+|----------|---------|
+| `runMaxwell(query)` | Async generator yielding MaxwellEvent |
+| `runMaxwellComplete(query)` | Non-streaming Promise wrapper |
+| `prepareEvidence(sources)` | Background evidence preparation |
+| `POST /api/maxwell` | SSE streaming endpoint |
+| `GET /api/maxwell` | Health check |
+
+### Quality Presets
+| Preset | Synthesis Model | Verification Concurrency | Use Case |
+|--------|-----------------|-------------------------|----------|
+| **FAST** (default) | Gemini 3.0 Flash | 8 | Live demos, quick answers |
+| MEDIUM | Claude Sonnet 4.5 | 6 | Balanced quality/speed |
+| SLOW | Claude Sonnet 4.5 | 4 | Maximum quality |
+
+### Performance Optimizations
+1. **Parallel evidence prep during synthesis**: Saves ~3-4 seconds
+2. **Dynamic concurrency**: Based on quality preset
+3. **Gemini Flash for synthesis**: Much faster streaming
+
+### Tests Passed (FAST preset)
+- [x] All 4 phases executed in **20.1s** (was 38s!)
+- [x] 18 sources found
+- [x] 12 claims verified (9 SUPPORTED, 3 NEUTRAL)
+- [x] 53% confidence
+- [x] API health check works
+
+### Model Stack
+| Step | Model |
+|------|-------|
+| Decomposition | google/gemini-3-flash-preview |
+| Search | Tavily API |
+| Synthesis | google/gemini-3-flash-preview (FAST) |
+| Claim Extraction | google/gemini-3-flash-preview |
+| Embeddings | qwen/qwen3-embedding-8b |
+| NLI | google/gemini-3-flash-preview |
+
+

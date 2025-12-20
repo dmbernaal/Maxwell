@@ -8,14 +8,56 @@
  */
 
 // ============================================
+// QUALITY PRESETS
+// ============================================
+
+/**
+ * Quality preset determines synthesis model and verification concurrency.
+ *
+ * FAST: Gemini Flash for synthesis, high concurrency (8) - DEFAULT
+ *       Best for: Live demos, quick answers, cost efficiency
+ *       Trade-off: Slightly less nuanced prose
+ *
+ * MEDIUM: Claude Sonnet for synthesis, medium concurrency (6)
+ *         Best for: Balanced quality and speed
+ *         Trade-off: ~2x slower than FAST
+ *
+ * SLOW: Claude Sonnet for synthesis, lower concurrency (4)
+ *       Best for: Maximum quality, complex topics
+ *       Trade-off: ~3x slower than FAST
+ */
+export type QualityPreset = 'fast' | 'medium' | 'slow';
+
+export const QUALITY_PRESETS = {
+    fast: {
+        synthesisModel: 'google/gemini-3-flash-preview',
+        verificationConcurrency: 8,
+        description: 'Fastest response, good quality',
+    },
+    medium: {
+        synthesisModel: 'anthropic/claude-sonnet-4.5',
+        verificationConcurrency: 6,
+        description: 'Balanced quality and speed',
+    },
+    slow: {
+        synthesisModel: 'anthropic/claude-sonnet-4.5',
+        verificationConcurrency: 4,
+        description: 'Highest quality, thorough verification',
+    },
+} as const;
+
+/** Default quality preset */
+export const DEFAULT_QUALITY_PRESET: QualityPreset = 'fast';
+
+// ============================================
 // MODEL CONFIGURATION
 // ============================================
 
 /** Model for query decomposition (fast, good at structured output) */
 export const DECOMPOSITION_MODEL = 'google/gemini-3-flash-preview';
 
-/** Model for answer synthesis (strong reasoning) */
-export const SYNTHESIS_MODEL = 'anthropic/claude-sonnet-4.5';
+/** Model for answer synthesis - DYNAMICALLY SET BY QUALITY PRESET */
+export const SYNTHESIS_MODEL = QUALITY_PRESETS[DEFAULT_QUALITY_PRESET].synthesisModel;
 
 /** Model for claim extraction (fast, simple task) */
 export const CLAIM_EXTRACTION_MODEL = 'google/gemini-3-flash-preview';
@@ -25,6 +67,9 @@ export const NLI_MODEL = 'google/gemini-3-flash-preview';
 
 /** Model for embeddings (via OpenRouter, modern and efficient) */
 export const EMBEDDING_MODEL = 'qwen/qwen3-embedding-8b';
+
+/** Default verification concurrency - DYNAMICALLY SET BY QUALITY PRESET */
+export const DEFAULT_VERIFICATION_CONCURRENCY = QUALITY_PRESETS[DEFAULT_QUALITY_PRESET].verificationConcurrency;
 
 // ============================================
 // DECOMPOSITION CONFIGURATION

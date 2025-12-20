@@ -237,3 +237,69 @@ const container = {
 | System prompt | `prompts.ts` | `SYSTEM_PROMPT` |
 | API timeout | `route.ts` | `maxDuration` |
 | Storage key | `store.ts` | `name` |
+
+---
+
+## Maxwell Settings
+
+### File: `app/lib/maxwell/constants.ts`
+
+### Quality Presets
+
+```typescript
+export type QualityPreset = 'fast' | 'medium' | 'slow';
+
+export const QUALITY_PRESETS = {
+    fast: {
+        synthesisModel: 'google/gemini-3-flash-preview',
+        verificationConcurrency: 8,
+        description: 'Fastest response, good quality',
+    },
+    medium: {
+        synthesisModel: 'anthropic/claude-sonnet-4.5',
+        verificationConcurrency: 6,
+        description: 'Balanced quality and speed',
+    },
+    slow: {
+        synthesisModel: 'anthropic/claude-sonnet-4.5',
+        verificationConcurrency: 4,
+        description: 'Highest quality, thorough verification',
+    },
+};
+
+export const DEFAULT_QUALITY_PRESET: QualityPreset = 'fast';
+```
+
+| Preset | Synthesis Model | Verification Concurrency | Use Case |
+|--------|-----------------|-------------------------|----------|
+| **FAST** (default) | Gemini 3.0 Flash | 8 | Live demos, quick answers |
+| MEDIUM | Claude Sonnet 4.5 | 6 | Balanced quality/speed |
+| SLOW | Claude Sonnet 4.5 | 4 | Maximum quality |
+
+### Model Configuration
+
+| Constant | Model | Purpose |
+|----------|-------|---------|
+| `DECOMPOSITION_MODEL` | google/gemini-3-flash-preview | Query breakdown |
+| `SYNTHESIS_MODEL` | (from preset) | Answer generation |
+| `CLAIM_EXTRACTION_MODEL` | google/gemini-3-flash-preview | Extract claims |
+| `NLI_MODEL` | google/gemini-3-flash-preview | Entailment check |
+| `EMBEDDING_MODEL` | qwen/qwen3-embedding-8b | Vector embeddings |
+
+### Verification Tuning
+
+| Constant | Default | Purpose |
+|----------|---------|---------|
+| `MAX_CLAIMS_TO_VERIFY` | 12 | Cap on claim count |
+| `HIGH_CONFIDENCE_THRESHOLD` | 0.72 | High confidence cutoff |
+| `MEDIUM_CONFIDENCE_THRESHOLD` | 0.42 | Medium confidence cutoff |
+
+### Future Preset Extensions
+
+Quality presets can be extended to control:
+- Number of sub-queries (`MIN_SUB_QUERIES`, `MAX_SUB_QUERIES`)
+- Results per search (`RESULTS_PER_QUERY`)
+- Search depth (`SEARCH_DEPTH`)
+- Maximum claims (`MAX_CLAIMS_TO_VERIFY`)
+- Synthesis token limit (`SYNTHESIS_MAX_TOKENS`)
+

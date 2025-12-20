@@ -28,6 +28,7 @@ import {
     LOW_RETRIEVAL_THRESHOLD,
     CITATION_MISMATCH_MULTIPLIER,
     NUMERIC_MISMATCH_MULTIPLIER,
+    DEFAULT_VERIFICATION_CONCURRENCY,
 } from './constants';
 
 import type {
@@ -204,6 +205,38 @@ export function chunkSourcesIntoPassages(sources: MaxwellSource[]): Passage[] {
     }
 
     return passages;
+}
+
+// ============================================
+// EVIDENCE PREPARATION (for parallel pipelining)
+// ============================================
+
+/**
+ * Prepared evidence for verification.
+ */
+export interface PreparedEvidence {
+    passages: Passage[];
+    embeddings: number[][];
+}
+
+/**
+ * Prepares evidence by chunking sources and embedding passages.
+ * This can be called in the background during synthesis to save time.
+ *
+ * @param sources - Array of sources to prepare
+ * @returns Passages and their embeddings, ready for verification
+ */
+export async function prepareEvidence(sources: MaxwellSource[]): Promise<PreparedEvidence> {
+    const passages = chunkSourcesIntoPassages(sources);
+
+    if (passages.length === 0) {
+        return { passages: [], embeddings: [] };
+    }
+
+    const texts = passages.map((p) => p.text);
+    const embeddings = await embedTexts(texts);
+
+    return { passages, embeddings };
 }
 
 // ============================================
@@ -506,12 +539,14 @@ export function aggregateSignals(
  * @param answer - The synthesized answer to verify
  * @param sources - The sources used in synthesis
  * @param onProgress - Optional callback for progress updates
+ * @param precomputedEvidence - Optional pre-computed evidence from background prep
  * @returns Complete verification output with all claims verified
  */
 export async function verifyClaims(
     answer: string,
     sources: MaxwellSource[],
-    onProgress?: VerificationProgressCallback
+    onProgress?: VerificationProgressCallback,
+    precomputedEvidence?: PreparedEvidence
 ): Promise<VerificationOutput> {
     const startTime = Date.now();
 
@@ -529,113 +564,130 @@ export async function verifyClaims(
         };
     }
 
-    // 2. Chunk sources into passages
-    onProgress?.({ current: 0, total: claims.length, status: 'Processing evidence...' });
-    const passages = chunkSourcesIntoPassages(sources);
+    // 2. Get evidence (use precomputed if available - OPTIMIZATION)
+    let passages: Passage[];
+    let passageEmbeddings: number[][];
+
+    if (precomputedEvidence && precomputedEvidence.passages.length > 0) {
+        // 🚀 FAST PATH: Evidence was prepared during synthesis
+        passages = precomputedEvidence.passages;
+        passageEmbeddings = precomputedEvidence.embeddings;
+    } else {
+        // SLOW PATH: Prepare evidence now (fallback)
+        onProgress?.({ current: 0, total: claims.length, status: 'Processing evidence...' });
+        const prep = await prepareEvidence(sources);
+        passages = prep.passages;
+        passageEmbeddings = prep.embeddings;
+    }
 
     if (passages.length === 0) {
         // If we have claims but no sources to check against, return low confidence
         return createNoEvidenceResult(claims, startTime);
     }
 
-    // 3. Batch embed all passages (optimization: do this once)
-    onProgress?.({ current: 0, total: claims.length, status: 'Embedding evidence...' });
-    const passageTexts = passages.map((p) => p.text);
-    const passageEmbeddings = await embedTexts(passageTexts);
+    // 3. Batch embed claims (passages already embedded)
+    onProgress?.({ current: 0, total: claims.length, status: 'Embedding claims...' });
+    const claimTexts = claims.map((c) => c.text);
+    const claimEmbeddings = await embedTexts(claimTexts);
 
-    // 4. Verify each claim with try/catch safety
-    const verifiedClaims: VerifiedClaim[] = [];
+    // 4. Verify claims in parallel with concurrency limit
+    // Concurrency set by quality preset (FAST=8, MEDIUM=6, SLOW=4)
+    const CONCURRENCY_LIMIT = DEFAULT_VERIFICATION_CONCURRENCY;
 
-    for (let i = 0; i < claims.length; i++) {
-        const claim = claims[i];
+    onProgress?.({ current: 0, total: claims.length, status: 'Verifying claims in parallel...' });
 
-        onProgress?.({
-            current: i + 1,
-            total: claims.length,
-            status: `Verifying claim ${i + 1}/${claims.length}...`,
-        });
-
-        try {
-            // 4a. Embed claim
-            const claimEmbedding = await embedText(claim.text);
-
-            // 4b. Retrieve best evidence
-            const retrieval = retrieveEvidence(
-                claimEmbedding,
-                passages,
-                passageEmbeddings,
-                claim.citedSources
-            );
-
-            // 4c. Check entailment via NLI
-            const entailment = await checkEntailment(
-                claim.text,
-                retrieval.bestPassage.text
-            );
-
-            // 4d. Check numeric consistency
-            const claimNumbers = extractNumbers(claim.text);
-            const evidenceNumbers = extractNumbers(retrieval.bestPassage.text);
-            const numericCheck =
-                claimNumbers.length > 0
-                    ? checkNumericConsistency(claimNumbers, evidenceNumbers)
-                    : null;
-
-            // 4e. Aggregate all signals
-            const verdict = aggregateSignals(
-                entailment.verdict,
-                retrieval.retrievalSimilarity,
-                retrieval.citationMismatch,
-                numericCheck
-            );
-
-            verifiedClaims.push({
-                id: claim.id,
-                text: claim.text,
-                confidence: verdict.confidence,
-                confidenceLevel: verdict.confidenceLevel,
-                entailment: entailment.verdict,
-                entailmentReasoning: entailment.reasoning,
-                bestMatchingSource: {
-                    sourceId: retrieval.bestPassage.sourceId,
-                    sourceTitle: retrieval.bestPassage.sourceTitle,
-                    sourceIndex: retrieval.bestPassage.sourceIndex,
-                    passage: retrieval.bestPassage.text,
-                    similarity: retrieval.retrievalSimilarity,
-                    isCitedSource: claim.citedSources.includes(retrieval.bestPassage.sourceIndex),
-                },
-                citationMismatch: retrieval.citationMismatch,
-                citedSourceSupport: retrieval.citedSourceSupport,
-                globalBestSupport: retrieval.globalBestSupport,
-                numericCheck,
-                issues: verdict.issues,
+    const verifiedClaims = await mapAsyncWithConcurrency(
+        claims,
+        CONCURRENCY_LIMIT,
+        async (claim, i) => {
+            onProgress?.({
+                current: i + 1,
+                total: claims.length,
+                status: `Verifying claims (${i + 1}/${claims.length})...`,
             });
-        } catch (error) {
-            // Fallback for failed claim verification - don't crash the whole pipeline
-            console.error(`[Maxwell Verifier] Failed to verify claim "${claim.text}":`, error);
-            verifiedClaims.push({
-                id: claim.id,
-                text: claim.text,
-                confidence: 0,
-                confidenceLevel: 'low',
-                entailment: 'NEUTRAL',
-                entailmentReasoning: 'Verification failed due to internal error',
-                bestMatchingSource: {
-                    sourceId: '',
-                    sourceTitle: 'Error',
-                    sourceIndex: 0,
-                    passage: '',
-                    similarity: 0,
-                    isCitedSource: false,
-                },
-                citationMismatch: false,
-                citedSourceSupport: 0,
-                globalBestSupport: 0,
-                numericCheck: null,
-                issues: ['System error during verification'],
-            });
+
+            try {
+                // 4a. Use pre-computed claim embedding (no network call!)
+                const claimEmbedding = claimEmbeddings[i];
+
+                // 4b. Retrieve best evidence (CPU-bound, fast)
+                const retrieval = retrieveEvidence(
+                    claimEmbedding,
+                    passages,
+                    passageEmbeddings,
+                    claim.citedSources
+                );
+
+                // 4c. Check entailment via NLI (network-bound, now parallel)
+                const entailment = await checkEntailment(
+                    claim.text,
+                    retrieval.bestPassage.text
+                );
+
+                // 4d. Check numeric consistency (CPU-bound, fast)
+                const claimNumbers = extractNumbers(claim.text);
+                const evidenceNumbers = extractNumbers(retrieval.bestPassage.text);
+                const numericCheck =
+                    claimNumbers.length > 0
+                        ? checkNumericConsistency(claimNumbers, evidenceNumbers)
+                        : null;
+
+                // 4e. Aggregate all signals
+                const verdict = aggregateSignals(
+                    entailment.verdict,
+                    retrieval.retrievalSimilarity,
+                    retrieval.citationMismatch,
+                    numericCheck
+                );
+
+                return {
+                    id: claim.id,
+                    text: claim.text,
+                    confidence: verdict.confidence,
+                    confidenceLevel: verdict.confidenceLevel,
+                    entailment: entailment.verdict,
+                    entailmentReasoning: entailment.reasoning,
+                    bestMatchingSource: {
+                        sourceId: retrieval.bestPassage.sourceId,
+                        sourceTitle: retrieval.bestPassage.sourceTitle,
+                        sourceIndex: retrieval.bestPassage.sourceIndex,
+                        passage: retrieval.bestPassage.text,
+                        similarity: retrieval.retrievalSimilarity,
+                        isCitedSource: claim.citedSources.includes(retrieval.bestPassage.sourceIndex),
+                    },
+                    citationMismatch: retrieval.citationMismatch,
+                    citedSourceSupport: retrieval.citedSourceSupport,
+                    globalBestSupport: retrieval.globalBestSupport,
+                    numericCheck,
+                    issues: verdict.issues,
+                } as VerifiedClaim;
+            } catch (error) {
+                // Fallback for failed claim - doesn't affect other claims
+                console.error(`[Maxwell Verifier] Failed to verify claim "${claim.text}":`, error);
+                return {
+                    id: claim.id,
+                    text: claim.text,
+                    confidence: 0,
+                    confidenceLevel: 'low',
+                    entailment: 'NEUTRAL',
+                    entailmentReasoning: 'Verification failed due to internal error',
+                    bestMatchingSource: {
+                        sourceId: '',
+                        sourceTitle: 'Error',
+                        sourceIndex: 0,
+                        passage: '',
+                        similarity: 0,
+                        isCitedSource: false,
+                    },
+                    citationMismatch: false,
+                    citedSourceSupport: 0,
+                    globalBestSupport: 0,
+                    numericCheck: null,
+                    issues: ['System error during verification'],
+                } as VerifiedClaim;
+            }
         }
-    }
+    );
 
     // 5. Calculate summary and overall confidence
     const confidenceScores = verifiedClaims.map((c) => c.confidence);
@@ -718,8 +770,52 @@ export function validateVerificationOutput(output: VerificationOutput): boolean 
 }
 
 // ============================================
+// CONCURRENCY UTILITY
+// ============================================
+
+/**
+ * Processes items in parallel with a concurrency limit.
+ * Race-condition safe: uses pre-allocated results array with index-based writes.
+ *
+ * @param items - Array of items to process
+ * @param concurrency - Maximum number of concurrent operations
+ * @param fn - Async function to process each item
+ * @returns Array of results in same order as input
+ */
+async function mapAsyncWithConcurrency<T, U>(
+    items: T[],
+    concurrency: number,
+    fn: (item: T, index: number) => Promise<U>
+): Promise<U[]> {
+    // Pre-allocate results array to guarantee order preservation
+    const results = new Array<U>(items.length);
+
+    // Create work queue with original indices
+    // Each worker pulls from this queue - shift() is atomic in JS single-threaded event loop
+    const queue = items.map((item, index) => ({ item, index }));
+
+    // Worker function - each worker processes items until queue is empty
+    const worker = async (): Promise<void> => {
+        while (queue.length > 0) {
+            const task = queue.shift();
+            if (task) {
+                // Each worker writes to its own index - no race conditions
+                results[task.index] = await fn(task.item, task.index);
+            }
+        }
+    };
+
+    // Spawn workers up to concurrency limit (or item count if smaller)
+    const workerCount = Math.min(concurrency, items.length);
+    await Promise.all(Array.from({ length: workerCount }, worker));
+
+    return results;
+}
+
+// ============================================
 // EXPORTS
 // ============================================
 
 // Export schemas for potential use in next phases
 export { ClaimsSchema, EntailmentSchema };
+
