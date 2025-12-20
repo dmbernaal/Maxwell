@@ -13,6 +13,8 @@ export const maxDuration = 60;
 
 // Delimiter for sources section (must be unique and unlikely in normal text)
 export const SOURCES_DELIMITER = '\n\n---SOURCES_JSON---\n';
+// Delimiter for debug steps (interspersed in stream)
+export const DEBUG_DELIMITER = '\n\n---DEBUG_JSON---\n';
 
 export async function POST(req: Request) {
     try {
@@ -47,6 +49,15 @@ export async function POST(req: Request) {
                     for await (const event of streamAgentWithSources(messages, modelId)) {
                         if (event.type === 'text') {
                             controller.enqueue(encoder.encode(event.content));
+                        } else if (event.type === 'debug') {
+                             // Stream debug event immediately
+                             const debugJson = JSON.stringify({
+                                 id: Math.random().toString(36).substring(7),
+                                 type: 'tool_call', // Simplified for now
+                                 content: event.content,
+                                 timestamp: Date.now()
+                             });
+                             controller.enqueue(encoder.encode(DEBUG_DELIMITER + debugJson + DEBUG_DELIMITER));
                         } else if (event.type === 'sources') {
                             // Append sources at the end
                             console.log('[API] Appending sources:', event.sources.length);

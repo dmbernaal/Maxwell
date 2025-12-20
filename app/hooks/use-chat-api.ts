@@ -2,11 +2,12 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { useChatStore } from '../store';
-import type { Source } from '../types';
+import type { Source, DebugStep } from '../types';
 import { DEFAULT_MODEL } from '../lib/models';
 
 // Must match the delimiter in route.ts
 const SOURCES_DELIMITER = '\n\n---SOURCES_JSON---\n';
+const DEBUG_DELIMITER = '\n\n---DEBUG_JSON---\n';
 
 interface UseChatApiOptions {
     model?: string;
@@ -21,26 +22,60 @@ interface UseChatApiReturn {
 }
 
 /**
- * Parse sources JSON from the end of the stream
+ * Parse content to extract sources and debug steps
  */
-function parseSourcesFromText(text: string): { content: string; sources: Source[] } {
-    const delimiterIndex = text.indexOf(SOURCES_DELIMITER);
+function parseStreamContent(text: string): { cleanText: string; sources: Source[]; debugSteps: DebugStep[] } {
+    let cleanText = text;
+    let sources: Source[] = [];
+    const debugSteps: DebugStep[] = [];
 
-    if (delimiterIndex === -1) {
-        return { content: text, sources: [] };
+    // 1. Extract Sources (at the end)
+    const sourcesSplit = cleanText.split(SOURCES_DELIMITER);
+    if (sourcesSplit.length > 1) {
+        cleanText = sourcesSplit[0]; // Remove sources part from text
+        try {
+            // Only try to parse if we have content after the delimiter
+            if (sourcesSplit[1].trim()) {
+                sources = JSON.parse(sourcesSplit[1]) as Source[];
+            }
+        } catch (error) {
+            console.error('[useChatApi] Failed to parse sources:', error);
+        }
     }
 
-    const content = text.substring(0, delimiterIndex);
-    const sourcesJson = text.substring(delimiterIndex + SOURCES_DELIMITER.length);
-
-    try {
-        const sources = JSON.parse(sourcesJson) as Source[];
-        console.log('[useChatApi] Parsed sources:', sources.length);
-        return { content, sources };
-    } catch (error) {
-        console.error('[useChatApi] Failed to parse sources:', error);
-        return { content: text, sources: [] };
+    // 2. Extract Debug Steps (interspersed)
+    // Regex to match: DELIMITER + (content) + DELIMITER
+    // We use [\s\S]*? for non-greedy multiline match
+    const debugRegex = new RegExp(`${DEBUG_DELIMITER}([\\s\\S]*?)${DEBUG_DELIMITER}`, 'g');
+    
+    let match;
+    while ((match = debugRegex.exec(text)) !== null) {
+        try {
+            const step = JSON.parse(match[1]);
+            // Avoid duplicates if parsing same text multiple times (though we rebuild array each time)
+            if (!debugSteps.find(s => s.id === step.id)) {
+                debugSteps.push(step);
+            }
+        } catch (error) {
+            console.error('[useChatApi] Failed to parse debug step:', error);
+        }
     }
+
+    // Remove all debug blocks from cleanText
+    cleanText = cleanText.replace(debugRegex, '');
+
+    // 3. Handle partial debug blocks at the end of the stream (to prevent flashing raw protocol text)
+    // If text ends with start of delimiter, trim it
+    const partialStart = DEBUG_DELIMITER.substring(0, 10); // Check first few chars
+    const lastIndex = cleanText.lastIndexOf(partialStart);
+    if (lastIndex !== -1 && lastIndex > cleanText.length - 50) { // Only if near end
+         // Check if it actually matches the start of the full delimiter
+         if (DEBUG_DELIMITER.startsWith(cleanText.substring(lastIndex))) {
+             cleanText = cleanText.substring(0, lastIndex);
+         }
+    }
+
+    return { cleanText, sources, debugSteps };
 }
 
 /**
@@ -142,19 +177,20 @@ export function useChatApi(options: UseChatApiOptions = {}): UseChatApiReturn {
                 updateCount++;
 
                 // Don't show the sources delimiter in the UI during streaming
-                const displayText = accumulatedText.split(SOURCES_DELIMITER)[0];
+                // Parse content to get clean text and debug steps
+                const { cleanText, debugSteps } = parseStreamContent(accumulatedText);
 
                 // Update message every few chunks for performance
                 if (updateCount % 3 === 0) {
-                    updateMessage(agentMessageId, displayText, undefined, sessionId);
+                    updateMessage(agentMessageId, cleanText, undefined, sessionId, debugSteps);
                 }
             }
 
             // 7. Parse sources from the complete response
-            const { content: finalContent, sources } = parseSourcesFromText(accumulatedText);
+            const { cleanText: finalContent, sources, debugSteps } = parseStreamContent(accumulatedText);
 
-            // Final update with sources
-            updateMessage(agentMessageId, finalContent, sources, sessionId);
+            // Final update with sources and debug steps
+            updateMessage(agentMessageId, finalContent, sources, sessionId, debugSteps);
             console.log('[useChatApi] Final update with sources:', sources.length);
 
             // 8. Set complete state

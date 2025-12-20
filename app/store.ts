@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import { AgentState, Message, ChatSession, Source } from './types';
+import { AgentState, Message, ChatSession, Source, DebugStep } from './types';
 
 interface ChatStore {
   // State
@@ -13,8 +13,8 @@ interface ChatStore {
   createSession: () => string;
   switchSession: (sessionId: string) => void;
   deleteSession: (sessionId: string) => void;
-  addMessage: (content: string, role: 'user' | 'agent', verified?: boolean, sessionId?: string, sources?: Source[]) => string;
-  updateMessage: (messageId: string, content: string, sources?: Source[], sessionId?: string) => void;
+  addMessage: (content: string, role: 'user' | 'agent', verified?: boolean, sessionId?: string, sources?: Source[], debugSteps?: DebugStep[]) => string;
+  updateMessage: (messageId: string, content: string, sources?: Source[], sessionId?: string, debugSteps?: DebugStep[]) => void;
   setAgentState: (state: AgentState, sessionId?: string) => void;
   setHasHydrated: (state: boolean) => void;
 
@@ -69,7 +69,7 @@ export const useChatStore = create<ChatStore>()(
         });
       },
 
-      addMessage: (content, role, verified = false, sessionId, sources) => {
+      addMessage: (content, role, verified = false, sessionId, sources, debugSteps) => {
         const messageId = uuidv4();
         set((state) => {
           // Use provided sessionId or fallback to activeSessionId
@@ -85,6 +85,7 @@ export const useChatStore = create<ChatStore>()(
             verified,
             timestamp: Date.now(),
             sources,
+            debugSteps,
           };
 
           // Auto-generate title from first user message if it's "New Conversation"
@@ -108,7 +109,7 @@ export const useChatStore = create<ChatStore>()(
         return messageId;
       },
 
-      updateMessage: (messageId, content, sources, sessionId) => {
+      updateMessage: (messageId, content, sources, sessionId, debugSteps) => {
         set((state) => {
           const targetId = sessionId || state.activeSessionId;
           if (!targetId || !state.sessions[targetId]) return state;
@@ -122,6 +123,7 @@ export const useChatStore = create<ChatStore>()(
             ...updatedMessages[messageIndex],
             content,
             sources: sources ?? updatedMessages[messageIndex].sources,
+            debugSteps: debugSteps ?? updatedMessages[messageIndex].debugSteps,
           };
 
           return {

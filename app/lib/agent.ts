@@ -75,7 +75,7 @@ export async function runAgent(messages: CoreMessage[], modelId: string = DEFAUL
  * @param messages - Chat messages from the client
  * @param modelId - Optional model ID to use (defaults to configured default)
  */
-export async function* streamAgentWithSources(messages: CoreMessage[], modelId: string = DEFAULT_MODEL): AsyncGenerator<{ type: 'text'; content: string } | { type: 'sources'; sources: Source[] }> {
+export async function* streamAgentWithSources(messages: CoreMessage[], modelId: string = DEFAULT_MODEL): AsyncGenerator<{ type: 'text'; content: string } | { type: 'sources'; sources: Source[] } | { type: 'debug'; content: string }> {
     console.log('[Agent] Starting with sources streaming, model:', modelId);
 
     const tools = getToolsForModel(modelId);
@@ -95,6 +95,16 @@ export async function* streamAgentWithSources(messages: CoreMessage[], modelId: 
     for await (const event of result.fullStream) {
         if (event.type === 'text-delta') {
             yield { type: 'text', content: event.text };
+        } else if (event.type === 'tool-call') {
+            const toolName = event.toolName;
+            const args = event.args;
+            
+            if (toolName === 'search' && args && typeof args === 'object' && 'query' in args) {
+               const query = (args as { query: string }).query;
+               yield { type: 'debug', content: `Searching: "${query}"` };
+            } else {
+               yield { type: 'debug', content: `Using tool: ${toolName}` };
+            }
         } else if (event.type === 'tool-result') {
             // Extract sources from tool result (AI SDK v5 uses 'output' property)
             const toolResult = event as unknown as { output: { results?: Source[]; error?: string } };
@@ -102,6 +112,7 @@ export async function* streamAgentWithSources(messages: CoreMessage[], modelId: 
             if (searchResults && Array.isArray(searchResults)) {
                 console.log('[Agent] Collected sources:', searchResults.length);
                 collectedSources.push(...searchResults);
+                yield { type: 'debug', content: `Found ${searchResults.length} sources` };
             }
         }
     }

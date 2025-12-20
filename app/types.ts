@@ -1,5 +1,12 @@
 export type AgentState = 'relaxed' | 'thinking' | 'orchestrating' | 'synthesizing' | 'complete';
 
+export interface DebugStep {
+  id: string;
+  type: 'tool_call' | 'tool_result' | 'thought';
+  content: string;
+  timestamp: number;
+}
+
 /**
  * A source from web search (Tavily)
  */
@@ -17,6 +24,7 @@ export interface Message {
   verified?: boolean;
   timestamp: number;
   sources?: Source[];
+  debugSteps?: DebugStep[];
 }
 
 export interface ChatSession {
