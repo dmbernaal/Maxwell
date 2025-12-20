@@ -12,7 +12,7 @@ import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { z } from 'zod';
 
 import { createClaimExtractionPrompt, createNLIPrompt } from './prompts';
-import { cosineSimilarity } from './embeddings';
+import { embedText, embedTexts, cosineSimilarity } from './embeddings';
 import {
     CLAIM_EXTRACTION_MODEL,
     NLI_MODEL,
@@ -38,7 +38,28 @@ import type {
     EntailmentVerdict,
     NumericCheck,
     AggregatedVerdict,
+    VerifiedClaim,
+    VerificationOutput,
+    VerificationSummary,
 } from './types';
+
+// ============================================
+// PROGRESS TYPES
+// ============================================
+
+/**
+ * Progress update during verification.
+ */
+export interface VerificationProgress {
+    current: number;
+    total: number;
+    status: string;
+}
+
+/**
+ * Callback for verification progress updates.
+ */
+export type VerificationProgressCallback = (progress: VerificationProgress) => void;
 
 // ============================================
 // OPENROUTER CLIENT
@@ -472,6 +493,228 @@ export function aggregateSignals(
     else confidenceLevel = 'low';
 
     return { confidence, confidenceLevel, issues };
+}
+
+// ============================================
+// MAIN VERIFICATION FUNCTION
+// ============================================
+
+/**
+ * Main verification orchestrator.
+ * Connects: Extraction → Chunking → Embedding → Retrieval → NLI → Aggregation
+ *
+ * @param answer - The synthesized answer to verify
+ * @param sources - The sources used in synthesis
+ * @param onProgress - Optional callback for progress updates
+ * @returns Complete verification output with all claims verified
+ */
+export async function verifyClaims(
+    answer: string,
+    sources: MaxwellSource[],
+    onProgress?: VerificationProgressCallback
+): Promise<VerificationOutput> {
+    const startTime = Date.now();
+
+    // 1. Extract claims
+    onProgress?.({ current: 0, total: 1, status: 'Extracting factual claims...' });
+    const claims = await extractClaims(answer);
+
+    // Handle no claims
+    if (claims.length === 0) {
+        return {
+            claims: [],
+            overallConfidence: 0,
+            summary: createEmptySummary(),
+            durationMs: Date.now() - startTime,
+        };
+    }
+
+    // 2. Chunk sources into passages
+    onProgress?.({ current: 0, total: claims.length, status: 'Processing evidence...' });
+    const passages = chunkSourcesIntoPassages(sources);
+
+    if (passages.length === 0) {
+        // If we have claims but no sources to check against, return low confidence
+        return createNoEvidenceResult(claims, startTime);
+    }
+
+    // 3. Batch embed all passages (optimization: do this once)
+    onProgress?.({ current: 0, total: claims.length, status: 'Embedding evidence...' });
+    const passageTexts = passages.map((p) => p.text);
+    const passageEmbeddings = await embedTexts(passageTexts);
+
+    // 4. Verify each claim with try/catch safety
+    const verifiedClaims: VerifiedClaim[] = [];
+
+    for (let i = 0; i < claims.length; i++) {
+        const claim = claims[i];
+
+        onProgress?.({
+            current: i + 1,
+            total: claims.length,
+            status: `Verifying claim ${i + 1}/${claims.length}...`,
+        });
+
+        try {
+            // 4a. Embed claim
+            const claimEmbedding = await embedText(claim.text);
+
+            // 4b. Retrieve best evidence
+            const retrieval = retrieveEvidence(
+                claimEmbedding,
+                passages,
+                passageEmbeddings,
+                claim.citedSources
+            );
+
+            // 4c. Check entailment via NLI
+            const entailment = await checkEntailment(
+                claim.text,
+                retrieval.bestPassage.text
+            );
+
+            // 4d. Check numeric consistency
+            const claimNumbers = extractNumbers(claim.text);
+            const evidenceNumbers = extractNumbers(retrieval.bestPassage.text);
+            const numericCheck =
+                claimNumbers.length > 0
+                    ? checkNumericConsistency(claimNumbers, evidenceNumbers)
+                    : null;
+
+            // 4e. Aggregate all signals
+            const verdict = aggregateSignals(
+                entailment.verdict,
+                retrieval.retrievalSimilarity,
+                retrieval.citationMismatch,
+                numericCheck
+            );
+
+            verifiedClaims.push({
+                id: claim.id,
+                text: claim.text,
+                confidence: verdict.confidence,
+                confidenceLevel: verdict.confidenceLevel,
+                entailment: entailment.verdict,
+                entailmentReasoning: entailment.reasoning,
+                bestMatchingSource: {
+                    sourceId: retrieval.bestPassage.sourceId,
+                    sourceTitle: retrieval.bestPassage.sourceTitle,
+                    sourceIndex: retrieval.bestPassage.sourceIndex,
+                    passage: retrieval.bestPassage.text,
+                    similarity: retrieval.retrievalSimilarity,
+                    isCitedSource: claim.citedSources.includes(retrieval.bestPassage.sourceIndex),
+                },
+                citationMismatch: retrieval.citationMismatch,
+                citedSourceSupport: retrieval.citedSourceSupport,
+                globalBestSupport: retrieval.globalBestSupport,
+                numericCheck,
+                issues: verdict.issues,
+            });
+        } catch (error) {
+            // Fallback for failed claim verification - don't crash the whole pipeline
+            console.error(`[Maxwell Verifier] Failed to verify claim "${claim.text}":`, error);
+            verifiedClaims.push({
+                id: claim.id,
+                text: claim.text,
+                confidence: 0,
+                confidenceLevel: 'low',
+                entailment: 'NEUTRAL',
+                entailmentReasoning: 'Verification failed due to internal error',
+                bestMatchingSource: {
+                    sourceId: '',
+                    sourceTitle: 'Error',
+                    sourceIndex: 0,
+                    passage: '',
+                    similarity: 0,
+                    isCitedSource: false,
+                },
+                citationMismatch: false,
+                citedSourceSupport: 0,
+                globalBestSupport: 0,
+                numericCheck: null,
+                issues: ['System error during verification'],
+            });
+        }
+    }
+
+    // 5. Calculate summary and overall confidence
+    const confidenceScores = verifiedClaims.map((c) => c.confidence);
+    const avgConf = confidenceScores.reduce((a, b) => a + b, 0) / (confidenceScores.length || 1);
+
+    return {
+        claims: verifiedClaims,
+        overallConfidence: Math.round(avgConf * 100),
+        summary: {
+            supported: verifiedClaims.filter((c) => c.entailment === 'SUPPORTED').length,
+            uncertain: verifiedClaims.filter((c) => c.entailment === 'NEUTRAL').length,
+            contradicted: verifiedClaims.filter((c) => c.entailment === 'CONTRADICTED').length,
+            citationMismatches: verifiedClaims.filter((c) => c.citationMismatch).length,
+            numericMismatches: verifiedClaims.filter((c) => c.numericCheck && !c.numericCheck.match).length,
+        },
+        durationMs: Date.now() - startTime,
+    };
+}
+
+// ============================================
+// HELPERS
+// ============================================
+
+/**
+ * Creates an empty verification summary.
+ */
+function createEmptySummary(): VerificationSummary {
+    return {
+        supported: 0,
+        uncertain: 0,
+        contradicted: 0,
+        citationMismatches: 0,
+        numericMismatches: 0,
+    };
+}
+
+/**
+ * Creates a result when no evidence is available.
+ */
+function createNoEvidenceResult(
+    claims: ExtractedClaim[],
+    startTime: number
+): VerificationOutput {
+    return {
+        claims: claims.map((c) => ({
+            id: c.id,
+            text: c.text,
+            confidence: 0,
+            confidenceLevel: 'low' as const,
+            entailment: 'NEUTRAL' as const,
+            entailmentReasoning: 'No evidence available',
+            bestMatchingSource: {
+                sourceId: '',
+                sourceTitle: '',
+                sourceIndex: 0,
+                passage: '',
+                similarity: 0,
+                isCitedSource: false,
+            },
+            citationMismatch: false,
+            citedSourceSupport: 0,
+            globalBestSupport: 0,
+            numericCheck: null,
+            issues: ['No sources available for verification'],
+        })),
+        overallConfidence: 0,
+        summary: { ...createEmptySummary(), uncertain: claims.length },
+        durationMs: Date.now() - startTime,
+    };
+}
+
+/**
+ * Validates verification output structure.
+ */
+export function validateVerificationOutput(output: VerificationOutput): boolean {
+    if (!Array.isArray(output.claims)) throw new Error('claims must be array');
+    if (typeof output.overallConfidence !== 'number') throw new Error('overallConfidence must be number');
+    if (!output.summary) throw new Error('summary missing');
+    return true;
 }
 
 // ============================================

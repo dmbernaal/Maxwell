@@ -263,3 +263,31 @@ This file tracks the completion of each implementation phase.
 - [x] Numeric mismatch correctly penalized (1.0 → 0.4)
 - [x] CONTRADICTED → 0.15 confidence (low)
 
+---
+
+## Phase 8: Verification Assembly
+**Status**: ✅ Complete  
+**Completed**: December 19, 2024
+
+### Files Modified
+- `app/lib/maxwell/verifier.ts` - Added main orchestrator
+
+### Functions Added
+| Function | Purpose |
+|----------|---------|
+| `verifyClaims(answer, sources, onProgress?)` | Main orchestrator |
+| `validateVerificationOutput(output)` | Runtime structure validation |
+
+### Key Features
+- **Full Pipeline**: Extraction → Chunking → Embedding → Retrieval → NLI → Aggregation
+- **Try/Catch Safety**: Individual claim failures don't crash pipeline
+- **Progress Callbacks**: Real-time UI updates during verification
+- **Batched Embeddings**: Passages embedded once, reused for all claims
+
+### Tests Passed
+- [x] Full pipeline: 2 claims verified in 5327ms
+- [x] Both claims SUPPORTED with 100% confidence
+- [x] Progress callbacks fired (5 times)
+- [x] Output validation works
+- [x] Empty answer handling
+- [x] No sources handling
