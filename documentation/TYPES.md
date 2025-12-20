@@ -306,6 +306,18 @@ interface RetrievalResult {
 }
 ```
 
+### AggregatedVerdict
+
+Aggregated verdict from all verification signals.
+
+```typescript
+interface AggregatedVerdict {
+    confidence: number;                    // 0.0 to 1.0
+    confidenceLevel: 'high' | 'medium' | 'low';
+    issues: string[];                      // List of issues found
+}
+```
+
 ### VerifiedClaim
 
 A claim that has been through multi-signal verification.

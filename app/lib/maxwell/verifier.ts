@@ -11,13 +11,23 @@ import { generateObject } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { z } from 'zod';
 
-import { createClaimExtractionPrompt } from './prompts';
+import { createClaimExtractionPrompt, createNLIPrompt } from './prompts';
 import { cosineSimilarity } from './embeddings';
 import {
     CLAIM_EXTRACTION_MODEL,
+    NLI_MODEL,
     MAX_CLAIMS_TO_VERIFY,
     MIN_PASSAGE_LENGTH,
     CITATION_MISMATCH_THRESHOLD,
+    HIGH_CONFIDENCE_THRESHOLD,
+    MEDIUM_CONFIDENCE_THRESHOLD,
+    ENTAILMENT_SUPPORTED_CONFIDENCE,
+    ENTAILMENT_NEUTRAL_CONFIDENCE,
+    ENTAILMENT_CONTRADICTED_CONFIDENCE,
+    LOW_RETRIEVAL_MULTIPLIER,
+    LOW_RETRIEVAL_THRESHOLD,
+    CITATION_MISMATCH_MULTIPLIER,
+    NUMERIC_MISMATCH_MULTIPLIER,
 } from './constants';
 
 import type {
@@ -25,6 +35,9 @@ import type {
     ExtractedClaim,
     Passage,
     RetrievalResult,
+    EntailmentVerdict,
+    NumericCheck,
+    AggregatedVerdict,
 } from './types';
 
 // ============================================
@@ -58,6 +71,14 @@ const ClaimsSchema = z.object({
             citedSources: z.array(z.number()),
         })
     ),
+});
+
+/**
+ * Zod schema for NLI entailment LLM output.
+ */
+const EntailmentSchema = z.object({
+    verdict: z.enum(['SUPPORTED', 'CONTRADICTED', 'NEUTRAL']),
+    reasoning: z.string(),
 });
 
 // ============================================
@@ -223,8 +244,239 @@ export function retrieveEvidence(
 }
 
 // ============================================
+// NLI ENTAILMENT CHECK
+// ============================================
+
+/**
+ * Checks if evidence supports, contradicts, or is neutral to a claim.
+ *
+ * @param claim - The factual claim to verify
+ * @param evidence - The evidence passage to check against
+ * @returns Verdict and reasoning from NLI model
+ */
+export async function checkEntailment(
+    claim: string,
+    evidence: string
+): Promise<{ verdict: EntailmentVerdict; reasoning: string }> {
+    if (!claim || !evidence) {
+        return { verdict: 'NEUTRAL', reasoning: 'Missing claim or evidence' };
+    }
+
+    try {
+        const openrouter = getOpenRouterClient();
+        const prompt = createNLIPrompt(claim, evidence);
+
+        const { object } = await generateObject({
+            model: openrouter(NLI_MODEL),
+            schema: EntailmentSchema,
+            prompt,
+        });
+
+        return {
+            verdict: object.verdict,
+            reasoning: object.reasoning,
+        };
+    } catch (error) {
+        console.error('[Maxwell Verifier] NLI check failed:', error);
+        return { verdict: 'NEUTRAL', reasoning: 'NLI check failed' };
+    }
+}
+
+// ============================================
+// NUMERIC EXTRACTION
+// ============================================
+
+/**
+ * Patterns for extracting numbers from text.
+ */
+const NUMBER_PATTERNS = [
+    /[$¥€£][\d,.]+\s*[BMKbmk](?:illion|illion)?/gi, // Currency + suffix
+    /[\d,.]+%/g, // Percentages
+    /\b\d{1,3}(?:,\d{3})+(?:\.\d+)?\b/g, // Comma separated
+    /\b\d+\.\d+\b/g, // Decimals
+    /\b\d+\s*(?:billion|million|thousand|trillion)/gi, // Number + unit
+    /\b(19|20)\d{2}\b/g, // Years
+    /\b\d{4,}\b/g, // Large integers
+];
+
+/**
+ * Extracts all numbers from text using multiple patterns.
+ *
+ * @param text - Text to extract numbers from
+ * @returns Array of number strings found
+ */
+export function extractNumbers(text: string): string[] {
+    if (!text) return [];
+    const numbers = new Set<string>();
+
+    for (const pattern of NUMBER_PATTERNS) {
+        const matches = text.match(pattern);
+        if (matches) {
+            matches.forEach((m) => numbers.add(m.toLowerCase().trim()));
+        }
+    }
+
+    return Array.from(numbers);
+}
+
+/**
+ * Normalizes a number string to a numeric value.
+ * Handles B/M/K suffixes, currencies, and percentages.
+ *
+ * @param numStr - Number string like "$96.8 billion" or "18.5%"
+ * @returns Normalized number or null if invalid
+ */
+export function normalizeNumber(numStr: string): number | null {
+    if (!numStr) return null;
+
+    // Clean string
+    let cleaned = numStr.replace(/[$¥€£,]/g, '').toLowerCase().trim();
+
+    // Percentages - keep as-is (18.8% → 18.8)
+    if (cleaned.endsWith('%')) {
+        const val = parseFloat(cleaned);
+        return isNaN(val) ? null : val;
+    }
+
+    // Suffixes
+    let multiplier = 1;
+    if (cleaned.match(/t(rillion)?$/)) multiplier = 1e12;
+    else if (cleaned.match(/b(illion)?$/)) multiplier = 1e9;
+    else if (cleaned.match(/m(illion)?$/)) multiplier = 1e6;
+    else if (cleaned.match(/k(ousand)?$/)) multiplier = 1e3;
+
+    // Remove words to parse
+    cleaned = cleaned.replace(/[a-z%]/g, '').trim();
+
+    const val = parseFloat(cleaned);
+    return isNaN(val) ? null : val * multiplier;
+}
+
+/**
+ * Checks if two number strings represent the same value.
+ *
+ * @param a - First number string
+ * @param b - Second number string
+ * @returns True if numbers match within tolerance
+ */
+function numbersMatch(a: string, b: string): boolean {
+    const valA = normalizeNumber(a);
+    const valB = normalizeNumber(b);
+
+    if (valA === null || valB === null) return false;
+
+    // Percentages need exactish match (0.5 tolerance)
+    if (a.includes('%') || b.includes('%')) {
+        return Math.abs(valA - valB) < 0.5;
+    }
+
+    // Standard tolerance (5%)
+    if (valA === 0) return valB === 0;
+    const ratio = valA / valB;
+    return ratio > 0.95 && ratio < 1.05;
+}
+
+/**
+ * Checks if numbers in claim match numbers in evidence.
+ *
+ * @param claimNumbers - Numbers extracted from claim
+ * @param evidenceNumbers - Numbers extracted from evidence
+ * @returns NumericCheck result
+ */
+export function checkNumericConsistency(
+    claimNumbers: string[],
+    evidenceNumbers: string[]
+): NumericCheck {
+    if (claimNumbers.length === 0) {
+        return { claimNumbers, evidenceNumbers, match: true };
+    }
+
+    let allMatch = true;
+
+    for (const claimNum of claimNumbers) {
+        // Ignore years in consistency check (context, not stats)
+        if (/^(19|20)\d{2}$/.test(claimNum)) continue;
+
+        // Check if this number exists in evidence
+        const found = evidenceNumbers.some((evNum) => numbersMatch(claimNum, evNum));
+        if (!found) {
+            allMatch = false;
+            break;
+        }
+    }
+
+    return { claimNumbers, evidenceNumbers, match: allMatch };
+}
+
+// ============================================
+// SIGNAL AGGREGATION
+// ============================================
+
+/**
+ * Aggregates all verification signals into a final confidence score.
+ *
+ * @param entailment - NLI verdict
+ * @param retrievalSimilarity - Semantic similarity score
+ * @param citationMismatch - Whether best evidence was from uncited source
+ * @param numericCheck - Result of numeric consistency check
+ * @returns Aggregated verdict with confidence and issues
+ */
+export function aggregateSignals(
+    entailment: EntailmentVerdict,
+    retrievalSimilarity: number,
+    citationMismatch: boolean,
+    numericCheck: NumericCheck | null
+): AggregatedVerdict {
+    const issues: string[] = [];
+    let confidence: number;
+
+    // 1. Base Confidence from NLI
+    switch (entailment) {
+        case 'SUPPORTED':
+            confidence = ENTAILMENT_SUPPORTED_CONFIDENCE;
+            break;
+        case 'CONTRADICTED':
+            confidence = ENTAILMENT_CONTRADICTED_CONFIDENCE;
+            issues.push('Evidence contradicts claim');
+            break;
+        case 'NEUTRAL':
+            confidence = ENTAILMENT_NEUTRAL_CONFIDENCE;
+            issues.push('Evidence is neutral/irrelevant');
+            break;
+    }
+
+    // 2. Retrieval Penalty
+    if (retrievalSimilarity < LOW_RETRIEVAL_THRESHOLD) {
+        confidence *= LOW_RETRIEVAL_MULTIPLIER;
+        issues.push('Low semantic similarity');
+    }
+
+    // 3. Citation Penalty
+    if (citationMismatch) {
+        confidence *= CITATION_MISMATCH_MULTIPLIER;
+        issues.push('Better evidence found in uncited source');
+    }
+
+    // 4. Numeric Penalty (Severe)
+    if (numericCheck && !numericCheck.match) {
+        confidence *= NUMERIC_MISMATCH_MULTIPLIER;
+        issues.push(
+            `Numeric mismatch: [${numericCheck.claimNumbers.join(', ')}] vs [${numericCheck.evidenceNumbers.join(', ')}]`
+        );
+    }
+
+    // Determine confidence level
+    let confidenceLevel: 'high' | 'medium' | 'low';
+    if (confidence >= HIGH_CONFIDENCE_THRESHOLD) confidenceLevel = 'high';
+    else if (confidence >= MEDIUM_CONFIDENCE_THRESHOLD) confidenceLevel = 'medium';
+    else confidenceLevel = 'low';
+
+    return { confidence, confidenceLevel, issues };
+}
+
+// ============================================
 // EXPORTS
 // ============================================
 
-// Export schema for potential use in next phases
-export { ClaimsSchema };
+// Export schemas for potential use in next phases
+export { ClaimsSchema, EntailmentSchema };

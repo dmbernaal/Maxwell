@@ -98,7 +98,7 @@ maxwell-v2/
 | `searcher.ts` | Parallel search | `parallelSearch()`, `getSearchStats()`, `validateSearchOutput()` |
 | `synthesizer.ts` | Answer synthesis | `synthesize()`, `synthesizeComplete()`, `countCitations()` |
 | `embeddings.ts` | Embedding utilities | `embedText()`, `embedTexts()`, `cosineSimilarity()`, `findTopMatches()` |
-| `verifier.ts` | Multi-signal verification | `extractClaims()`, `chunkSourcesIntoPassages()`, `retrieveEvidence()` |
+| `verifier.ts` | Multi-signal verification | `extractClaims()`, `chunkSourcesIntoPassages()`, `retrieveEvidence()`, `checkEntailment()`, `extractNumbers()`, `aggregateSignals()` |
 | `index.ts` | Main orchestrator | (Phase 9) |
 
 ### Hooks (`app/hooks/`)

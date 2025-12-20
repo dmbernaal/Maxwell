@@ -230,3 +230,36 @@ This file tracks the completion of each implementation phase.
 - [x] Evidence retrieval finds correct source (0.9825 similarity)
 - [x] Citation mismatch correctly detected
 - [x] Empty answer handling
+
+---
+
+## Phase 7: Verification Signals
+**Status**: ✅ Complete  
+**Completed**: December 19, 2024
+
+### Files Modified
+- `app/lib/maxwell/verifier.ts` - Added signal functions
+- `app/lib/maxwell/types.ts` - Added `AggregatedVerdict` interface
+
+### Functions Added
+| Function | Purpose |
+|----------|---------|
+| `checkEntailment(claim, evidence)` | NLI via LLM |
+| `extractNumbers(text)` | Regex-based number extraction |
+| `normalizeNumber(numStr)` | Parse "$96.8 billion" → 96.8e9 |
+| `checkNumericConsistency(...)` | Compare claim vs evidence numbers |
+| `aggregateSignals(...)` | Combine all signals → confidence |
+
+### Key Features
+- **NLI Entailment**: LLM judges SUPPORTED/CONTRADICTED/NEUTRAL
+- **Numeric Extraction**: Handles B/M/K suffixes, currencies, percentages
+- **Signal Fusion**: Confidence = base × retrieval × citation × numeric penalties
+
+### Tests Passed
+- [x] NLI correctly identified SUPPORTED
+- [x] Number extraction works (6 numbers from test text)
+- [x] Normalization handles $96.8B, 18.5%, comma-separated
+- [x] Consistent numbers matched, mismatches detected
+- [x] Numeric mismatch correctly penalized (1.0 → 0.4)
+- [x] CONTRADICTED → 0.15 confidence (low)
+

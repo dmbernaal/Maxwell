@@ -168,6 +168,18 @@ export interface RetrievalResult {
 }
 
 /**
+ * Aggregated verdict from all verification signals.
+ */
+export interface AggregatedVerdict {
+    /** Final confidence score (0.0 to 1.0) */
+    confidence: number;
+    /** Confidence level category */
+    confidenceLevel: 'high' | 'medium' | 'low';
+    /** List of issues found during verification */
+    issues: string[];
+}
+
+/**
  * A fully verified claim with all signals.
  */
 export interface VerifiedClaim {
