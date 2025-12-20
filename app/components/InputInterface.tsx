@@ -2,13 +2,19 @@
 
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence, useMotionValue, useMotionTemplate } from 'framer-motion';
-import { Mic, ArrowRight, Search, Zap, Globe, FileText, Plus, ChevronDown, Paperclip, ScanEye } from 'lucide-react';
+import { Mic, ArrowRight, Search, Zap, Globe, FileText, Plus, Paperclip } from 'lucide-react';
 import { AgentState } from '../types';
+import ModeDropdown, { SearchMode } from './ModeDropdown';
 
 interface InputInterfaceProps {
   state: AgentState;
   hasMessages: boolean;
   onQuery: (query: string) => void;
+  mode?: SearchMode;
+  onModeChange?: (mode: SearchMode) => void;
+  disabled?: boolean;
+  hasMaxwellResults?: boolean;
+  onViewResults?: () => void;
 }
 
 function SpotlightPill({ icon: Icon, label, onClick }: { icon: any, label: string, onClick: () => void }) {
@@ -49,7 +55,16 @@ function SpotlightPill({ icon: Icon, label, onClick }: { icon: any, label: strin
   );
 }
 
-export default function InputInterface({ state, hasMessages, onQuery }: InputInterfaceProps) {
+export default function InputInterface({
+  state,
+  hasMessages,
+  onQuery,
+  mode = 'normal',
+  onModeChange,
+  disabled = false,
+  hasMaxwellResults = false,
+  onViewResults,
+}: InputInterfaceProps) {
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
 
@@ -98,7 +113,7 @@ export default function InputInterface({ state, hasMessages, onQuery }: InputInt
         <motion.form
           onSubmit={handleSubmit}
           onMouseMove={handleMouseMove}
-          className="relative group w-full p-[2px] rounded-[24px] bg-white/5 overflow-hidden"
+          className="relative group w-full p-[2px] rounded-[24px] bg-white/5"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
@@ -170,10 +185,15 @@ export default function InputInterface({ state, hasMessages, onQuery }: InputInt
 
               {/* Right: Actions */}
               <div className="flex items-center gap-3">
-                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#18151d] border border-white/5 text-[11px] font-mono uppercase tracking-wider text-white/40 cursor-pointer hover:bg-[#231f29] transition-colors">
-                  <span>Pro</span>
-                  <ChevronDown size={12} />
-                </div>
+                {onModeChange && (
+                  <ModeDropdown
+                    mode={mode}
+                    onModeChange={onModeChange}
+                    disabled={disabled}
+                    hasMaxwellResults={hasMaxwellResults}
+                    onViewResults={onViewResults}
+                  />
+                )}
 
                 <div className="h-4 w-[1px] bg-white/10 mx-1 hidden md:block" />
 

@@ -7,8 +7,11 @@ import InputInterface from './components/InputInterface';
 import ResponseDisplay from './components/ResponseDisplay';
 import UserMessage from './components/UserMessage';
 import ChatHistory from './components/ChatHistory';
+import { MaxwellCanvas } from './components/maxwell';
 import { useChatStore } from './store';
 import { useChatApi } from './hooks/use-chat-api';
+import { useMaxwell } from './hooks/use-maxwell';
+import type { SearchMode } from './components/ModeDropdown';
 
 const blurVariants = {
   relaxed: { opacity: 0 },
@@ -28,8 +31,17 @@ export default function Home() {
     activeSessionId
   } = useChatStore();
 
-  // Use the chat API hook
+  // Search mode state
+  const [searchMode, setSearchMode] = useState<SearchMode>('normal');
+
+  // Use the chat API hook (base product)
   const { sendMessage, isStreaming } = useChatApi();
+
+  // Use the Maxwell hook (killer feature)
+  const maxwell = useMaxwell();
+
+  // Track if canvas should be visible (separate from having results)
+  const [isCanvasVisible, setIsCanvasVisible] = useState(false);
 
   const [currentLayout, setCurrentLayout] = useState<'relaxed' | 'active'>('relaxed');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -51,12 +63,26 @@ export default function Home() {
   const agentState = activeSession?.agentState || 'relaxed';
 
   // Update history tracking when session changes
-  if (renderedSessionId.current !== activeSessionId) {
-    // We just switched sessions!
-    // Mark ALL current messages as history so they don't animate individually
-    historyIds.current = new Set(messages.map(m => m.id));
-    renderedSessionId.current = activeSessionId;
-  }
+  // CRITICAL: Also reset Maxwell state for clean slate
+  const prevSessionId = useRef(activeSessionId);
+
+  useEffect(() => {
+    if (prevSessionId.current !== activeSessionId) {
+      // Session changed! Reset everything for clean slate
+      prevSessionId.current = activeSessionId;
+
+      // Mark all current messages as history
+      historyIds.current = new Set(messages.map(m => m.id));
+      renderedSessionId.current = activeSessionId;
+
+      // Reset Maxwell state for new chat
+      maxwell.reset();
+      setIsCanvasVisible(false);
+
+      // Optionally reset to normal mode on new chat
+      // setSearchMode('normal'); // Uncomment if you want this behavior
+    }
+  }, [activeSessionId, messages, maxwell]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -74,12 +100,47 @@ export default function Home() {
     }
   }, [agentState, messages.length]);
 
-  // Handle query submission - now uses real API
+  // Handle query submission - routes to correct API based on mode
   const handleQuery = (q: string) => {
-    if (!activeSessionId || isStreaming) return;
-    sendMessage(q);
+    if (!activeSessionId) return;
+
+    if (searchMode === 'normal') {
+      // Base product - use chat API
+      if (isStreaming) return;
+      sendMessage(q);
+    } else {
+      // Maxwell mode - use Maxwell API
+      if (maxwell.isLoading) return;
+      maxwell.search(q);
+    }
   };
 
+  // Check if Maxwell has results (for View Results button)
+  const hasMaxwellResults = maxwell.phase === 'complete' || maxwell.sources.length > 0;
+
+  // Check if Maxwell canvas should be visible
+  // Show when: Maxwell mode + (actively processing OR (has results AND canvas visible))
+  const isMaxwellActive = searchMode !== 'normal' && (
+    (maxwell.phase !== 'idle' && maxwell.phase !== 'complete') ||
+    (hasMaxwellResults && isCanvasVisible)
+  );
+
+  // Handle closing maxwell canvas (just hide, don't reset)
+  const handleCloseCanvas = () => {
+    setIsCanvasVisible(false);
+  };
+
+  // Handle viewing results (re-open canvas)
+  const handleViewResults = () => {
+    setIsCanvasVisible(true);
+  };
+
+  // Auto-show canvas when maxwell starts processing
+  useEffect(() => {
+    if (maxwell.phase !== 'idle' && maxwell.phase !== 'complete') {
+      setIsCanvasVisible(true);
+    }
+  }, [maxwell.phase]);
 
   // Prevent hydration mismatch
   if (!hasHydrated) return null;
@@ -124,7 +185,16 @@ export default function Home() {
                 transition={{ duration: 0.4, delay: 0.1, ease: 'easeOut' }}
                 className="w-full"
               >
-                <InputInterface state={agentState} hasMessages={messages.length > 0} onQuery={handleQuery} />
+                <InputInterface
+                  state={agentState}
+                  hasMessages={messages.length > 0}
+                  onQuery={handleQuery}
+                  mode={searchMode}
+                  onModeChange={setSearchMode}
+                  disabled={isStreaming || maxwell.isLoading}
+                  hasMaxwellResults={hasMaxwellResults && !isCanvasVisible}
+                  onViewResults={handleViewResults}
+                />
               </motion.div>
             </div>
           </motion.div>
@@ -160,20 +230,54 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
               transition={{ duration: 0.4, ease: 'easeOut' }}
-              className="fixed bottom-0 left-0 w-full z-30 px-4 pb-6 flex justify-center pointer-events-auto"
+              className="fixed bottom-0 left-0 z-30 px-4 pb-6 flex justify-center pointer-events-auto"
+              style={{ width: isMaxwellActive ? '55%' : '100%' }}
             >
-              <div className="w-full max-w-3xl">
-                <InputInterface state={agentState} hasMessages={messages.length > 0} onQuery={handleQuery} />
-              </div>
+              <motion.div
+                className="w-full max-w-3xl"
+                layout
+                transition={{ type: 'spring', stiffness: 300, damping: 40 }}
+              >
+                <InputInterface
+                  state={agentState}
+                  hasMessages={messages.length > 0}
+                  onQuery={handleQuery}
+                  mode={searchMode}
+                  onModeChange={setSearchMode}
+                  disabled={isStreaming || maxwell.isLoading}
+                  hasMaxwellResults={hasMaxwellResults && !isCanvasVisible}
+                  onViewResults={handleViewResults}
+                />
+              </motion.div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MAXWELL CANVAS - Right Panel */}
+      <AnimatePresence>
+        {isMaxwellActive && (
+          <MaxwellCanvas
+            phase={maxwell.phase}
+            subQueries={maxwell.subQueries}
+            searchMetadata={maxwell.searchMetadata}
+            sources={maxwell.sources}
+            verification={maxwell.verification}
+            verificationProgress={maxwell.verificationProgress}
+            phaseDurations={maxwell.phaseDurations}
+            onClose={handleCloseCanvas}
+          />
         )}
       </AnimatePresence>
 
 
 
       {/* CONTENT LAYER */}
-      <div className="relative z-10 w-full h-screen flex flex-col">
+      <motion.div
+        className="relative z-10 h-screen flex flex-col"
+        animate={{ width: isMaxwellActive ? '55%' : '100%' }}
+        transition={{ type: 'spring', stiffness: 300, damping: 40 }}
+      >
 
         {/* Scrollable Chat Area */}
         <div
@@ -244,7 +348,7 @@ export default function Home() {
             </AnimatePresence>
           </div>
         </div>
-      </div>
+      </motion.div>
 
     </main>
   );

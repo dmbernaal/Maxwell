@@ -114,9 +114,21 @@ maxwell-v2/
 |------|---------|
 | `AgentSphere.tsx` | Animated 3D sphere using React Three Fiber |
 | `ChatHistory.tsx` | Sidebar with session list |
-| `InputInterface.tsx` | Chat input with send button |
+| `InputInterface.tsx` | Chat input with mode selector |
+| `ModeDropdown.tsx` | Search mode selector (Normal/Maxwell) |
 | `ResponseDisplay.tsx` | Agent messages with markdown + sources panel |
 | `UserMessage.tsx` | User message bubble |
+
+### Maxwell Components (`app/components/maxwell/`)
+
+| File | Purpose |
+|------|---------|
+| `MaxwellCanvas.tsx` | Right panel container for Maxwell data |
+| `PhaseProgress.tsx` | Pipeline phase indicators |
+| `SubQueryList.tsx` | Sub-query list with search status |
+| `SourcesPanel.tsx` | Collapsible sources list |
+| `VerificationPanel.tsx` | Claims with verdicts and evidence |
+| `index.ts` | Barrel exports |
 
 ### State
 
@@ -142,6 +154,12 @@ maxwell-v2/
 | Add new API endpoint | `app/api/[route]/route.ts` |
 | Add shared types | `app/types.ts` |
 | Change styling | `app/globals.css` or component |
+| Maxwell mode switching | `app/components/ModeDropdown.tsx` |
+| Maxwell canvas layout | `app/components/maxwell/MaxwellCanvas.tsx` |
+| Maxwell phase display | `app/components/maxwell/PhaseProgress.tsx` |
+| Maxwell verification UI | `app/components/maxwell/VerificationPanel.tsx` |
+| Maxwell prompts | `app/lib/maxwell/prompts.ts` |
+| Maxwell orchestration | `app/lib/maxwell/orchestrator.ts` |
 
 ---
 
@@ -151,6 +169,10 @@ maxwell-v2/
 // From components
 import ResponseDisplay from '@/app/components/ResponseDisplay';
 import InputInterface from '@/app/components/InputInterface';
+import ModeDropdown from '@/app/components/ModeDropdown';
+
+// From Maxwell components
+import { MaxwellCanvas, PhaseProgress, VerificationPanel } from '@/app/components/maxwell';
 
 // From lib
 import { runAgent, streamAgentWithSources } from '@/app/lib/agent';
@@ -159,8 +181,13 @@ import { searchTool, getToolsForModel } from '@/app/lib/tools';
 import { AVAILABLE_MODELS, DEFAULT_MODEL } from '@/app/lib/models';
 import { env } from '@/app/lib/env';
 
+// From Maxwell lib
+import { runMaxwellPipeline } from '@/app/lib/maxwell/orchestrator';
+import type { MaxwellSource, VerificationOutput } from '@/app/lib/maxwell/types';
+
 // From hooks
 import { useChatApi } from '@/app/hooks/use-chat-api';
+import { useMaxwell } from '@/app/hooks/use-maxwell';
 
 // From store
 import { useChatStore } from '@/app/store';
@@ -181,3 +208,4 @@ The **source extraction pipeline** spans these files:
 4. `app/hooks/use-chat-api.ts` - Parses delimiter, calls `updateMessage(id, content, sources)`
 5. `app/store.ts` - Stores sources in message
 6. `app/components/ResponseDisplay.tsx` - Renders sources panel + citations
+

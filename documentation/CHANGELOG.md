@@ -368,3 +368,42 @@ This file tracks the completion of each implementation phase.
 - **Local State**: Verification data stays in hook (not persisted)
 - **Toggle-Ready**: Hook is mode-agnostic, consumer decides when to use
 
+---
+
+## Phase 11: Frontend Components
+**Status**: ✅ Complete  
+**Completed**: December 20, 2024
+
+### Files Created
+- `app/components/ModeDropdown.tsx` - Mode selector dropdown with portal rendering
+- `app/components/maxwell/MaxwellCanvas.tsx` - Right panel container
+- `app/components/maxwell/PhaseProgress.tsx` - Pipeline phase indicators
+- `app/components/maxwell/SubQueryList.tsx` - Sub-query list with status
+- `app/components/maxwell/SourcesPanel.tsx` - Collapsible sources list
+- `app/components/maxwell/VerificationPanel.tsx` - Claims with verdicts
+- `app/components/maxwell/index.ts` - Barrel exports
+
+### Files Modified
+- `app/components/InputInterface.tsx` - Added mode props, integrated ModeDropdown
+- `app/page.tsx` - Added split-view layout, Maxwell Canvas integration, session sync
+
+### Features
+- **Mode Dropdown**: Normal | Maxwell Fast | Maxwell Medium | Maxwell Slow
+- **Split Layout**: Chat (55%) + Canvas (45%) when Maxwell active
+- **Smooth Animations**: Framer Motion spring physics (stiffness: 300, damping: 40)
+- **Canvas Appears on Think**: Only shows when Maxwell starts processing (not on toggle)
+- **Responsive**: Chat and input components shrink gracefully
+- **View Results**: Button to re-open canvas after closing
+- **Session Sync**: Canvas and Maxwell state reset on session change
+
+### UX Fixes
+- **Dropdown Portal**: Uses `createPortal` to render to `document.body`, escaping overflow containers
+- **Upward Opening**: Dropdown always opens upward using `bottom` CSS positioning
+- **Session Reset**: Maxwell state clears when switching chats (no stale canvas)
+- **Canvas Persistence**: Close button hides canvas but preserves results for re-viewing
+
+### Design Tokens (per design-guide.md)
+- Background: `#120F14`
+- Surface: `#18151d`
+- Brand Accent: `#6F3BF5`
+- Typography: uppercase tracking-[0.2em] headers
