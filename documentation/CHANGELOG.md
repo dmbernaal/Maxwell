@@ -340,4 +340,31 @@ This file tracks the completion of each implementation phase.
 | Embeddings | qwen/qwen3-embedding-8b |
 | NLI | google/gemini-3-flash-preview |
 
+---
+
+## Phase 10: Frontend Hook
+**Status**: ✅ Complete  
+**Completed**: December 20, 2024
+
+### Files Created
+- `app/hooks/use-maxwell.ts` - Maxwell hook with SSE streaming
+
+### Features
+- **SSE Streaming**: Parses `data: {...}` events from `/api/maxwell`
+- **Store Integration**: Uses shared `useChatStore` for message persistence
+- **Phase Tracking**: Local state for phases, verification progress
+- **Type Mapping**: `MaxwellSource` → `Source` for store compatibility
+
+### Exports
+| Export | Purpose |
+|--------|---------|
+| `useMaxwell()` | Main hook for Maxwell API |
+| `usePhaseInfo(phase)` | Utility for phase labels/descriptions |
+| `MaxwellUIState` | State type for consumers |
+| `VerificationProgress` | Progress type interface |
+
+### Design Decisions
+- **Shared Store**: Messages persist to same chat history as base product
+- **Local State**: Verification data stays in hook (not persisted)
+- **Toggle-Ready**: Hook is mode-agnostic, consumer decides when to use
 

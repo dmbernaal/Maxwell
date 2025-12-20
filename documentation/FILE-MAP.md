@@ -105,7 +105,8 @@ maxwell-v2/
 
 | File | Purpose | Key Exports |
 |------|---------|-------------|
-| `use-chat-api.ts` | Streaming + source parsing | `useChatApi()` |
+| `use-chat-api.ts` | Base product streaming | `useChatApi()` |
+| `use-maxwell.ts` | Maxwell SSE streaming | `useMaxwell()`, `usePhaseInfo()` |
 
 ### Components (`app/components/`)
 
