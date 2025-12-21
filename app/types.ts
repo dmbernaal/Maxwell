@@ -25,6 +25,7 @@ export interface Message {
   timestamp: number;
   sources?: Source[];
   debugSteps?: DebugStep[];
+  maxwellState?: any; // Storing full Maxwell state for hydration
 }
 
 export interface ChatSession {

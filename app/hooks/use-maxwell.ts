@@ -69,6 +69,7 @@ export interface UseMaxwellReturn extends MaxwellUIState {
     search: (query: string) => Promise<void>;
     reset: () => void;
     abort: () => void;
+    hydrate: (state: MaxwellUIState) => void;
 }
 
 // ============================================
@@ -120,8 +121,12 @@ export function useMaxwell(): UseMaxwellReturn {
     const abortControllerRef = useRef<AbortController | null>(null);
     const agentMessageIdRef = useRef<string | null>(null);
 
-    // Shared store integration
-    const { addMessage, updateMessage, setAgentState, activeSessionId, getActiveSession } = useChatStore();
+    // Shared store integration - Use selectors to avoid unnecessary re-renders
+    const activeSessionId = useChatStore(s => s.activeSessionId);
+    const addMessage = useChatStore(s => s.addMessage);
+    const updateMessage = useChatStore(s => s.updateMessage);
+    const setAgentState = useChatStore(s => s.setAgentState);
+    const getActiveSession = useChatStore(s => s.getActiveSession);
 
     const reset = useCallback(() => {
         if (abortControllerRef.current) {
@@ -139,6 +144,12 @@ export function useMaxwell(): UseMaxwellReturn {
             abortControllerRef.current = null;
         }
         setIsLoading(false);
+    }, []);
+
+    const hydrate = useCallback((maxwellState: MaxwellUIState) => {
+        setState(maxwellState);
+        // Also update isLoading based on the hydrated state's phase
+        setIsLoading(maxwellState.phase !== 'idle' && maxwellState.phase !== 'complete' && maxwellState.phase !== 'error');
     }, []);
 
     const handleEvent = useCallback((event: MaxwellEvent, sessionId: string) => {
@@ -189,22 +200,39 @@ export function useMaxwell(): UseMaxwellReturn {
                 break;
 
             case 'complete':
-                setState((prev) => ({
-                    ...prev,
-                    phase: 'complete',
-                    verificationProgress: null,
-                    phaseDurations: {
-                        ...prev.phaseDurations,
-                        total: event.data.totalDurationMs,
-                    },
-                }));
-                setAgentState('complete', sessionId);
+                setState((prev) => {
+                    const newState = {
+                        ...prev,
+                        phase: 'complete' as const,
+                        verificationProgress: null,
+                        phaseDurations: {
+                            ...prev.phaseDurations,
+                            total: event.data.totalDurationMs,
+                        },
+                    };
 
-                // Final update with sources
-                if (agentMessageIdRef.current && event.data.sources) {
-                    const baseSources = event.data.sources.map(mapMaxwellSourceToSource);
-                    updateMessage(agentMessageIdRef.current, event.data.answer, baseSources, sessionId);
-                }
+                    // Final update with sources AND full state persistence
+                    if (agentMessageIdRef.current && event.data.sources) {
+                        const baseSources = event.data.sources.map(mapMaxwellSourceToSource);
+
+                        // Persist the FULL Maxwell state to the message
+                        // This allows us to re-hydrate the canvas later
+                        // Wrap in setTimeout to avoid "cannot update during render" error
+                        setTimeout(() => {
+                            updateMessage(
+                                agentMessageIdRef.current!,
+                                event.data.answer,
+                                baseSources,
+                                sessionId,
+                                undefined,
+                                newState // Pass the full UI state
+                            );
+                        }, 0);
+                    }
+
+                    return newState;
+                });
+                setAgentState('complete', sessionId);
                 break;
 
             case 'error':
@@ -361,7 +389,7 @@ export function useMaxwell(): UseMaxwellReturn {
         [activeSessionId, reset, addMessage, setAgentState, handleEvent]
     );
 
-    return { ...state, isLoading, search, reset, abort };
+    return { ...state, isLoading, search, reset, abort, hydrate };
 }
 
 // ============================================

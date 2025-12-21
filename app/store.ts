@@ -14,7 +14,7 @@ interface ChatStore {
   switchSession: (sessionId: string) => void;
   deleteSession: (sessionId: string) => void;
   addMessage: (content: string, role: 'user' | 'agent', verified?: boolean, sessionId?: string, sources?: Source[], debugSteps?: DebugStep[]) => string;
-  updateMessage: (messageId: string, content: string, sources?: Source[], sessionId?: string, debugSteps?: DebugStep[]) => void;
+  updateMessage: (messageId: string, content: string, sources?: Source[], sessionId?: string, debugSteps?: DebugStep[], maxwellState?: any) => void;
   setAgentState: (state: AgentState, sessionId?: string) => void;
   setHasHydrated: (state: boolean) => void;
 
@@ -109,7 +109,7 @@ export const useChatStore = create<ChatStore>()(
         return messageId;
       },
 
-      updateMessage: (messageId, content, sources, sessionId, debugSteps) => {
+      updateMessage: (messageId, content, sources, sessionId, debugSteps, maxwellState) => {
         set((state) => {
           const targetId = sessionId || state.activeSessionId;
           if (!targetId || !state.sessions[targetId]) return state;
@@ -124,6 +124,7 @@ export const useChatStore = create<ChatStore>()(
             content,
             sources: sources ?? updatedMessages[messageIndex].sources,
             debugSteps: debugSteps ?? updatedMessages[messageIndex].debugSteps,
+            maxwellState: maxwellState ?? updatedMessages[messageIndex].maxwellState,
           };
 
           return {
