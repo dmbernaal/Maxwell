@@ -289,8 +289,8 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
         </ReactMarkdown>
       </motion.div>
 
-      {/* Sources Panel - Only show if we have real sources AND agent is done typing (or history) */}
-      {hasRealSources && (!isActive || isHistory) && (
+      {/* Sources Panel - Show if we have sources AND (agent is done typing OR history OR verifying/adjudicating) */}
+      {hasRealSources && (!isActive || isHistory || message?.maxwellState?.phase === 'verification' || message?.maxwellState?.phase === 'adjudication') && (
         <motion.div
           initial={isHistory ? false : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -368,8 +368,25 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
         </motion.div>
       )}
 
-      {/* View Results Card - Persistent Re-open Trigger */}
-      {message?.maxwellState && (
+      {/* Thinking Trace - Shows active processing state below sources */}
+      {isActive && (message?.maxwellState?.phase === 'verification' || message?.maxwellState?.phase === 'adjudication') && (
+        <motion.div
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-2 mt-4 mb-2 pl-1"
+        >
+          <div className="relative flex items-center justify-center w-3 h-3">
+            <span className="absolute inset-0 rounded-full bg-brand-accent/30 animate-ping" />
+            <span className="relative w-1.5 h-1.5 rounded-full bg-brand-accent shadow-[0_0_8px_rgba(111,59,245,0.8)]" />
+          </div>
+          <span className="text-[10px] font-medium text-white/40 uppercase tracking-widest animate-pulse">
+            {message.maxwellState.phase === 'verification' ? 'Verifying Claims...' : 'Finalizing Verdict...'}
+          </span>
+        </motion.div>
+      )}
+
+      {/* View Results Card - Show when verification is done (during adjudication or complete) */}
+      {message?.maxwellState && (message.maxwellState.phase === 'complete' || message.maxwellState.phase === 'adjudication') && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}

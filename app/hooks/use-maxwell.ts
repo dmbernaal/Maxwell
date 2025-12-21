@@ -110,8 +110,9 @@ function mapPhaseToAgentState(phase: ExecutionPhase): 'relaxed' | 'thinking' | '
         case 'synthesis':
             return 'synthesizing';
         case 'verification':
+        case 'adjudication':
+            return 'thinking'; // Keep active during verification/adjudication
         case 'complete':
-            return 'complete';
         case 'error':
             return 'complete';
         default:
@@ -169,18 +170,41 @@ export function useMaxwell(): UseMaxwellReturn {
 
         switch (event.type) {
             case 'phase-start':
-                setState((prev) => ({
-                    ...prev,
-                    phase: event.phase as ExecutionPhase,
-                    phaseStartTimes: {
-                        ...prev.phaseStartTimes,
-                        [event.phase]: Date.now(),
-                    },
-                    verificationProgress:
-                        event.phase === 'verification'
-                            ? { current: 0, total: 0, status: 'Starting verification...' }
-                            : prev.verificationProgress,
-                }));
+                setState((prev) => {
+                    const newState = {
+                        ...prev,
+                        phase: event.phase as ExecutionPhase,
+                        phaseStartTimes: {
+                            ...prev.phaseStartTimes,
+                            [event.phase]: Date.now(),
+                        },
+                        verificationProgress:
+                            event.phase === 'verification'
+                                ? { current: 0, total: 0, status: 'Starting verification...' }
+                                : prev.verificationProgress,
+                    };
+
+                    // FORCE SYNC: Update global store with new phase immediately
+                    // Wrapped in setTimeout to avoid "Cannot update component while rendering" error
+                    if (agentMessageIdRef.current) {
+                        setTimeout(() => {
+                            const session = getActiveSession();
+                            const message = session?.messages.find((m) => m.id === agentMessageIdRef.current);
+                            if (message) {
+                                updateMessage(
+                                    agentMessageIdRef.current!,
+                                    message.content,
+                                    undefined,
+                                    sessionId,
+                                    undefined,
+                                    newState // Pass updated state to store
+                                );
+                            }
+                        }, 0);
+                    }
+
+                    return newState;
+                });
                 setAgentState(mapPhaseToAgentState(event.phase as ExecutionPhase), sessionId);
                 break;
 
@@ -211,10 +235,33 @@ export function useMaxwell(): UseMaxwellReturn {
                 break;
 
             case 'adjudication-chunk':
-                setState((prev) => ({
-                    ...prev,
-                    adjudication: (prev.adjudication || '') + event.content,
-                }));
+                setState((prev) => {
+                    const newState = {
+                        ...prev,
+                        adjudication: (prev.adjudication || '') + event.content,
+                    };
+
+                    // FORCE SYNC: Stream adjudication text to global store
+                    // Wrapped in setTimeout to avoid "Cannot update component while rendering" error
+                    if (agentMessageIdRef.current) {
+                        setTimeout(() => {
+                            const session = getActiveSession();
+                            const message = session?.messages.find((m) => m.id === agentMessageIdRef.current);
+                            if (message) {
+                                updateMessage(
+                                    agentMessageIdRef.current!,
+                                    message.content,
+                                    undefined,
+                                    sessionId,
+                                    undefined,
+                                    newState // Pass updated state with adjudication text
+                                );
+                            }
+                        }, 0);
+                    }
+
+                    return newState;
+                });
                 break;
 
             case 'verification-progress':
