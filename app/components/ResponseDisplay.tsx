@@ -466,22 +466,28 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
       )
       }
 
-      {/* Adjudication Panel (Phase 5) - Streams in last */}
-      {
-        (message?.maxwellState?.adjudication || message?.maxwellState?.phase === 'adjudication') && (
-          <AdjudicationPanel
-            text={message.maxwellState?.adjudication || ''}
-            isStreaming={message.maxwellState?.phase === 'adjudication'}
-            status={
-              (message.maxwellState?.verification?.summary?.contradicted ?? 0) > 0 ||
-                (message.maxwellState?.verification?.summary?.citationMismatches ?? 0) > 0 ||
-                (message.maxwellState?.verification?.summary?.numericMismatches ?? 0) > 0
-                ? 'correction_needed'
-                : 'verified'
-            }
-          />
-        )
-      }
+      {/* Adjudication - Rendered as regular text (Phase 5) */}
+      {(message?.maxwellState?.adjudication || message?.maxwellState?.phase === 'adjudication') && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mt-8 pt-6 prose prose-invert prose-lg leading-relaxed text-white/70"
+        >
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              p: ({ children }) => (
+                <p className="mb-3 last:mb-0 leading-relaxed text-[17px]">{children}</p>
+              ),
+              strong: ({ children }) => (
+                <strong className="font-semibold text-white">{children}</strong>
+              ),
+            }}
+          >
+            {message.maxwellState.adjudication || ''}
+          </ReactMarkdown>
+        </motion.div>
+      )}
     </div >
   );
 }

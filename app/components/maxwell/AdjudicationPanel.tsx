@@ -46,7 +46,7 @@ export function AdjudicationPanel({ text, isStreaming, status }: AdjudicationPan
 
             {/* Content */}
             <div className="prose prose-invert prose-sm max-w-none">
-                <div className="text-[13px] leading-relaxed text-white/80 font-serif tracking-wide">
+                <div className="text-[15px] leading-relaxed text-white/90 font-sans">
                     <ReactMarkdown>{text}</ReactMarkdown>
                     {isStreaming && (
                         <span className="inline-block w-1.5 h-3.5 ml-0.5 align-middle bg-white/50 animate-pulse" />
