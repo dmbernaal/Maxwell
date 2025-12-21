@@ -14,11 +14,11 @@ Maxwell is a **verified search agent** that differentiates from standard Perplex
 │   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌────────────┐   ┌───────────┐ │
 │   │     PHASE 1  │   │    PHASE 2   │   │    PHASE 3   │   │  PHASE 4   │   │  PHASE 5  │ │
 │   │              │   │              │   │              │   │            │   │           │ │
-│   │ DECOMPOSE    │──▶│   SEARCH     │──▶│  SYNTHESIZE  │──▶│  VERIFY    │──▶│ ADJUDICATE│ │
+│   │ DECOMPOSE    │──▶│   SEARCH     │──▶│  SYNTHESIZE  │──▶│  VERIFY    │──▶│ RECONSTRUCT │ │
 │   │              │   │              │   │              │   │            │   │           │ │
 │   │ Break query  │   │ Parallel     │   │ Generate     │   │ NLI +      │   │ Final     │ │
-│   │ into 3-5     │   │ Tavily       │   │ answer with  │   │ Embeddings │   │ Verdict   │ │
-│   │ sub-queries  │   │ calls        │   │ citations    │   │ + Numerics │   │ & Summary │ │
+│   │ into 3-5     │   │ Tavily       │   │ answer with  │   │ Embeddings │   │ Answer    │ │
+│   │ sub-queries  │   │ calls        │   │ citations    │   │ + Numerics │   │ Synthesis │ │
 │   └──────────────┘   └──────────────┘   └──────────────┘   └────────────┘   └───────────┘ │
 │                                                                                           │
 │   🚀 OPTIMIZATION: Evidence prep runs in BACKGROUND during Phase 3                       │
@@ -33,8 +33,8 @@ Maxwell is a **verified search agent** that differentiates from standard Perplex
 
 | Standard RAG | Maxwell |
 |--------------|---------|
-| Retrieves → Synthesizes → Done | Retrieves → Synthesizes → **Verifies** → Reports |
-| "Trust me, this is accurate" | "Here's the confidence score and evidence" |
+| Retrieves → Synthesizes → Done | Retrieves → Synthesizes → **Verifies** → **Reconstructs** |
+| "Trust me, this is accurate" | "Here is the verified answer, stripped of hallucinations" |
 | Citations ≈ decoration | Citations validated against evidence |
 | No numeric checking | Detects `"grew 18%"` vs source saying `"grew 15%"` |
 
@@ -430,29 +430,30 @@ With CONCURRENCY = 4:
 
 ---
 
-## Phase 5: The Adjudicator (Final Verdict)
+## Phase 5: The Reconstructor (Final Answer)
 
 **File:** `app/lib/maxwell/adjudicator.ts`
 
-**Purpose:** Provide a final, authoritative verdict on the answer based on the verification report.
+**Purpose:** Provide a final, authoritative answer by **reconstructing** the truth from verified claims, ignoring any hallucinations in the draft.
 
 ### How It Works
 
-The Adjudicator acts as the "Editor-in-Chief". It reads the draft answer and the verification report to issue a final judgment.
+The Reconstructor acts as the "Final Authority". It discards the original draft and synthesizes a new answer using ONLY the verified evidence.
 
 **Logic:**
-1.  **High Confidence (>80%) & No Issues:** Generates a **"Verified Summary"**.
-    *   *Tone:* Trusted, Emerald/Teal theme.
-    *   *Content:* Concise executive summary of verified facts.
-2.  **Contradictions Found:** Generates a **"Correction"**.
-    *   *Tone:* Alert, Amber/Gold theme.
-    *   *Content:* Explicitly corrects errors (e.g., "The draft stated X, but evidence confirms Y").
-3.  **Uncertainty/Low Confidence:** Generates a **"Consensus Note"**.
-    *   *Tone:* Cautious, Amber theme.
-    *   *Content:* Summarizes what is known vs. what remains unverified.
+1.  **Filter Claims:**
+    *   **Verified Facts (Green):** Claims with `SUPPORTED` entailment or High Confidence (>0.7).
+    *   **Disputed Facts (Red):** Claims with `CONTRADICTED` entailment.
+    *   **Unverified:** Claims with `NEUTRAL` entailment or Low Confidence.
+2.  **Synthesize:**
+    *   The LLM is instructed to **IGNORE** the original draft.
+    *   It constructs a direct answer using the **Verified Facts**.
+    *   It explicitly corrects any **Disputed Facts** using the evidence (e.g., "Contrary to some reports of X, verified data confirms Y").
+3.  **Output:**
+    *   A clean, authoritative answer that represents the "Verified Truth".
 
 **Streaming:**
-The verdict streams into the chat UI immediately after the verification card, creating a seamless "read-verify-adjudicate" flow.
+The reconstructed answer streams into the chat UI immediately after the verification card, effectively replacing the draft as the "Final Word".
 
 **Tunable Parameters:**
 
