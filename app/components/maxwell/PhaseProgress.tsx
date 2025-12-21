@@ -24,18 +24,45 @@ const PHASES = [
 interface PhaseProgressProps {
     phase: ExecutionPhase;
     phaseDurations: PhaseDurations;
+    phaseStartTimes: Record<string, number>;
 }
 
-export function PhaseProgress({ phase, phaseDurations }: PhaseProgressProps) {
+export function PhaseProgress({ phase, phaseDurations, phaseStartTimes }: PhaseProgressProps) {
+    const [elapsed, setElapsed] = React.useState(0);
+
+    // Update elapsed time for active phase
+    React.useEffect(() => {
+        if (phase === 'idle' || phase === 'complete' || phase === 'error') return;
+
+        const startTime = phaseStartTimes[phase];
+        if (!startTime) return;
+
+        const interval = setInterval(() => {
+            setElapsed(Date.now() - startTime);
+        }, 50);
+
+        return () => clearInterval(interval);
+    }, [phase, phaseStartTimes]);
+
     if (phase === 'idle') return null;
 
     const currentIdx = PHASES.findIndex((p) => p.id === phase);
     const currentPhase = PHASES[currentIdx];
     const isComplete = phase === 'complete';
-    const isError = phase === 'error';
 
-    // Calculate total time for active phase
-    const activeDuration = currentPhase ? phaseDurations[currentPhase.id as keyof PhaseDurations] : 0;
+    // Determine duration to show
+    let displayDuration = 0;
+    if (isComplete) {
+        // If complete, show total duration if available, or sum of phases?
+        // Actually, phaseDurations.total is set on complete.
+        displayDuration = phaseDurations.total || 0;
+    } else if (currentPhase) {
+        // If active, show live elapsed time
+        displayDuration = elapsed;
+    } else {
+        // Fallback
+        displayDuration = 0;
+    }
 
     return (
         <div className="w-full font-mono">
@@ -58,7 +85,7 @@ export function PhaseProgress({ phase, phaseDurations }: PhaseProgressProps) {
                         Time
                     </span>
                     <span className="text-xs text-white/60 font-medium">
-                        {activeDuration ? (activeDuration / 1000).toFixed(2) : '0.00'}s
+                        {(displayDuration / 1000).toFixed(2)}s
                     </span>
                 </div>
             </div>

@@ -12,10 +12,11 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Book, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
-import type { MaxwellSource } from '../../lib/maxwell/types';
+import type { MaxwellSource, SearchMetadata } from '../../lib/maxwell/types';
 
 interface SourcesPanelProps {
     sources: MaxwellSource[];
+    searchMetadata: SearchMetadata[];
 }
 
 function getFavicon(url: string): string | null {
@@ -27,16 +28,40 @@ function getFavicon(url: string): string | null {
     }
 }
 
-export function SourcesPanel({ sources }: SourcesPanelProps) {
+export function SourcesPanel({ sources, searchMetadata }: SourcesPanelProps) {
     const [isExpanded, setIsExpanded] = useState(false);
 
     if (sources.length === 0) return null;
+
+    // Calculate stats
+    const totalFound = searchMetadata.reduce((acc, m) => acc + m.sourcesFound, 0);
+    const indexed = sources.length;
 
     // Show first 5 sources when collapsed, all when expanded
     const displaySources = isExpanded ? sources : sources.slice(0, 5);
 
     return (
         <div className="space-y-4">
+            {/* Utilization Funnel */}
+            <div className="flex items-center gap-4 px-1 pb-2 border-b border-white/5">
+                <div className="flex flex-col">
+                    <span className="text-[9px] font-mono text-white/30 uppercase tracking-widest">Found</span>
+                    <span className="text-xs font-mono text-white/60">{totalFound}</span>
+                </div>
+                <div className="h-4 w-[1px] bg-white/10" />
+                <div className="flex flex-col">
+                    <span className="text-[9px] font-mono text-white/30 uppercase tracking-widest">Indexed</span>
+                    <span className="text-xs font-mono text-emerald-400">{indexed}</span>
+                </div>
+                <div className="h-4 w-[1px] bg-white/10" />
+                <div className="flex flex-col">
+                    <span className="text-[9px] font-mono text-white/30 uppercase tracking-widest">Efficiency</span>
+                    <span className="text-xs font-mono text-white/60">
+                        {totalFound > 0 ? Math.round((indexed / totalFound) * 100) : 0}%
+                    </span>
+                </div>
+            </div>
+
             {/* Sources Grid */}
             <div className="grid grid-cols-2 gap-3">
                 {displaySources.map((source, idx) => {

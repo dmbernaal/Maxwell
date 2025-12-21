@@ -298,7 +298,9 @@ export default function Home() {
             verification={maxwell.verification}
             verificationProgress={maxwell.verificationProgress}
             phaseDurations={maxwell.phaseDurations}
+            phaseStartTimes={maxwell.phaseStartTimes}
             onClose={handleCloseCanvas}
+            reasoning={maxwell.reasoning}
           />
         )}
       </AnimatePresence>

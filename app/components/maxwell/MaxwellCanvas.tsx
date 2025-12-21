@@ -19,7 +19,7 @@ import { motion } from 'framer-motion';
 import { X, Sparkles } from 'lucide-react';
 import { PhaseProgress } from './PhaseProgress';
 import { SubQueryList } from './SubQueryList';
-import { SourcesPanel } from './SourcesPanel';
+
 import { VerificationPanel } from './VerificationPanel';
 import type { ExecutionPhase, PhaseDurations, SubQuery, SearchMetadata, MaxwellSource, VerificationOutput } from '../../lib/maxwell/types';
 import type { VerificationProgress } from '../../hooks/use-maxwell';
@@ -32,7 +32,9 @@ interface MaxwellCanvasProps {
     verification: VerificationOutput | null;
     verificationProgress: VerificationProgress | null;
     phaseDurations: PhaseDurations;
+    phaseStartTimes: Record<string, number>;
     onClose: () => void;
+    reasoning?: string;
 }
 
 export function MaxwellCanvas({
@@ -43,7 +45,9 @@ export function MaxwellCanvas({
     verification,
     verificationProgress,
     phaseDurations,
+    phaseStartTimes,
     onClose,
+    reasoning,
 }: MaxwellCanvasProps) {
     return (
         <motion.div
@@ -89,13 +93,15 @@ export function MaxwellCanvas({
             <div className="relative z-10 flex-1 overflow-y-auto px-8 py-8 space-y-8 no-scrollbar">
                 {/* Phase Progress */}
                 <div className="space-y-3">
-                    <PhaseProgress phase={phase} phaseDurations={phaseDurations} />
+                    <PhaseProgress phase={phase} phaseDurations={phaseDurations} phaseStartTimes={phaseStartTimes} />
                 </div>
 
                 {/* Sub-queries */}
                 <div className="space-y-3">
-                    <SubQueryList subQueries={subQueries} searchMetadata={searchMetadata} />
+                    <SubQueryList subQueries={subQueries} searchMetadata={searchMetadata} reasoning={reasoning} />
                 </div>
+
+
 
                 {/* Verification */}
                 {(verification || verificationProgress) && (

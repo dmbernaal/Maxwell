@@ -37,23 +37,30 @@ function ClaimRow({ claim }: { claim: VerifiedClaim }) {
 
     const verdictConfig = {
         SUPPORTED: {
-            label: '[VERIFIED]',
-            colorClass: 'text-emerald-500',
+            label: 'VERIFIED',
+            colorClass: 'text-emerald-400',
+            bgClass: 'bg-emerald-500/10',
+            borderClass: 'border-emerald-500/20'
         },
         NEUTRAL: {
-            label: '[UNCERTAIN]',
-            colorClass: 'text-amber-500',
+            label: 'UNCERTAIN',
+            colorClass: 'text-amber-400',
+            bgClass: 'bg-amber-500/10',
+            borderClass: 'border-amber-500/20'
         },
         CONTRADICTED: {
-            label: '[DISPUTED]',
-            colorClass: 'text-rose-500',
+            label: 'DISPUTED',
+            colorClass: 'text-rose-400',
+            bgClass: 'bg-rose-500/10',
+            borderClass: 'border-rose-500/20'
         },
     };
 
     const config = verdictConfig[claim.entailment] || verdictConfig.NEUTRAL;
+    const hasNumericMismatch = claim.numericCheck && !claim.numericCheck.match;
 
     return (
-        <div className={`rounded-lg overflow-hidden border border-white/5 transition-all duration-300 ${isExpanded ? 'bg-white/[0.04]' : 'bg-white/[0.02] hover:bg-white/[0.04]'}`}>
+        <div className={`rounded-xl overflow-hidden border transition-all duration-300 ${isExpanded ? 'bg-white/[0.04] border-white/10' : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.04]'}`}>
             {/* Claim Header */}
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
@@ -61,20 +68,40 @@ function ClaimRow({ claim }: { claim: VerifiedClaim }) {
             >
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
-                        <span className={`text-[9px] font-mono tracking-wider ${config.colorClass}`}>
+                        <span className={`text-[9px] font-mono tracking-wider px-1.5 py-0.5 rounded border ${config.colorClass} ${config.bgClass} ${config.borderClass}`}>
                             {config.label}
                         </span>
+                        {hasNumericMismatch && (
+                            <span className="text-[9px] font-mono tracking-wider px-1.5 py-0.5 rounded border text-rose-400 bg-rose-500/10 border-rose-500/20 flex items-center gap-1">
+                                <AlertTriangle size={10} />
+                                NUMERIC MISMATCH
+                            </span>
+                        )}
                         <span className="text-[9px] font-mono text-white/20">
                             ID: {claim.id.slice(0, 8)}
                         </span>
                     </div>
-                    <p className="text-xs text-white/80 leading-relaxed font-light">
+                    <p className="text-[13px] text-white/80 leading-relaxed font-light">
                         {claim.text}
                     </p>
                 </div>
-                <span className="text-[10px] font-mono text-white/30 shrink-0 mt-1">
-                    {Math.round(claim.confidence * 100)}%
-                </span>
+
+                {/* Confidence Score - Linear Bar instead of Circle */}
+                <div className="flex flex-col items-end gap-1 mt-1 min-w-[60px]">
+                    <span className={`text-[10px] font-mono ${claim.confidence >= 0.7 ? 'text-emerald-400' :
+                        claim.confidence >= 0.4 ? 'text-amber-400' : 'text-rose-400'
+                        }`}>
+                        {Math.round(claim.confidence * 100)}%
+                    </span>
+                    <div className="w-12 h-1 bg-white/10 rounded-full overflow-hidden">
+                        <div
+                            className={`h-full rounded-full ${claim.confidence >= 0.7 ? 'bg-emerald-500' :
+                                claim.confidence >= 0.4 ? 'bg-amber-500' : 'bg-rose-500'
+                                }`}
+                            style={{ width: `${claim.confidence * 100}%` }}
+                        />
+                    </div>
+                </div>
             </button>
 
             {/* Expanded Details */}
@@ -89,6 +116,30 @@ function ClaimRow({ claim }: { claim: VerifiedClaim }) {
                     >
                         <div className="px-4 pb-4 pt-0 space-y-4">
                             <div className="h-[1px] w-full bg-white/5" />
+
+                            {/* Numeric Diff View */}
+                            {hasNumericMismatch && claim.numericCheck && (
+                                <div className="bg-rose-500/5 rounded-lg p-3 border border-rose-500/10">
+                                    <div className="text-[9px] font-mono text-rose-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                        <AlertTriangle size={12} />
+                                        Numeric Discrepancy Detected
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <div className="text-[9px] text-white/40 mb-1">CLAIMED VALUE</div>
+                                            <div className="text-rose-300 font-mono text-xs">
+                                                {claim.numericCheck.claimNumbers.join(', ')}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[9px] text-white/40 mb-1">EVIDENCE VALUE</div>
+                                            <div className="text-emerald-300 font-mono text-xs">
+                                                {claim.numericCheck.evidenceNumbers.join(', ')}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Reasoning */}
                             <div>
@@ -107,10 +158,10 @@ function ClaimRow({ claim }: { claim: VerifiedClaim }) {
                                         Primary_Evidence
                                     </span>
                                     <span className="text-[9px] font-mono text-white/20">
-                                        REF: [{claim.bestMatchingSource.sourceIndex + 1}]
+                                        SOURCE: {claim.bestMatchingSource.sourceTitle}
                                     </span>
                                 </div>
-                                <p className="text-[11px] text-white/50 leading-relaxed italic font-serif">
+                                <p className="text-[11px] text-white/50 leading-relaxed italic font-serif border-l-2 border-white/10 pl-3">
                                     "{claim.bestMatchingSource.passage}"
                                 </p>
                             </div>
@@ -184,36 +235,31 @@ export function VerificationPanel({ verification, progress }: VerificationPanelP
 
             {/* Progress indicator */}
             {progress && !verification && (
-                <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-white/[0.02] border border-white/5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-brand-accent animate-pulse" />
-                    <span className="text-[10px] font-mono text-white/60">
-                        Verifying claim {progress.current} of {progress.total}...
-                    </span>
+                <div className="px-1 py-2">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-mono text-white/40 uppercase tracking-widest">
+                            Verifying Claims
+                        </span>
+                        <span className="text-[10px] font-mono text-white/40">
+                            {progress.current}/{progress.total}
+                        </span>
+                    </div>
+                    <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+                        <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${(progress.current / progress.total) * 100}%` }}
+                            transition={{ duration: 0.3, ease: "easeOut" }}
+                            className="h-full bg-white/80"
+                        />
+                    </div>
                 </div>
             )}
 
-            {/* Verification Grid */}
+            {/* Verification List */}
             {verification && (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-2">
                     {verification.claims.map((claim) => (
-                        <div
-                            key={claim.id}
-                            className="flex flex-col gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-colors group"
-                        >
-                            <div className="flex items-center justify-between">
-                                <span className={`text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border ${claim.entailment === 'SUPPORTED' ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400' :
-                                        claim.entailment === 'CONTRADICTED' ? 'bg-rose-500/5 border-rose-500/20 text-rose-400' :
-                                            'bg-amber-500/5 border-amber-500/20 text-amber-400'
-                                    }`}>
-                                    [{claim.entailment}]
-                                </span>
-                                <ConfidenceCircle score={claim.confidence * 100} />
-                            </div>
-
-                            <p className="text-[13px] text-white/80 leading-relaxed line-clamp-4 font-light">
-                                {claim.text}
-                            </p>
-                        </div>
+                        <ClaimRow key={claim.id} claim={claim} />
                     ))}
                 </div>
             )}

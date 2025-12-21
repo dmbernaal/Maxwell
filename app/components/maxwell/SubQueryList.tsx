@@ -16,9 +16,10 @@ import type { SubQuery, SearchMetadata } from '../../lib/maxwell/types';
 interface SubQueryListProps {
     subQueries: SubQuery[];
     searchMetadata: SearchMetadata[];
+    reasoning?: string;
 }
 
-export function SubQueryList({ subQueries, searchMetadata }: SubQueryListProps) {
+export function SubQueryList({ subQueries, searchMetadata, reasoning }: SubQueryListProps) {
     const [isExpanded, setIsExpanded] = useState(true);
 
     if (subQueries.length === 0) return null;
@@ -30,6 +31,18 @@ export function SubQueryList({ subQueries, searchMetadata }: SubQueryListProps) 
             <h3 className="text-[10px] font-mono text-white/40 uppercase tracking-widest mb-3">
                 Execution Graph
             </h3>
+
+            {/* Strategy / Reasoning */}
+            {reasoning && (
+                <div className="mb-6 pl-3 border-l border-white/10 ml-[3px]">
+                    <div className="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-1.5">
+                        Strategy
+                    </div>
+                    <p className="text-[11px] text-white/60 leading-relaxed font-light italic">
+                        "{reasoning}"
+                    </p>
+                </div>
+            )}
             {/* Git Graph List */}
             <div className="relative pl-3">
                 {/* Main Trunk Line - Glowing Circuit */}

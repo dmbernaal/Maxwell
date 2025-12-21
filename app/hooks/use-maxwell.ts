@@ -46,7 +46,9 @@ export interface MaxwellUIState {
     verification: VerificationOutput | null;
     verificationProgress: VerificationProgress | null;
     phaseDurations: PhaseDurations;
+    phaseStartTimes: Record<string, number>;
     error: string | null;
+    reasoning?: string;
 }
 
 const initialState: MaxwellUIState = {
@@ -57,7 +59,9 @@ const initialState: MaxwellUIState = {
     verification: null,
     verificationProgress: null,
     phaseDurations: {},
+    phaseStartTimes: {},
     error: null,
+    reasoning: undefined,
 };
 
 // ============================================
@@ -158,6 +162,10 @@ export function useMaxwell(): UseMaxwellReturn {
                 setState((prev) => ({
                     ...prev,
                     phase: event.phase as ExecutionPhase,
+                    phaseStartTimes: {
+                        ...prev.phaseStartTimes,
+                        [event.phase]: Date.now(),
+                    },
                     verificationProgress:
                         event.phase === 'verification'
                             ? { current: 0, total: 0, status: 'Starting verification...' }
@@ -257,6 +265,7 @@ export function useMaxwell(): UseMaxwellReturn {
                 switch (phase) {
                     case 'decomposition':
                         updates.subQueries = (phaseData.subQueries as SubQuery[]) || [];
+                        updates.reasoning = (phaseData.reasoning as string) || undefined;
                         updates.phaseDurations = {
                             ...prev.phaseDurations,
                             decomposition: phaseData.durationMs as number,
