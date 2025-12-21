@@ -707,6 +707,57 @@ export async function verifyClaims(
     };
 }
 
+/**
+ * Streaming wrapper for verifyClaims.
+ * Yields progress events and final result.
+ */
+export async function* verifyClaimsStream(
+    answer: string,
+    sources: MaxwellSource[],
+    precomputedEvidence?: PreparedEvidence
+): AsyncGenerator<{ type: 'progress'; data: VerificationProgress } | { type: 'result'; data: VerificationOutput }> {
+    const progressQueue: VerificationProgress[] = [];
+    let resolveProgress: (() => void) | null = null;
+    let isDone = false;
+    let error: unknown = null;
+
+    const onProgress = (p: VerificationProgress) => {
+        progressQueue.push(p);
+        if (resolveProgress) {
+            resolveProgress();
+            resolveProgress = null;
+        }
+    };
+
+    const verificationPromise = verifyClaims(answer, sources, onProgress, precomputedEvidence)
+        .then((result) => {
+            isDone = true;
+            if (resolveProgress) resolveProgress();
+            return result;
+        })
+        .catch((err) => {
+            isDone = true;
+            error = err;
+            if (resolveProgress) resolveProgress();
+            throw err;
+        });
+
+    while (!isDone || progressQueue.length > 0) {
+        if (progressQueue.length > 0) {
+            yield { type: 'progress', data: progressQueue.shift()! };
+        } else {
+            if (isDone) break;
+            await new Promise<void>((resolve) => {
+                resolveProgress = resolve;
+            });
+        }
+    }
+
+    if (error) throw error;
+    const result = await verificationPromise;
+    yield { type: 'result', data: result };
+}
+
 // ============================================
 // HELPERS
 // ============================================

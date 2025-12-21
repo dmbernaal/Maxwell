@@ -10,7 +10,7 @@
 import { decomposeQuery } from './decomposer';
 import { parallelSearch } from './searcher';
 import { synthesize } from './synthesizer';
-import { verifyClaims, prepareEvidence, type PreparedEvidence } from './verifier';
+import { verifyClaims, verifyClaimsStream, prepareEvidence, type PreparedEvidence } from './verifier';
 
 import type {
     MaxwellSource,
@@ -147,16 +147,18 @@ export async function* runMaxwell(query: string): AsyncGenerator<MaxwellEvent> {
         phases.verification.status = 'in_progress';
 
         // 🚀 Await the background evidence prep - should be ready by now!
+        // 🚀 Await the background evidence prep - should be ready by now!
         const precomputedEvidence = await evidencePromise;
 
-        const verification = await verifyClaims(
-            answer,
-            sources,
-            (progress) => {
-                // Future: Could yield verification-progress events here
-            },
-            precomputedEvidence || undefined
-        );
+        let verification: any = null;
+
+        for await (const event of verifyClaimsStream(answer, sources, precomputedEvidence || undefined)) {
+            if (event.type === 'progress') {
+                yield { type: 'verification-progress', data: event.data };
+            } else if (event.type === 'result') {
+                verification = event.data;
+            }
+        }
 
         phases.verification = {
             status: 'complete',

@@ -40,28 +40,57 @@ interface OpenRouterEmbeddingResponse {
  */
 async function callEmbeddingAPI(texts: string[]): Promise<number[][]> {
     const { OPENROUTER_API_KEY } = getMaxwellEnvConfig();
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 1000;
 
-    const response = await fetch('https://openrouter.ai/api/v1/embeddings', {
-        method: 'POST',
-        headers: {
-            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            model: EMBEDDING_MODEL,
-            input: texts,
-        }),
-    });
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            const response = await fetch('https://openrouter.ai/api/v1/embeddings', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: EMBEDDING_MODEL,
+                    input: texts,
+                }),
+            });
 
-    if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`OpenRouter Embedding Error (${response.status}): ${errorBody}`);
+            if (!response.ok) {
+                const errorBody = await response.text();
+                throw new Error(`OpenRouter Embedding Error (${response.status}): ${errorBody}`);
+            }
+
+            const text = await response.text();
+            if (!text || text.trim().length === 0) {
+                throw new Error('Empty response from Embedding API');
+            }
+
+            let data: OpenRouterEmbeddingResponse;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                throw new Error(`Failed to parse Embedding API response: ${e instanceof Error ? e.message : 'Unknown error'}`);
+            }
+
+            if (!data.data || !Array.isArray(data.data)) {
+                throw new Error('Invalid response format from Embedding API');
+            }
+
+            // Sort by index to ensure order matches input
+            return data.data.sort((a, b) => a.index - b.index).map((d) => d.embedding);
+
+        } catch (error) {
+            const isLastAttempt = attempt === MAX_RETRIES;
+            console.warn(`[Maxwell] Embedding attempt ${attempt}/${MAX_RETRIES} failed:`, error);
+
+            if (isLastAttempt) throw error;
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * attempt));
+        }
     }
 
-    const data = (await response.json()) as OpenRouterEmbeddingResponse;
-
-    // Sort by index to ensure order matches input
-    return data.data.sort((a, b) => a.index - b.index).map((d) => d.embedding);
+    throw new Error('Embedding API failed after retries');
 }
 
 // ============================================
