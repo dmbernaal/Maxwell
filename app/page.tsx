@@ -299,7 +299,8 @@ export default function Home() {
             verificationProgress={maxwell.verificationProgress}
             phaseDurations={maxwell.phaseDurations}
             phaseStartTimes={maxwell.phaseStartTimes}
-            onClose={handleCloseCanvas}
+            events={maxwell.events}
+            onClose={() => setIsCanvasVisible(false)}
             reasoning={maxwell.reasoning}
           />
         )}

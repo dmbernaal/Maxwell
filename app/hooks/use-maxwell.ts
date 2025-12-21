@@ -47,6 +47,7 @@ export interface MaxwellUIState {
     verificationProgress: VerificationProgress | null;
     phaseDurations: PhaseDurations;
     phaseStartTimes: Record<string, number>;
+    events: MaxwellEvent[];
     error: string | null;
     reasoning?: string;
 }
@@ -60,6 +61,7 @@ const initialState: MaxwellUIState = {
     verificationProgress: null,
     phaseDurations: {},
     phaseStartTimes: {},
+    events: [],
     error: null,
     reasoning: undefined,
 };
@@ -157,6 +159,12 @@ export function useMaxwell(): UseMaxwellReturn {
     }, []);
 
     const handleEvent = useCallback((event: MaxwellEvent, sessionId: string) => {
+        // Append event to history (keep last 100)
+        setState((prev) => ({
+            ...prev,
+            events: [...prev.events, event].slice(-100)
+        }));
+
         switch (event.type) {
             case 'phase-start':
                 setState((prev) => ({

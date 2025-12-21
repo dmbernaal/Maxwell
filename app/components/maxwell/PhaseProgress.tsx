@@ -50,18 +50,22 @@ export function PhaseProgress({ phase, phaseDurations, phaseStartTimes }: PhaseP
     const currentPhase = PHASES[currentIdx];
     const isComplete = phase === 'complete';
 
-    // Determine duration to show
+    // Calculate total duration for waterfall
+    const durations = {
+        decomposition: phaseDurations.decomposition || (phase === 'decomposition' ? elapsed : 0),
+        search: phaseDurations.search || (phase === 'search' ? elapsed : 0),
+        synthesis: phaseDurations.synthesis || (phase === 'synthesis' ? elapsed : 0),
+        verification: phaseDurations.verification || (phase === 'verification' ? elapsed : 0),
+    };
+
+    const totalDuration = Object.values(durations).reduce((a, b) => a + b, 0);
+
+    // Determine display duration (total or current phase)
     let displayDuration = 0;
     if (isComplete) {
-        // If complete, show total duration if available, or sum of phases?
-        // Actually, phaseDurations.total is set on complete.
-        displayDuration = phaseDurations.total || 0;
+        displayDuration = phaseDurations.total || totalDuration;
     } else if (currentPhase) {
-        // If active, show live elapsed time
         displayDuration = elapsed;
-    } else {
-        // Fallback
-        displayDuration = 0;
     }
 
     return (
@@ -87,6 +91,61 @@ export function PhaseProgress({ phase, phaseDurations, phaseStartTimes }: PhaseP
                     <span className="text-xs text-white/60 font-medium">
                         {(displayDuration / 1000).toFixed(2)}s
                     </span>
+                </div>
+            </div>
+
+            {/* Latency Waterfall */}
+            <div className="mt-2 px-1">
+                <div className="flex h-1.5 w-full rounded-full overflow-hidden bg-white/5">
+                    {/* Decomposition */}
+                    {durations.decomposition > 0 && (
+                        <div
+                            className="h-full bg-indigo-500/50"
+                            style={{ width: `${(durations.decomposition / totalDuration) * 100}%` }}
+                        />
+                    )}
+                    {/* Search */}
+                    {durations.search > 0 && (
+                        <div
+                            className="h-full bg-sky-500/50"
+                            style={{ width: `${(durations.search / totalDuration) * 100}%` }}
+                        />
+                    )}
+                    {/* Synthesis */}
+                    {durations.synthesis > 0 && (
+                        <div
+                            className="h-full bg-violet-500/50"
+                            style={{ width: `${(durations.synthesis / totalDuration) * 100}%` }}
+                        />
+                    )}
+                    {/* Verification */}
+                    {durations.verification > 0 && (
+                        <div
+                            className="h-full bg-emerald-500/50"
+                            style={{ width: `${(durations.verification / totalDuration) * 100}%` }}
+                        />
+                    )}
+                </div>
+
+                {/* Waterfall Legend */}
+                <div className="flex justify-between mt-1.5">
+                    {Object.entries(durations).map(([key, duration]) => {
+                        if (duration === 0) return null;
+                        const colorMap: Record<string, string> = {
+                            decomposition: 'text-indigo-400',
+                            search: 'text-sky-400',
+                            synthesis: 'text-violet-400',
+                            verification: 'text-emerald-400'
+                        };
+                        return (
+                            <div key={key} className="flex items-center gap-1.5">
+                                <span className={`w-1 h-1 rounded-full ${colorMap[key].replace('text', 'bg')}`} />
+                                <span className={`text-[9px] uppercase tracking-wider ${colorMap[key]} opacity-60`}>
+                                    {(duration / 1000).toFixed(1)}s
+                                </span>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         </div>

@@ -19,20 +19,22 @@ import { motion } from 'framer-motion';
 import { X, Sparkles } from 'lucide-react';
 import { PhaseProgress } from './PhaseProgress';
 import { SubQueryList } from './SubQueryList';
-
 import { VerificationPanel } from './VerificationPanel';
-import type { ExecutionPhase, PhaseDurations, SubQuery, SearchMetadata, MaxwellSource, VerificationOutput } from '../../lib/maxwell/types';
+import { EventLog } from './EventLog';
+
+import type { ExecutionPhase, PhaseDurations, SubQuery, SearchMetadata, MaxwellSource, VerificationOutput, MaxwellEvent } from '../../lib/maxwell/types';
 import type { VerificationProgress } from '../../hooks/use-maxwell';
 
 interface MaxwellCanvasProps {
     phase: ExecutionPhase;
     subQueries: SubQuery[];
-    searchMetadata: SearchMetadata[];
     sources: MaxwellSource[];
+    searchMetadata: SearchMetadata[];
     verification: VerificationOutput | null;
     verificationProgress: VerificationProgress | null;
     phaseDurations: PhaseDurations;
     phaseStartTimes: Record<string, number>;
+    events: MaxwellEvent[];
     onClose: () => void;
     reasoning?: string;
 }
@@ -40,12 +42,13 @@ interface MaxwellCanvasProps {
 export function MaxwellCanvas({
     phase,
     subQueries,
-    searchMetadata,
     sources,
+    searchMetadata,
     verification,
     verificationProgress,
     phaseDurations,
     phaseStartTimes,
+    events,
     onClose,
     reasoning,
 }: MaxwellCanvasProps) {
@@ -98,7 +101,7 @@ export function MaxwellCanvas({
 
                 {/* Sub-queries */}
                 <div className="space-y-3">
-                    <SubQueryList subQueries={subQueries} searchMetadata={searchMetadata} reasoning={reasoning} />
+                    <SubQueryList subQueries={subQueries} searchMetadata={searchMetadata} sources={sources} reasoning={reasoning} />
                 </div>
 
 
@@ -113,6 +116,9 @@ export function MaxwellCanvas({
                         />
                     </div>
                 )}
+
+                {/* Live Event Log */}
+                <EventLog events={events} />
             </div>
         </motion.div>
     );
