@@ -69,7 +69,7 @@ const CitationBadge = ({ href, number, source }: { href?: string, number: string
   const favicon = source?.url ? getFavicon(source.url) : null;
 
   return (
-    <span 
+    <span
       className="relative inline-block ml-0.5 -mt-1 select-none z-20"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -82,10 +82,10 @@ const CitationBadge = ({ href, number, source }: { href?: string, number: string
         className={`
             inline-flex items-center justify-center min-w-[14px] h-[14px] 
             rounded-full border text-[9px] font-mono no-underline transition-all duration-200
-            ${isHovered 
-                ? 'bg-brand-accent text-white border-brand-accent scale-110 shadow-[0_0_10px_rgba(111,59,245,0.4)]' 
-                : 'bg-white/5 text-white/30 border-white/5 hover:bg-white/10 hover:text-white/70'
-            }
+            ${isHovered
+            ? 'bg-brand-accent text-white border-brand-accent scale-110 shadow-[0_0_10px_rgba(111,59,245,0.4)]'
+            : 'bg-white/5 text-white/30 border-white/5 hover:bg-white/10 hover:text-white/70'
+          }
         `}
       >
         {number}
@@ -109,32 +109,32 @@ const CitationBadge = ({ href, number, source }: { href?: string, number: string
                 shadow-2xl shadow-black/50 backdrop-blur-xl
                 overflow-hidden block
             ">
-                {/* Spotlight/Glow Effect */}
-                <span className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent opacity-50 pointer-events-none block" />
-                
-                {/* Header: Icon + Domain */}
-                <span className="flex items-center gap-2 relative z-10">
-                    <span className="w-4 h-4 rounded-full bg-white/5 flex items-center justify-center border border-white/5 overflow-hidden block">
-                        {favicon && (
-                            <img 
-                                src={favicon} 
-                                alt="" 
-                                className="w-3 h-3 opacity-70 block"
-                                onError={(e) => (e.currentTarget.style.display = 'none')} 
-                            />
-                        )}
-                    </span>
-                    <span className="text-[10px] font-mono text-white/40 uppercase tracking-tight truncate block">
-                        {hostname}
-                    </span>
-                </span>
+              {/* Spotlight/Glow Effect */}
+              <span className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent opacity-50 pointer-events-none block" />
 
-                {/* Title */}
-                <span className="text-xs text-white/90 font-medium leading-snug line-clamp-2 relative z-10 font-sans block">
-                    {source.title}
+              {/* Header: Icon + Domain */}
+              <span className="flex items-center gap-2 relative z-10">
+                <span className="w-4 h-4 rounded-full bg-white/5 flex items-center justify-center border border-white/5 overflow-hidden block">
+                  {favicon && (
+                    <img
+                      src={favicon}
+                      alt=""
+                      className="w-3 h-3 opacity-70 block"
+                      onError={(e) => (e.currentTarget.style.display = 'none')}
+                    />
+                  )}
                 </span>
+                <span className="text-[10px] font-mono text-white/40 uppercase tracking-tight truncate block">
+                  {hostname}
+                </span>
+              </span>
+
+              {/* Title */}
+              <span className="text-xs text-white/90 font-medium leading-snug line-clamp-2 relative z-10 font-sans block">
+                {source.title}
+              </span>
             </span>
-            
+
             {/* Arrow */}
             <span className="absolute left-1/2 -translate-x-1/2 top-full -mt-1.5 border-4 border-transparent border-t-[#18151d] block" />
             <span className="absolute left-1/2 -translate-x-1/2 top-full -mt-[7px] border-4 border-transparent border-t-white/10 -z-10 block" />
@@ -151,7 +151,7 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
 
   const sources = message?.sources || [];
   const hasRealSources = sources.length > 0;
-  
+
   // Is the agent actively processing?
   const isActive = status !== 'relaxed' && status !== 'complete';
   const debugSteps = message?.debugSteps || [];
@@ -169,12 +169,12 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
         {isActive ? (
           /* Active: "Ghost Heartbeat" Effect */
           <div className="relative flex items-center justify-center w-4 h-4">
-            <motion.div 
+            <motion.div
               className="absolute inset-0 rounded-full bg-brand-accent/30"
               animate={{ scale: [1, 2], opacity: [0.5, 0] }}
               transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut" }}
             />
-            <motion.div 
+            <motion.div
               className="relative w-2 h-2 rounded-full bg-brand-accent shadow-[0_0_12px_rgba(111,59,245,0.8)]"
               animate={{ scale: [1, 1.1, 1] }}
               transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
@@ -184,7 +184,7 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
           /* Static: Silver/White Dot (Subtle) */
           <div className="w-2 h-2 rounded-full bg-white/20 ml-1" />
         )}
-        
+
         <span className="text-[11px] font-medium text-white/40 uppercase tracking-[0.2em] animate-in fade-in duration-300">
           {isActive ? `${status.toUpperCase()}...` : "Maxwell's Analysis"}
         </span>
@@ -194,15 +194,15 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
       {debugSteps.length > 0 && isActive && (
         <div className="flex flex-col gap-0.5 mb-6 pl-7 border-l border-white/5 ml-1.5 py-1">
           {debugSteps.map((step, idx) => (
-             <DebugStepItem key={step.id || idx} step={step} index={idx} />
+            <DebugStepItem key={step.id || idx} step={step} index={idx} />
           ))}
         </div>
       )}
 
       {/* Main Content - Markdown Rendered */}
       <motion.div
-        variants={isHistory ? undefined : container}
-        initial={isHistory ? false : "hidden"}
+        variants={container}
+        initial={isHistory ? "show" : "hidden"}
         animate="show"
         className="prose prose-invert prose-lg leading-relaxed text-white/70 mb-8 min-h-[20px]"
       >
@@ -215,15 +215,15 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
             a: ({ href, children }) => {
               const content = String(children);
               const isCitation = /^\^\d+\^$/.test(content);
-              
+
               if (isCitation) {
                 const number = content.replace(/\^/g, '');
                 const source = sources.find(s => s.url === href);
                 return (
-                  <CitationBadge 
-                    href={href} 
-                    number={number} 
-                    source={source} 
+                  <CitationBadge
+                    href={href}
+                    number={number}
+                    source={source}
                   />
                 );
               }
@@ -309,23 +309,23 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-3.5 h-3.5 rounded-full bg-white/5 flex items-center justify-center border border-white/5 overflow-hidden group-hover:border-white/10 transition-colors shrink-0">
-                         {favicon && (
-                            <img
-                              src={favicon}
-                              alt=""
-                              className="w-2.5 h-2.5 opacity-50 grayscale group-hover:grayscale-0 group-hover:opacity-100 transition-all"
-                              onError={(e) => (e.currentTarget.style.display = 'none')}
-                            />
-                          )}
+                        {favicon && (
+                          <img
+                            src={favicon}
+                            alt=""
+                            className="w-2.5 h-2.5 opacity-50 grayscale group-hover:grayscale-0 group-hover:opacity-100 transition-all"
+                            onError={(e) => (e.currentTarget.style.display = 'none')}
+                          />
+                        )}
                       </div>
                       <span className="text-[10px] font-mono text-white/30 group-hover:text-white/50 transition-colors truncate">
                         {hostname}
                       </span>
                     </div>
-                    
+
                     {/* Index Number */}
                     <span className="text-[10px] font-mono text-white/20 group-hover:text-white/40 transition-colors shrink-0 ml-2">
-                       {String(i + 1).padStart(2, '0')}
+                      {String(i + 1).padStart(2, '0')}
                     </span>
                   </div>
 
