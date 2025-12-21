@@ -109,6 +109,7 @@ export function MaxwellCanvas({
                         <VerificationPanel
                             verification={verification}
                             progress={verificationProgress}
+                            sources={sources}
                         />
                     </div>
                 )}
