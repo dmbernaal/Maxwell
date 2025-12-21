@@ -23,7 +23,9 @@ import type {
     MaxwellEvent,
     ExecutionPhase,
     PhaseDurations,
+    PlanningCompleteEvent, // Added import
 } from '../lib/maxwell/types';
+import type { ExecutionConfig } from '../lib/maxwell/configFactory'; // Added import
 
 // ============================================
 // STATE TYPES
@@ -51,6 +53,7 @@ export interface MaxwellUIState {
     events: MaxwellEvent[];
     error: string | null;
     reasoning?: string;
+    config?: ExecutionConfig; // Added config
 }
 
 const initialState: MaxwellUIState = {
@@ -66,6 +69,7 @@ const initialState: MaxwellUIState = {
     events: [],
     error: null,
     reasoning: undefined,
+    config: undefined, // Added config
 };
 
 // ============================================
@@ -262,6 +266,13 @@ export function useMaxwell(): UseMaxwellReturn {
 
                     return newState;
                 });
+                break;
+
+            case 'planning-complete':
+                setState((prev) => ({
+                    ...prev,
+                    config: event.config,
+                }));
                 break;
 
             case 'verification-progress':

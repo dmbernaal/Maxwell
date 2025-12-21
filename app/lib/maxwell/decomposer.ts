@@ -8,11 +8,11 @@
  */
 
 import { generateObject } from 'ai';
-import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { z } from 'zod';
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 
 // ✅ CORRECT IMPORT: Using the helper function, not the raw string
-import { createDecompositionPrompt } from './prompts';
+import { DECOMPOSITION_PROMPT } from './prompts';
 import {
     DECOMPOSITION_MODEL,
     MIN_SUB_QUERIES,
@@ -20,6 +20,7 @@ import {
 } from './constants';
 
 import type { SubQuery, DecompositionOutput } from './types';
+import type { ComplexityLevel } from './configFactory';
 
 // ============================================
 // OPENROUTER CLIENT
@@ -37,27 +38,27 @@ function getOpenRouterClient() {
     return createOpenRouter({ apiKey });
 }
 
+
+
 // ============================================
 // SCHEMA DEFINITIONS
 // ============================================
 
 const SubQuerySchema = z.object({
     id: z.string().describe('Unique identifier like "q1", "q2"'),
-    query: z.string().describe('The search query optimized for web search'),
-    purpose: z.string().describe('Why this query is needed for the answer'),
+    query: z.string().describe('The search query optimized for Tavily'),
+    purpose: z.string().describe('Why this query is needed'),
     topic: z.enum(['general', 'news']).describe('Search topic'),
     depth: z.enum(['basic', 'advanced']).describe('Search depth'),
-    days: z.number().nullable().optional().describe('Days back to search'),
-    domains: z.array(z.string()).nullable().optional().describe('Domains to include'),
+    days: z.number().nullable().describe('Days back to search (null for all time)'),
+    domains: z.array(z.string()).nullable().describe('Specific domains to search'),
 });
 
 const DecompositionSchema = z.object({
-    reasoning: z.string().describe('Explanation of decomposition strategy'),
-    subQueries: z
-        .array(SubQuerySchema)
-        .min(MIN_SUB_QUERIES)
-        .max(MAX_SUB_QUERIES)
-        .describe(`Array of ${MIN_SUB_QUERIES}-${MAX_SUB_QUERIES} sub-queries`),
+    reasoning: z.string().describe('Explanation of strategy'),
+    complexity: z.enum(['simple', 'standard', 'deep_research']).describe('Complexity level'),
+    complexityReasoning: z.string().describe('Reasoning for complexity choice'),
+    subQueries: z.array(SubQuerySchema).min(1).max(7),
 });
 
 // ============================================
@@ -71,7 +72,10 @@ const DecompositionSchema = z.object({
  * @returns DecompositionOutput with sub-queries and metadata
  * @throws Error if query is empty or decomposition fails
  */
-export async function decomposeQuery(query: string): Promise<DecompositionOutput> {
+export async function decomposeQuery(
+    query: string,
+    modelId: string = DECOMPOSITION_MODEL
+): Promise<DecompositionOutput> {
     const startTime = Date.now();
 
     // Validate input
@@ -88,13 +92,16 @@ export async function decomposeQuery(query: string): Promise<DecompositionOutput
         const openrouter = getOpenRouterClient();
 
         // ✅ Generate prompt with Date Injection
-        const fullPrompt = createDecompositionPrompt(trimmedQuery);
+        const fullPrompt = DECOMPOSITION_PROMPT
+            .replace('{currentDate}', new Date().toISOString())
+            .replace('{query}', trimmedQuery); // Use trimmedQuery
 
         // Generate structured output
         const { object } = await generateObject({
-            model: openrouter(DECOMPOSITION_MODEL),
+            model: openrouter(modelId),
             schema: DecompositionSchema,
             prompt: fullPrompt,
+            temperature: 0.3, // Low temp for structured output
         });
 
         // Validate sub-query IDs are unique
@@ -123,6 +130,8 @@ export async function decomposeQuery(query: string): Promise<DecompositionOutput
             originalQuery: trimmedQuery,
             subQueries: normalizedSubQueries,
             reasoning: object.reasoning,
+            complexity: object.complexity as ComplexityLevel,
+            complexityReasoning: object.complexityReasoning,
             durationMs: Date.now() - startTime,
         };
     } catch (error) {

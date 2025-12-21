@@ -34,7 +34,7 @@ async function runTests(): Promise<void> {
     ];
 
     try {
-        const result = await parallelSearch(subQueries, (meta) => {
+        const result = await parallelSearch(subQueries, 5, (meta) => {
             console.log(`   CALLBACK: ${meta.queryId} finished with ${meta.sourcesFound} sources (${meta.status})`);
         });
 

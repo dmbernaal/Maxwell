@@ -113,7 +113,10 @@ const EntailmentSchema = z.object({
  * @param answer - The synthesized answer with citations
  * @returns Array of extracted claims with cited source numbers
  */
-export async function extractClaims(answer: string): Promise<ExtractedClaim[]> {
+export async function extractClaims(
+    answer: string,
+    maxClaimsToVerify: number = MAX_CLAIMS_TO_VERIFY // Added parameter with default
+): Promise<ExtractedClaim[]> {
     if (!answer || typeof answer !== 'string' || answer.trim().length === 0) {
         return [];
     }
@@ -130,7 +133,7 @@ export async function extractClaims(answer: string): Promise<ExtractedClaim[]> {
 
         // Normalize and limit
         return object.claims
-            .slice(0, MAX_CLAIMS_TO_VERIFY)
+            .slice(0, maxClaimsToVerify) // Use dynamic limit
             .map((claim, index) => ({
                 id: `c${index + 1}`,
                 text: claim.text.trim(),
@@ -546,13 +549,15 @@ export async function verifyClaims(
     answer: string,
     sources: MaxwellSource[],
     onProgress?: VerificationProgressCallback,
-    precomputedEvidence?: PreparedEvidence
+    precomputedEvidence?: PreparedEvidence,
+    maxClaimsToVerify: number = MAX_CLAIMS_TO_VERIFY, // Added parameter
+    verificationConcurrency: number = DEFAULT_VERIFICATION_CONCURRENCY // Added parameter
 ): Promise<VerificationOutput> {
     const startTime = Date.now();
 
     // 1. Extract claims
     onProgress?.({ current: 0, total: 1, status: 'Extracting factual claims...' });
-    const claims = await extractClaims(answer);
+    const claims = await extractClaims(answer, maxClaimsToVerify); // Pass limit
 
     // Handle no claims
     if (claims.length === 0) {
@@ -592,7 +597,7 @@ export async function verifyClaims(
 
     // 4. Verify claims in parallel with concurrency limit
     // Concurrency set by quality preset (FAST=8, MEDIUM=6, SLOW=4)
-    const CONCURRENCY_LIMIT = DEFAULT_VERIFICATION_CONCURRENCY;
+    const CONCURRENCY_LIMIT = verificationConcurrency; // Use dynamic concurrency
 
     onProgress?.({ current: 0, total: claims.length, status: 'Verifying claims in parallel...' });
 

@@ -121,7 +121,8 @@ function validateCitations(
  */
 export async function* synthesize(
     originalQuery: string,
-    sources: MaxwellSource[]
+    sources: MaxwellSource[],
+    synthesisModel: string = SYNTHESIS_MODEL // Added parameter with default
 ): AsyncGenerator<SynthesisEvent> {
     const startTime = Date.now();
 
@@ -150,7 +151,7 @@ export async function* synthesize(
 
         // 4. Start Stream
         const { textStream } = streamText({
-            model: openrouter(SYNTHESIS_MODEL),
+            model: openrouter(synthesisModel), // Use dynamic model
             prompt,
             maxOutputTokens: SYNTHESIS_MAX_TOKENS,
         });

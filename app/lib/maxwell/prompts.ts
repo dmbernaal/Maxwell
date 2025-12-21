@@ -33,11 +33,17 @@ STRATEGY RULES:
 5. **Domain Targeting (Optional):**
    - If asking about code/dev: include ["github.com", "stackoverflow.com", "docs.*"]
    - If generic, leave domains empty.
+6. **COMPLEXITY ASSESSMENT (CRITICAL):**
+   - 'simple': Fact lookups, specific data points, definitions, weather, stock prices.
+   - 'standard': Explanations, summaries of recent events, comparisons, how-to guides.
+   - 'deep_research': Multi-faceted analysis, future predictions, medical/legal queries, or requests for "comprehensive" reports.
 
 OUTPUT FORMAT:
 Return a JSON object with this exact structure:
 {
   "reasoning": "Brief explanation of your decomposition strategy",
+  "complexity": "simple" | "standard" | "deep_research",
+  "complexityReasoning": "Why this complexity level was chosen",
   "subQueries": [
     {
       "id": "q1",
@@ -56,6 +62,8 @@ EXAMPLES:
 User: "Why is Bitcoin down today?"
 Output: {
   "reasoning": "Breaking news event requiring recent market data and analysis.",
+  "complexity": "standard",
+  "complexityReasoning": "Requires analyzing multiple recent news sources but is a specific event.",
   "subQueries": [
     {
       "id": "q1",
@@ -102,8 +110,8 @@ CRITICAL RULES:
 
 CITATION FORMAT:
 - Use [1], [2], etc. inline IMMEDIATELY after the claim
-- Multiple sources for one claim: [1][3]
-- Do NOT use footnote style—citations go inline
+  - Multiple sources for one claim: [1][3]
+    - Do NOT use footnote style—citations go inline
 
 SOURCES PROVIDED:
 {sources}
@@ -328,5 +336,3 @@ Disputed: [Dip to $86k (False)]
 BAD OUTPUT: "The draft mentioned $88k but it's unverified. However, whale accumulation is true."
 GOOD OUTPUT: "Market signals favor an upward trend. Verified data shows record whale accumulation and net exchange outflows, signaling supply shock. While exact price support is volatile, the 'Extreme Fear' index (20) often precedes a reversal."
 `;
-
-

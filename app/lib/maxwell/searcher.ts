@@ -57,7 +57,8 @@ interface SingleSearchResult {
  */
 async function searchSingleQuery(
     apiKey: string,
-    subQuery: SubQuery
+    subQuery: SubQuery,
+    resultsPerQuery: number
 ): Promise<SingleSearchResult> {
     try {
         // Map days to time_range
@@ -81,7 +82,7 @@ async function searchSingleQuery(
                 body: JSON.stringify({
                     api_key: apiKey,
                     query: subQuery.query,
-                    max_results: RESULTS_PER_QUERY,
+                    max_results: resultsPerQuery,
                     search_depth: depth,
                     topic: subQuery.topic,
                     time_range: time_range,
@@ -209,6 +210,7 @@ export type SearchProgressCallback = (metadata: SearchMetadata) => void;
  */
 export async function parallelSearch(
     subQueries: SubQuery[],
+    resultsPerQuery: number = RESULTS_PER_QUERY, // Added parameter with default
     onProgress?: SearchProgressCallback
 ): Promise<SearchOutput> {
     const startTime = Date.now();
@@ -222,7 +224,7 @@ export async function parallelSearch(
     // Execute in parallel
     const results = await Promise.all(
         subQueries.map(async (subQuery) => {
-            const result = await searchSingleQuery(apiKey, subQuery);
+            const result = await searchSingleQuery(apiKey, subQuery, resultsPerQuery);
             if (onProgress) onProgress(result.metadata);
             return result;
         })

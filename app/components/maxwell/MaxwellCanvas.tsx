@@ -21,9 +21,11 @@ import { PhaseProgress } from './PhaseProgress';
 import { SubQueryList } from './SubQueryList';
 import { VerificationPanel } from './VerificationPanel';
 import { EventLog } from './EventLog';
+import { PlanningCard } from './PlanningCard'; // Added import
 
 import type { ExecutionPhase, PhaseDurations, SubQuery, SearchMetadata, MaxwellSource, VerificationOutput, MaxwellEvent } from '../../lib/maxwell/types';
 import type { VerificationProgress } from '../../hooks/use-maxwell';
+import type { ExecutionConfig } from '../../lib/maxwell/configFactory'; // Added import
 
 interface MaxwellCanvasProps {
     phase: ExecutionPhase;
@@ -37,6 +39,7 @@ interface MaxwellCanvasProps {
     events: MaxwellEvent[];
     onClose: () => void;
     reasoning?: string;
+    config?: ExecutionConfig; // Added config prop
 }
 
 export function MaxwellCanvas({
@@ -51,6 +54,7 @@ export function MaxwellCanvas({
     events,
     onClose,
     reasoning,
+    config, // Added config
 }: MaxwellCanvasProps) {
     return (
         <motion.div
@@ -99,12 +103,17 @@ export function MaxwellCanvas({
                     <PhaseProgress phase={phase} phaseDurations={phaseDurations} phaseStartTimes={phaseStartTimes} />
                 </div>
 
+                {/* Planning Card - Adaptive Compute Visualization */}
+                {config && (
+                    <div className="space-y-3">
+                        <PlanningCard config={config} />
+                    </div>
+                )}
+
                 {/* Sub-queries */}
                 <div className="space-y-3">
                     <SubQueryList subQueries={subQueries} searchMetadata={searchMetadata} sources={sources} reasoning={reasoning} />
                 </div>
-
-
 
                 {/* Verification */}
                 {(verification || verificationProgress) && (

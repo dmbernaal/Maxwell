@@ -42,6 +42,14 @@ export interface SubQuery {
     domains?: string[];
 }
 
+import { ComplexityLevel, ExecutionConfig } from './configFactory';
+
+// ... (previous imports)
+
+// ============================================
+// PHASE 1: DECOMPOSITION TYPES
+// ============================================
+
 /**
  * Output from the decomposition phase.
  */
@@ -52,13 +60,48 @@ export interface DecompositionOutput {
     subQueries: SubQuery[];
     /** Explanation of the decomposition strategy */
     reasoning: string;
+    /** Detected complexity level */
+    complexity: ComplexityLevel;
+    /** Reasoning for complexity assessment */
+    complexityReasoning: string;
     /** Time taken for decomposition in milliseconds */
     durationMs: number;
 }
 
+// ... (Search, Synthesis, Verification types remain same)
+
 // ============================================
-// PHASE 2: SEARCH TYPES
+// STREAMING EVENT TYPES
 // ============================================
+
+
+
+// ... (Other events)
+
+/**
+ * Union type of all possible Maxwell events.
+ */
+
+
+// ============================================
+// FRONTEND STATE TYPES
+// ============================================
+
+/**
+ * Complete frontend state for Maxwell.
+ */
+export interface MaxwellState {
+    phase: ExecutionPhase;
+    config?: ExecutionConfig; // Added config
+    subQueries: SubQuery[];
+    searchMetadata: SearchMetadata[];
+    sources: MaxwellSource[];
+    answer: string;
+    verification: VerificationOutput | null;
+    adjudication: string | null;
+    error: string | null;
+    phaseDurations: PhaseDurations;
+}
 
 /**
  * A source retrieved from web search.
@@ -407,11 +450,20 @@ export interface ErrorEvent {
 }
 
 /**
+ * Event emitted when planning is complete.
+ */
+export interface PlanningCompleteEvent {
+    type: 'planning-complete';
+    config: ExecutionConfig;
+}
+
+/**
  * Union type of all possible Maxwell events.
  */
 export type MaxwellEvent =
     | PhaseStartEvent
     | PhaseCompleteEvent
+    | PlanningCompleteEvent
     | SearchProgressEvent
     | SynthesisChunkEvent
     | VerificationProgressEvent
@@ -453,6 +505,7 @@ export interface PhaseDurations {
  */
 export interface MaxwellState {
     phase: ExecutionPhase;
+    config?: ExecutionConfig;
     subQueries: SubQuery[];
     searchMetadata: SearchMetadata[];
     sources: MaxwellSource[];

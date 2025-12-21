@@ -302,6 +302,7 @@ export default function Home() {
             events={maxwell.events}
             onClose={() => setIsCanvasVisible(false)}
             reasoning={maxwell.reasoning}
+            config={maxwell.config}
           />
         )}
       </AnimatePresence>

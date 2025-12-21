@@ -8,6 +8,7 @@
  */
 
 import { decomposeQuery } from './decomposer';
+import { createExecutionConfig } from './configFactory'; // Added import
 import { parallelSearch } from './searcher';
 import { synthesize } from './synthesizer';
 import { verifyClaims, verifyClaimsStream, prepareEvidence, type PreparedEvidence } from './verifier';
@@ -30,13 +31,6 @@ export { synthesize } from './synthesizer';
 export { verifyClaims } from './verifier';
 export { adjudicateAnswer } from './adjudicator';
 
-/**
- * Runs the complete Maxwell pipeline.
- * Yields events for every step to power the streaming UI.
- *
- * @param query - The user's search query
- * @yields MaxwellEvent for each phase transition and update
- */
 export async function* runMaxwell(query: string): AsyncGenerator<MaxwellEvent> {
     const overallStart = Date.now();
 
@@ -55,12 +49,18 @@ export async function* runMaxwell(query: string): AsyncGenerator<MaxwellEvent> {
 
     try {
         // ═══════════════════════════════════════════════════════════
-        // PHASE 1: DECOMPOSITION
+        // PHASE 1: DECOMPOSITION & PLANNING
         // ═══════════════════════════════════════════════════════════
         yield { type: 'phase-start', phase: 'decomposition' };
         phases.decomposition.status = 'in_progress';
 
         const decomposition = await decomposeQuery(query);
+
+        // Create Execution Config based on Complexity
+        const config = createExecutionConfig(
+            decomposition.complexity,
+            decomposition.complexityReasoning
+        );
 
         phases.decomposition = {
             status: 'complete',
@@ -74,13 +74,23 @@ export async function* runMaxwell(query: string): AsyncGenerator<MaxwellEvent> {
             data: decomposition,
         };
 
+        // Emit Planning Complete Event
+        yield {
+            type: 'planning-complete',
+            config,
+        };
+
         // ═══════════════════════════════════════════════════════════
         // PHASE 2: PARALLEL SEARCH
         // ═══════════════════════════════════════════════════════════
         yield { type: 'phase-start', phase: 'search' };
         phases.search.status = 'in_progress';
 
-        const searchOutput = await parallelSearch(decomposition.subQueries);
+        // Pass config.resultsPerQuery to searcher
+        const searchOutput = await parallelSearch(
+            decomposition.subQueries,
+            config.resultsPerQuery // Use dynamic limit
+        );
 
         sources = searchOutput.sources;
 
@@ -122,7 +132,7 @@ export async function* runMaxwell(query: string): AsyncGenerator<MaxwellEvent> {
         let synthesisDuration = 0;
         let sourcesUsed: string[] = [];
 
-        for await (const event of synthesize(query, sources)) {
+        for await (const event of synthesize(query, sources, config.synthesisModel)) {
             if (event.type === 'chunk') {
                 yield { type: 'synthesis-chunk', content: event.content };
             } else if (event.type === 'complete') {
