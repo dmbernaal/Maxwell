@@ -30,29 +30,15 @@ const modes: { id: SearchMode; label: string; icon: LucideIcon; description: str
         id: 'normal',
         label: 'Standard',
         icon: MessageSquare,
-        description: 'Quick, standard chat',
+        description: 'Quick LLM chat',
         color: 'text-white'
     },
     {
-        id: 'fast',
-        label: 'Fast',
-        icon: Zap,
-        description: 'Quick research',
-        color: 'text-amber-400'
-    },
-    {
-        id: 'balanced',
-        label: 'Balanced',
-        icon: Brain,
-        description: 'Thorough analysis',
+        id: 'maxwell',
+        label: 'Maxwell',
+        icon: Sparkles,
+        description: 'Verified search',
         color: 'text-brand-accent'
-    },
-    {
-        id: 'deep',
-        label: 'Deep',
-        icon: Clock,
-        description: 'Comprehensive report',
-        color: 'text-emerald-400'
     }
 ];
 

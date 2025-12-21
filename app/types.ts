@@ -28,7 +28,7 @@ export interface Message {
   maxwellState?: any; // Storing full Maxwell state for hydration
 }
 
-export type SearchMode = 'normal' | 'fast' | 'balanced' | 'deep';
+export type SearchMode = 'normal' | 'maxwell';
 
 export interface ChatSession {
   id: string;
