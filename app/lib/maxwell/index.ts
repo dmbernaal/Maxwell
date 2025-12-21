@@ -186,9 +186,12 @@ export async function* runMaxwell(query: string): AsyncGenerator<MaxwellEvent> {
         const adjudicationStart = Date.now();
 
         if (verification) {
-            for await (const chunk of adjudicateAnswer(query, answer, verification)) {
-                adjudicationText += chunk;
-                yield { type: 'adjudication-chunk', content: chunk };
+            const adjudicationResult = await adjudicateAnswer(query, answer, verification);
+            if (adjudicationResult) {
+                for await (const chunk of adjudicationResult.textStream) {
+                    adjudicationText += chunk;
+                    yield { type: 'adjudication-chunk', content: chunk };
+                }
             }
         }
 

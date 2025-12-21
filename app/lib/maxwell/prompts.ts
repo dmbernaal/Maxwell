@@ -274,61 +274,34 @@ export function createNLIPrompt(claim: string, evidence: string): string {
 // ADJUDICATOR PROMPT
 // ============================================
 
-export const ADJUDICATOR_PROMPT = `You are the Adjudicator, the final authority in a verified search pipeline.
+export const RECONSTRUCTOR_SYSTEM_PROMPT = `
+You are the Final Authority in a high-stakes intelligence pipeline.
+Your job is to answer the User's Question using ONLY verified evidence.
 
-INPUTS:
-1. User Query: "{query}"
-2. Draft Answer (written by a synthesizer)
-3. Verification Report (audit of the draft, containing claims and verdicts: SUPPORTED, CONTRADICTED, NEUTRAL)
+**INPUTS:**
+1. User Query: The original question asked.
+2. Verified Facts: A list of claims that have been proven true by evidence (High Confidence).
+3. Disputed Facts: A list of claims that were proven false, with their corrections.
+4. Unverified/Missing: Claims that had no evidence.
 
-VERIFICATION REPORT SUMMARY:
-{verificationSummary}
+**STRICT INSTRUCTIONS:**
+1. **IGNORE THE DRAFT:** Do not refer to "the draft," "the text," or "the previous section." The user should not know a draft existed.
+2. **SYNTHESIZE VERIFIED FACTS:** Construct a direct answer to the User Query using *only* the Verified Facts.
+3. **INTEGRATE CORRECTIONS:** If a Disputed Fact is relevant, state the *Corrected* version directly. (e.g., instead of "The draft said X but it is Y", just say "Current data confirms Y").
+4. **HANDLE GAPS:** If the verified facts are insufficient to answer the question fully, admit *specifically* what is unknown, but synthesize what *is* known.
+5. **CONCLUSION:** End with a "Final Verdict" or "Outlook" based purely on the verified signals.
 
-YOUR GOAL: Write a final 'Verdict' paragraph.
+**TONE:**
+Direct, dense, and authoritative. You are not a checker; you are the source of truth.
 
-RULES:
-* IF Verification contains CONTRADICTED claims: You MUST start with 'Correction:' and explicitly fix the errors. (e.g., 'The draft incorrectly stated revenue was $5B; verified sources confirm it is $4.2B').
-* IF Verification is HIGH (>80%) and NO contradictions: Write a concise 'Executive Summary' that synthesizes the key verified facts. Start with 'Verified Summary:'.
-* IF Verification is LOW/MEDIUM or has UNCERTAINTY: Write a 'Consensus Note' summarizing what is confirmed vs what remains uncertain. Start with 'Consensus Note:'.
-* ALWAYS generate a verdict. Do not skip.
-* Tone: Authoritative, objective, final.
-* Length: Maximum 3-4 sentences. Do not re-write the whole essay. Provide the 'Bottom Line'.
-* Formatting: Use Markdown.
+**EXAMPLE:**
+Query: "Will BTC go up?"
+Verified: [Whales buying (Yes), Fear Index 20 (Yes), Outflows (Yes)]
+Unverified: [Price is $88k]
+Disputed: [Dip to $86k (False)]
 
-DRAFT ANSWER FOR CONTEXT:
-{draft}
+BAD OUTPUT: "The draft mentioned $88k but it's unverified. However, whale accumulation is true."
+GOOD OUTPUT: "Market signals favor an upward trend. Verified data shows record whale accumulation and net exchange outflows, signaling supply shock. While exact price support is volatile, the 'Extreme Fear' index (20) often precedes a reversal."
+`;
 
-Generate the Verdict:`;
 
-/**
- * Creates the Adjudicator prompt.
- *
- * @param query - User query
- * @param draft - Draft answer
- * @param verification - Full verification output
- */
-export function createAdjudicatorPrompt(
-  query: string,
-  draft: string,
-  verification: any // Using any to avoid circular deps if types aren't exported here, but ideally VerificationOutput
-): string {
-  // Summarize verification for the prompt to save tokens/complexity
-  const summary = `
-    Overall Confidence: ${verification.overallConfidence}%
-    Supported Claims: ${verification.summary.supported}
-    Contradicted Claims: ${verification.summary.contradicted}
-    Uncertain Claims: ${verification.summary.uncertain}
-    
-    Issues Found:
-    ${verification.claims
-      .filter((c: any) => c.issues.length > 0)
-      .map((c: any) => `- Claim: "${c.text}" -> Issues: ${c.issues.join(', ')}`)
-      .join('\n')}
-    `;
-
-  return fillPromptTemplate(ADJUDICATOR_PROMPT, {
-    query,
-    draft: draft.substring(0, 2000), // Truncate draft if too long to save context
-    verificationSummary: summary,
-  });
-}
