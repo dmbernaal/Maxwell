@@ -272,8 +272,8 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
         </ReactMarkdown>
       </motion.div>
 
-      {/* Sources Panel - Only show if we have real sources */}
-      {hasRealSources && (
+      {/* Sources Panel - Only show if we have real sources AND agent is done typing (or history) */}
+      {hasRealSources && (!isActive || isHistory) && (
         <motion.div
           initial={isHistory ? false : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

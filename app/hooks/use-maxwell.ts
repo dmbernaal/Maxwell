@@ -157,6 +157,17 @@ export function useMaxwell(): UseMaxwellReturn {
 
             case 'phase-complete':
                 handlePhaseComplete(event, sessionId);
+
+                // If search is complete, update the chat message with sources immediately
+                if (event.phase === 'search' && agentMessageIdRef.current) {
+                    const session = getActiveSession();
+                    const message = session?.messages.find((m) => m.id === agentMessageIdRef.current);
+                    const currentContent = message?.content || '';
+                    const phaseData = event.data as { sources?: MaxwellSource[] };
+                    const sources = (phaseData.sources || []).map(mapMaxwellSourceToSource);
+
+                    updateMessage(agentMessageIdRef.current, currentContent, sources, sessionId);
+                }
                 break;
 
             case 'synthesis-chunk':
