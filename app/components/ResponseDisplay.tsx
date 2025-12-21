@@ -4,8 +4,12 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Check } from 'lucide-react';
+import { Check, Sparkles, ArrowRight } from 'lucide-react';
 import { Message, Source, AgentState, DebugStep } from '../types';
+
+// ... (rest of imports)
+
+// ... (inside ResponseDisplay component)
 
 interface ResponseDisplayProps {
   message: Message | null;
@@ -337,6 +341,86 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
               );
             })}
           </div>
+        </motion.div>
+      )}
+
+      {/* View Results Card - Persistent Re-open Trigger */}
+      {message?.maxwellState && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mt-4"
+        >
+          <button
+            onClick={() => {
+              // Dispatch custom event to open canvas with this state
+              const event = new CustomEvent('openMaxwellCanvas', {
+                detail: message.maxwellState
+              });
+              window.dispatchEvent(event);
+            }}
+            className="group w-full relative overflow-hidden rounded-xl border border-white/10 bg-[#18151d] p-4 text-left transition-all hover:border-white/20"
+          >
+            {/* Subtle Gradient Background */}
+            <div className="absolute inset-0 bg-gradient-to-r from-white/5 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+
+            <div className="relative z-10 flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-medium text-white/90">Analysis Complete</h4>
+                <p className="text-[11px] text-white/50 mt-0.5">Click to view full verification report</p>
+              </div>
+
+              {/* Confidence Score Indicator */}
+              {message.maxwellState.verification && (
+                <div className="flex items-center gap-3">
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] uppercase tracking-wider font-medium text-white/40">Confidence</span>
+                    <span className={`text-xs font-bold ${message.maxwellState.verification.overallConfidence >= 80 ? 'text-emerald-400' :
+                      message.maxwellState.verification.overallConfidence >= 50 ? 'text-amber-400' :
+                        'text-rose-400'
+                      }`}>
+                      {message.maxwellState.verification.overallConfidence}%
+                    </span>
+                  </div>
+
+                  <div className="relative flex items-center justify-center w-10 h-10">
+                    {/* Background Ring */}
+                    <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                      <path
+                        className="text-white/10"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                      />
+                      {/* Progress Ring */}
+                      <path
+                        className={`${message.maxwellState.verification.overallConfidence >= 80 ? 'text-emerald-500' :
+                          message.maxwellState.verification.overallConfidence >= 50 ? 'text-amber-500' :
+                            'text-rose-500'
+                          } drop-shadow-[0_0_4px_currentColor]`}
+                        strokeDasharray={`${message.maxwellState.verification.overallConfidence}, 100`}
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+
+                    {/* Inner Icon/Text */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className={`w-1.5 h-1.5 rounded-full ${message.maxwellState.verification.overallConfidence >= 80 ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' :
+                        message.maxwellState.verification.overallConfidence >= 50 ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]' :
+                          'bg-rose-400 shadow-[0_0_8px_rgba(251,113,133,0.6)]'
+                        }`} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </button>
         </motion.div>
       )}
     </div>

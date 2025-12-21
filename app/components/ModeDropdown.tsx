@@ -210,22 +210,6 @@ export default function ModeDropdown({
 
     return (
         <div className="flex items-center gap-2">
-            {/* View Results Button - Shows when Maxwell has results but canvas is closed */}
-            {hasMaxwellResults && onViewResults && (
-                <motion.button
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    onClick={onViewResults}
-                    className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full 
-                        bg-brand-accent/10 border border-brand-accent/30 text-brand-accent
-                        hover:bg-brand-accent/20 transition-colors text-xs font-medium"
-                >
-                    <Sparkles size={14} />
-                    <span>View Results</span>
-                </motion.button>
-            )}
-
             {/* Trigger Button */}
             <button
                 ref={buttonRef}
