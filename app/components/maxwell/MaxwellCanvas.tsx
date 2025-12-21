@@ -47,82 +47,65 @@ export function MaxwellCanvas({
 }: MaxwellCanvasProps) {
     return (
         <motion.div
-            initial={{ x: '100%', opacity: 0 }}
+            initial={{ x: 100, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            exit={{ x: '100%', opacity: 0 }}
+            exit={{ x: 100, opacity: 0 }}
             transition={{
                 type: 'spring',
                 stiffness: 300,
-                damping: 40,
+                damping: 30,
             }}
-            className="fixed top-0 right-0 h-full w-full md:w-[45%] lg:w-[40%] bg-[#120F14] border-l border-white/5 z-40 flex flex-col"
+            className="fixed top-4 right-4 bottom-4 w-[48%] bg-[#18151d] rounded-[32px] border border-white/10 shadow-2xl z-40 flex flex-col overflow-hidden"
         >
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-brand-accent/10 flex items-center justify-center">
-                        <Sparkles className="w-4 h-4 text-brand-accent" />
-                    </div>
-                    <div>
-                        <h2 className="text-sm font-medium text-white">Maxwell Canvas</h2>
-                        <p className="text-[10px] text-white/30 uppercase tracking-wider">
-                            Verified Search Agent
-                        </p>
-                    </div>
-                </div>
-                <button
-                    onClick={onClose}
-                    className="p-2 rounded-lg hover:bg-white/5 transition-colors"
-                >
-                    <X className="w-4 h-4 text-white/40" />
-                </button>
-            </div>
+            {/* Background Pattern - Dot Matrix */}
+            <div
+                className="absolute inset-0 opacity-[0.15] pointer-events-none z-0"
+                style={{
+                    backgroundImage: 'radial-gradient(#333 1px, transparent 1px)',
+                    backgroundSize: '24px 24px',
+                    maskImage: 'radial-gradient(circle at center, black 40%, transparent 100%)',
+                    WebkitMaskImage: 'radial-gradient(circle at center, black 40%, transparent 100%)'
+                }}
+            />
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8 no-scrollbar">
-                {/* Phase Progress */}
-                <PhaseProgress phase={phase} phaseDurations={phaseDurations} />
+            {/* Close Button - Absolute Top Left */}
+            <button
+                onClick={onClose}
+                className="absolute top-6 left-6 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors z-50 group"
+            >
+                <X className="w-5 h-5 text-white/40 group-hover:text-white transition-colors" />
+            </button>
 
-                {/* Sub-queries */}
-                <SubQueryList subQueries={subQueries} searchMetadata={searchMetadata} />
-
-                {/* Sources */}
-                <SourcesPanel sources={sources} />
-
-                {/* Verification */}
-                <VerificationPanel
-                    verification={verification}
-                    progress={verificationProgress}
-                />
-
-                {/* Empty State */}
-                {phase === 'idle' && (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                        <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                            <Sparkles className="w-6 h-6 text-white/20" />
-                        </div>
-                        <p className="text-sm text-white/40">
-                            Submit a query to start the Maxwell pipeline
-                        </p>
-                        <p className="text-[11px] text-white/20 mt-1">
-                            Decompose → Search → Synthesize → Verify
-                        </p>
-                    </div>
+            {/* Header - Minimalist & Transparent */}
+            <div className="relative z-10 flex items-center justify-end px-8 pt-8 pb-2">
+                {phaseDurations.total && (
+                    <span className="text-[10px] font-mono text-white/30">
+                        {phaseDurations.total > 0 ? `${(phaseDurations.total / 1000).toFixed(2)}s` : ''}
+                    </span>
                 )}
             </div>
 
-            {/* Footer */}
-            <div className="px-6 py-3 border-t border-white/5 bg-[#0d0b10]">
-                <div className="flex items-center justify-between">
-                    <span className="text-[9px] text-white/20 uppercase tracking-wider">
-                        Multi-signal verification
-                    </span>
-                    {phaseDurations.total && (
-                        <span className="text-[9px] font-mono text-white/30">
-                            {(phaseDurations.total / 1000).toFixed(1)}s
-                        </span>
-                    )}
+            {/* Content - Scrollable & Left Aligned */}
+            <div className="relative z-10 flex-1 overflow-y-auto px-8 py-8 space-y-8 no-scrollbar">
+                {/* Phase Progress */}
+                <div className="space-y-3">
+                    <PhaseProgress phase={phase} phaseDurations={phaseDurations} />
                 </div>
+
+                {/* Sub-queries */}
+                <div className="space-y-3">
+                    <SubQueryList subQueries={subQueries} searchMetadata={searchMetadata} />
+                </div>
+
+                {/* Verification */}
+                {(verification || verificationProgress) && (
+                    <div className="space-y-3">
+                        <VerificationPanel
+                            verification={verification}
+                            progress={verificationProgress}
+                        />
+                    </div>
+                )}
             </div>
         </motion.div>
     );

@@ -36,78 +36,47 @@ export function SourcesPanel({ sources }: SourcesPanelProps) {
     const displaySources = isExpanded ? sources : sources.slice(0, 5);
 
     return (
-        <div className="space-y-2">
-            {/* Header */}
-            <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full flex items-center justify-between group"
-            >
-                <div className="flex items-center gap-2">
-                    <Book className="w-3.5 h-3.5 text-white/30" />
-                    <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/30 group-hover:text-white/50 transition-colors">
-                        Sources
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded-full bg-white/5 text-[9px] font-mono text-white/40">
-                        {sources.length}
-                    </span>
-                </div>
-                {isExpanded ? (
-                    <ChevronUp className="w-3.5 h-3.5 text-white/30" />
-                ) : (
-                    <ChevronDown className="w-3.5 h-3.5 text-white/30" />
-                )}
-            </button>
-
+        <div className="space-y-4">
             {/* Sources Grid */}
-            <div className="grid grid-cols-1 gap-2">
+            <div className="grid grid-cols-2 gap-3">
                 {displaySources.map((source, idx) => {
-                    const favicon = getFavicon(source.url);
-                    let hostname = '';
-                    try {
-                        hostname = new URL(source.url).hostname;
-                    } catch {
-                        hostname = source.url;
-                    }
+                    const domain = new URL(source.url).hostname.replace('www.', '');
 
                     return (
-                        <motion.a
-                            key={source.id}
+                        <a
+                            key={idx}
                             href={source.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            initial={{ opacity: 0, y: 5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: idx * 0.02 }}
-                            className="group flex items-center gap-3 p-2.5 rounded-lg bg-[#18151d] border border-white/5 hover:bg-[#231f29] hover:border-white/10 transition-all"
+                            className="flex flex-col gap-2 p-3 rounded-xl bg-gradient-to-b from-white/[0.08] to-transparent border border-white/5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] hover:from-white/[0.12] transition-all group"
                         >
-                            {/* Citation Number */}
-                            <div className="w-5 h-5 rounded-md bg-brand-accent/10 text-brand-accent text-[9px] font-medium flex items-center justify-center border border-brand-accent/20 shrink-0">
-                                {idx + 1}
+                            <div className="flex items-start justify-between">
+                                {/* Citation Number */}
+                                <div className="flex items-center justify-center w-5 h-5 rounded-full bg-white/5 border border-white/5 text-[9px] font-mono text-white/40 group-hover:text-white/60 transition-colors">
+                                    {idx + 1}
+                                </div>
+                                {/* External Link Icon */}
+                                <ExternalLink className="w-3 h-3 text-white/20 group-hover:text-white/40 transition-colors" />
                             </div>
 
                             {/* Content */}
-                            <div className="flex-1 min-w-0">
-                                <p className="text-[11px] text-white/60 font-medium truncate group-hover:text-white/80 transition-colors">
-                                    {source.title || 'Untitled'}
-                                </p>
-                                <div className="flex items-center gap-2 mt-0.5">
-                                    {favicon && (
-                                        <img
-                                            src={favicon}
-                                            alt=""
-                                            className="w-3 h-3 opacity-40 group-hover:opacity-70 transition-opacity"
-                                            onError={(e) => (e.currentTarget.style.display = 'none')}
-                                        />
-                                    )}
+                            <div className="min-w-0">
+                                <h4 className="text-[11px] font-medium text-white/70 truncate group-hover:text-white transition-colors mb-1">
+                                    {source.title}
+                                </h4>
+                                <div className="flex items-center gap-2">
+                                    {/* Favicon */}
+                                    <img
+                                        src={`https://www.google.com/s2/favicons?domain=${domain}&sz=128`}
+                                        alt=""
+                                        className="w-3 h-3 opacity-40 grayscale group-hover:opacity-60 transition-opacity"
+                                    />
                                     <span className="text-[9px] font-mono text-white/30 truncate">
-                                        {hostname}
+                                        {domain}
                                     </span>
                                 </div>
                             </div>
-
-                            {/* External Link */}
-                            <ExternalLink className="w-3 h-3 text-white/20 group-hover:text-white/40 shrink-0" />
-                        </motion.a>
+                        </a>
                     );
                 })}
             </div>
@@ -116,9 +85,9 @@ export function SourcesPanel({ sources }: SourcesPanelProps) {
             {!isExpanded && sources.length > 5 && (
                 <button
                     onClick={() => setIsExpanded(true)}
-                    className="w-full text-center py-2 text-[10px] text-white/30 hover:text-white/50 transition-colors"
+                    className="w-full text-center py-2 text-[10px] font-mono text-white/30 hover:text-white/50 transition-colors"
                 >
-                    Show {sources.length - 5} more sources
+                    + {sources.length - 5} MORE SOURCES
                 </button>
             )}
         </div>

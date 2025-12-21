@@ -30,67 +30,38 @@ export function PhaseProgress({ phase, phaseDurations }: PhaseProgressProps) {
     if (phase === 'idle') return null;
 
     const currentIdx = PHASES.findIndex((p) => p.id === phase);
+    const currentPhase = PHASES[currentIdx];
     const isComplete = phase === 'complete';
     const isError = phase === 'error';
 
+    // Calculate total time for active phase
+    const activeDuration = currentPhase ? phaseDurations[currentPhase.id as keyof PhaseDurations] : 0;
+
     return (
-        <div className="space-y-3">
-            {/* Header */}
-            <div className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-brand-accent" />
-                <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/30">
-                    Pipeline Status
-                </span>
-            </div>
-
-            {/* Phase Pills */}
-            <div className="flex flex-wrap gap-2">
-                {PHASES.map((p, idx) => {
-                    const Icon = p.icon;
-                    const isDone = idx < currentIdx || isComplete;
-                    const isActive = p.id === phase && !isComplete && !isError;
-                    const duration = phaseDurations[p.id as keyof PhaseDurations];
-
-                    let bgClass = 'bg-white/5 text-white/30';
-                    if (isDone) bgClass = 'bg-emerald-500/10 text-emerald-400';
-                    if (isActive) bgClass = 'bg-brand-accent/10 text-brand-accent';
-
-                    return (
-                        <motion.div
-                            key={p.id}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: idx * 0.1 }}
-                            className={`
-                                flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-medium
-                                border border-transparent transition-colors
-                                ${bgClass}
-                            `}
-                        >
-                            {isActive ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
-                            ) : isDone ? (
-                                <CheckCircle className="w-3 h-3" />
-                            ) : (
-                                <Icon className="w-3 h-3" />
-                            )}
-                            <span>{p.label}</span>
-                            {duration && (
-                                <span className="opacity-60 font-mono text-[9px]">
-                                    {(duration / 1000).toFixed(1)}s
-                                </span>
-                            )}
-                        </motion.div>
-                    );
-                })}
-            </div>
-
-            {/* Total Duration */}
-            {phaseDurations.total && (
-                <div className="text-[10px] font-mono text-white/20">
-                    Total: {(phaseDurations.total / 1000).toFixed(1)}s
+        <div className="w-full font-mono">
+            {/* Terminal Status Line */}
+            <div className="flex items-center justify-between px-1 py-2">
+                <div className="flex items-center gap-3">
+                    <div className="flex flex-col">
+                        <span className="text-[10px] text-white/40 uppercase tracking-widest mb-0.5">
+                            Current Process
+                        </span>
+                        <span className="text-[13px] text-white/80 font-medium tracking-tight">
+                            {isComplete ? 'Processing Complete' : currentPhase?.label || 'Initializing...'}
+                        </span>
+                    </div>
                 </div>
-            )}
+
+                {/* Timer */}
+                <div className="text-right">
+                    <span className="text-[10px] text-white/30 uppercase tracking-widest block mb-0.5">
+                        Time
+                    </span>
+                    <span className="text-xs text-white/60 font-medium">
+                        {activeDuration ? (activeDuration / 1000).toFixed(2) : '0.00'}s
+                    </span>
+                </div>
+            </div>
         </div>
     );
 }

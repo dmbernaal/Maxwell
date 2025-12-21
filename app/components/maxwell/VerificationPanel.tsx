@@ -21,13 +21,13 @@ interface VerificationPanelProps {
 }
 
 function ConfidenceBadge({ score }: { score: number }) {
-    let colorClass = 'bg-red-500/10 text-red-400 border-red-500/20';
-    if (score >= 70) colorClass = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-    else if (score >= 40) colorClass = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+    let colorClass = 'text-red-400';
+    if (score >= 70) colorClass = 'text-emerald-400';
+    else if (score >= 40) colorClass = 'text-amber-400';
 
     return (
-        <span className={`px-2 py-0.5 rounded text-[10px] font-mono border ${colorClass}`}>
-            {score}%
+        <span className={`text-[10px] font-mono ${colorClass}`}>
+            CONFIDENCE: {score}%
         </span>
     );
 }
@@ -37,44 +37,44 @@ function ClaimRow({ claim }: { claim: VerifiedClaim }) {
 
     const verdictConfig = {
         SUPPORTED: {
-            icon: CheckCircle,
+            label: '[VERIFIED]',
             colorClass: 'text-emerald-500',
-            bgClass: 'bg-emerald-500/5',
         },
         NEUTRAL: {
-            icon: AlertTriangle,
+            label: '[UNCERTAIN]',
             colorClass: 'text-amber-500',
-            bgClass: 'bg-amber-500/5',
         },
         CONTRADICTED: {
-            icon: XCircle,
-            colorClass: 'text-red-500',
-            bgClass: 'bg-red-500/5',
+            label: '[DISPUTED]',
+            colorClass: 'text-rose-500',
         },
     };
 
     const config = verdictConfig[claim.entailment] || verdictConfig.NEUTRAL;
-    const Icon = config.icon;
 
     return (
-        <div className={`rounded-lg overflow-hidden ${isExpanded ? config.bgClass : 'hover:bg-white/[0.02]'}`}>
+        <div className={`rounded-lg overflow-hidden border border-white/5 transition-all duration-300 ${isExpanded ? 'bg-white/[0.04]' : 'bg-white/[0.02] hover:bg-white/[0.04]'}`}>
             {/* Claim Header */}
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full flex items-start gap-3 p-3 text-left transition-colors"
+                className="w-full flex items-start gap-4 p-4 text-left"
             >
-                <Icon className={`w-4 h-4 ${config.colorClass} shrink-0 mt-0.5`} />
                 <div className="flex-1 min-w-0">
-                    <p className="text-xs text-white/70 leading-snug">{claim.text}</p>
+                    <div className="flex items-center gap-3 mb-2">
+                        <span className={`text-[9px] font-mono tracking-wider ${config.colorClass}`}>
+                            {config.label}
+                        </span>
+                        <span className="text-[9px] font-mono text-white/20">
+                            ID: {claim.id.slice(0, 8)}
+                        </span>
+                    </div>
+                    <p className="text-xs text-white/80 leading-relaxed font-light">
+                        {claim.text}
+                    </p>
                 </div>
-                <span className="text-[10px] font-mono text-white/40 shrink-0">
+                <span className="text-[10px] font-mono text-white/30 shrink-0 mt-1">
                     {Math.round(claim.confidence * 100)}%
                 </span>
-                {isExpanded ? (
-                    <ChevronUp className="w-3 h-3 text-white/30 shrink-0" />
-                ) : (
-                    <ChevronDown className="w-3 h-3 text-white/30 shrink-0" />
-                )}
             </button>
 
             {/* Expanded Details */}
@@ -87,49 +87,33 @@ function ClaimRow({ claim }: { claim: VerifiedClaim }) {
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                     >
-                        <div className="px-3 pb-3 ml-7 space-y-3">
+                        <div className="px-4 pb-4 pt-0 space-y-4">
+                            <div className="h-[1px] w-full bg-white/5" />
+
                             {/* Reasoning */}
-                            <div className="p-2 rounded bg-black/20 border border-white/5">
-                                <div className="text-[9px] font-medium uppercase tracking-wider text-white/30 mb-1">
-                                    Reasoning
+                            <div>
+                                <div className="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-2">
+                                    Analysis
                                 </div>
-                                <p className="text-[11px] text-white/50 leading-relaxed">
+                                <p className="text-[11px] text-white/60 leading-relaxed">
                                     {claim.entailmentReasoning}
                                 </p>
                             </div>
 
                             {/* Evidence */}
-                            <div className="p-2 rounded bg-black/20 border border-white/5">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <Quote className="w-3 h-3 text-white/20" />
-                                    <span className="text-[9px] font-medium uppercase tracking-wider text-white/30">
-                                        Evidence
+                            <div className="bg-black/20 rounded p-3 border border-white/5">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-[9px] font-mono text-white/30 uppercase tracking-widest">
+                                        Primary_Evidence
                                     </span>
-                                    <span className="text-[9px] text-white/20 font-mono">
-                                        [{claim.bestMatchingSource.sourceIndex + 1}]
+                                    <span className="text-[9px] font-mono text-white/20">
+                                        REF: [{claim.bestMatchingSource.sourceIndex + 1}]
                                     </span>
                                 </div>
-                                <p className="text-[11px] text-white/50 leading-relaxed italic">
+                                <p className="text-[11px] text-white/50 leading-relaxed italic font-serif">
                                     "{claim.bestMatchingSource.passage}"
                                 </p>
-                                <p className="text-[9px] text-white/30 mt-1 truncate">
-                                    — {claim.bestMatchingSource.sourceTitle}
-                                </p>
                             </div>
-
-                            {/* Issues */}
-                            {claim.issues.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5">
-                                    {claim.issues.map((issue: string, i: number) => (
-                                        <span
-                                            key={i}
-                                            className="px-2 py-0.5 rounded bg-red-500/10 text-red-400 text-[9px] border border-red-500/20"
-                                        >
-                                            {issue}
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
                         </div>
                     </motion.div>
                 )}
@@ -138,85 +122,101 @@ function ClaimRow({ claim }: { claim: VerifiedClaim }) {
     );
 }
 
-export function VerificationPanel({ verification, progress }: VerificationPanelProps) {
-    const [isExpanded, setIsExpanded] = useState(true);
+function ConfidenceCircle({ score }: { score: number }) {
+    const radius = 16; // Increased radius
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (score / 100) * circumference;
 
+    let colorClass = 'text-rose-400';
+    if (score >= 70) colorClass = 'text-emerald-400';
+    else if (score >= 40) colorClass = 'text-amber-400';
+
+    return (
+        <div className="relative w-10 h-10 flex items-center justify-center">
+            <svg className="w-full h-full -rotate-90">
+                <circle
+                    cx="20"
+                    cy="20"
+                    r={radius}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    className="text-white/10"
+                />
+                <circle
+                    cx="20"
+                    cy="20"
+                    r={radius}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={offset}
+                    strokeLinecap="round"
+                    className={`${colorClass} transition-all duration-1000 ease-out`}
+                />
+            </svg>
+            <span className="absolute inset-0 flex items-center justify-center text-[9px] font-medium text-white/90">
+                {Math.round(score)}%
+            </span>
+        </div>
+    );
+}
+
+export function VerificationPanel({ verification, progress }: VerificationPanelProps) {
     // Show progress if verifying but not complete
     if (!verification && !progress) return null;
 
     return (
-        <div className="space-y-3">
+        <div className="space-y-4">
             {/* Header */}
-            <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full flex items-center justify-between group"
-            >
-                <div className="flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-brand-accent" />
-                    <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/40 group-hover:text-white/60 transition-colors">
-                        Fact Check
-                    </span>
-                    {verification && <ConfidenceBadge score={verification.overallConfidence} />}
-                </div>
-                <div className="flex items-center gap-2">
-                    {verification && (
-                        <div className="flex items-center gap-2 text-[9px] font-mono">
-                            <span className="text-emerald-500">{verification.summary.supported} ✓</span>
-                            <span className="text-amber-500">{verification.summary.uncertain} ?</span>
-                            <span className="text-red-500">{verification.summary.contradicted} ✗</span>
-                        </div>
-                    )}
-                    {isExpanded ? (
-                        <ChevronUp className="w-3.5 h-3.5 text-white/30" />
-                    ) : (
-                        <ChevronDown className="w-3.5 h-3.5 text-white/30" />
-                    )}
-                </div>
-            </button>
+            <div className="flex items-center justify-between px-1">
+                <h3 className="text-[10px] font-mono text-white/40 uppercase tracking-widest">
+                    Verification Report
+                </h3>
+                {verification && (
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-mono text-white/30">CONFIDENCE</span>
+                        <ConfidenceCircle score={verification.overallConfidence} />
+                    </div>
+                )}
+            </div>
 
             {/* Progress indicator */}
             {progress && !verification && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg bg-brand-accent/5 border border-brand-accent/10"
-                >
-                    <motion.div
-                        className="w-2 h-2 rounded-full bg-brand-accent"
-                        animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
-                        transition={{ duration: 1.5, repeat: Infinity }}
-                    />
-                    <span className="text-[11px] text-brand-accent">
-                        Verifying claim {progress.current}/{progress.total}...
+                <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-white/[0.02] border border-white/5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-brand-accent animate-pulse" />
+                    <span className="text-[10px] font-mono text-white/60">
+                        Verifying claim {progress.current} of {progress.total}...
                     </span>
-                </motion.div>
+                </div>
             )}
 
-            {/* Claims List */}
-            <AnimatePresence>
-                {isExpanded && verification && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="overflow-hidden"
-                    >
-                        <div className="space-y-1 rounded-xl border border-white/5 bg-[#18151d]/50 overflow-hidden">
-                            {verification.claims.map((claim, idx) => (
-                                <motion.div
-                                    key={claim.id}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: idx * 0.03 }}
-                                >
-                                    <ClaimRow claim={claim} />
-                                </motion.div>
-                            ))}
+            {/* Verification Grid */}
+            {verification && (
+                <div className="grid grid-cols-2 gap-2">
+                    {verification.claims.map((claim) => (
+                        <div
+                            key={claim.id}
+                            className="flex flex-col gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-colors group"
+                        >
+                            <div className="flex items-center justify-between">
+                                <span className={`text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border ${claim.entailment === 'SUPPORTED' ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400' :
+                                        claim.entailment === 'CONTRADICTED' ? 'bg-rose-500/5 border-rose-500/20 text-rose-400' :
+                                            'bg-amber-500/5 border-amber-500/20 text-amber-400'
+                                    }`}>
+                                    [{claim.entailment}]
+                                </span>
+                                <ConfidenceCircle score={claim.confidence * 100} />
+                            </div>
+
+                            <p className="text-[13px] text-white/80 leading-relaxed line-clamp-4 font-light">
+                                {claim.text}
+                            </p>
                         </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
