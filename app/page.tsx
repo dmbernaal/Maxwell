@@ -142,6 +142,23 @@ export default function Home() {
     }
   }, [maxwell.phase]);
 
+  // Listen for custom event to open canvas from history
+  useEffect(() => {
+    const handleOpenCanvas = (e: CustomEvent) => {
+      const state = e.detail;
+      if (state) {
+        // Hydrate Maxwell state from history
+        maxwell.hydrate(state);
+        setIsCanvasVisible(true);
+      }
+    };
+
+    window.addEventListener('openMaxwellCanvas', handleOpenCanvas as EventListener);
+    return () => {
+      window.removeEventListener('openMaxwellCanvas', handleOpenCanvas as EventListener);
+    };
+  }, [maxwell]);
+
   // Prevent hydration mismatch
   if (!hasHydrated) return null;
 
@@ -209,10 +226,14 @@ export default function Home() {
             {/* Ghost - Smart Fixed Header */}
             <motion.div
               initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
+              animate={{
+                opacity: 1,
+                y: 0,
+                width: isMaxwellActive ? '55%' : '100%'
+              }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.4, ease: 'easeOut' }}
-              className="fixed top-0 left-0 w-full z-30 flex justify-center pointer-events-none"
+              className="fixed top-0 left-0 z-30 flex justify-center pointer-events-none"
             >
               <div className="w-full max-w-4xl px-4 md:px-6 pt-8">
                 <div className="w-full max-w-3xl mx-auto">
@@ -318,9 +339,9 @@ export default function Home() {
                       {msg.role === 'user' ? (
                         <UserMessage content={msg.content} isHistory={isHistory} />
                       ) : (
-                        <ResponseDisplay 
-                          message={msg} 
-                          isHistory={isHistory} 
+                        <ResponseDisplay
+                          message={msg}
+                          isHistory={isHistory}
                           // Only pass active status if this is the latest message
                           status={index === messages.length - 1 ? agentState : 'complete'}
                         />
@@ -333,7 +354,7 @@ export default function Home() {
 
             {/* Show "Empty" ResponseDisplay if loading but no message yet */}
             {agentState !== 'relaxed' && agentState !== 'complete' && (!messages.length || messages[messages.length - 1].role !== 'agent') && (
-               <ResponseDisplay message={null} status={agentState} />
+              <ResponseDisplay message={null} status={agentState} />
             )}
           </div>
         </div>
