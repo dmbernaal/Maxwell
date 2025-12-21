@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronUp, Zap, Brain, Clock, LucideIcon, Sparkles, MessageSquare } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
-export type SearchMode = 'normal' | 'maxwell-fast' | 'maxwell-medium' | 'maxwell-slow';
+import { SearchMode } from '../types';
 
 interface ModeDropdownProps {
     mode: SearchMode;
@@ -25,18 +25,35 @@ interface ModeDropdownProps {
     onViewResults?: () => void;
 }
 
-interface ModeOption {
-    id: SearchMode;
-    label: string;
-    sublabel?: string;
-    icon: LucideIcon;
-}
-
-const MODE_OPTIONS: ModeOption[] = [
-    { id: 'normal', label: 'Normal', icon: MessageSquare },
-    { id: 'maxwell-fast', label: 'Maxwell', sublabel: 'Fast', icon: Zap },
-    { id: 'maxwell-medium', label: 'Maxwell', sublabel: 'Medium', icon: Brain },
-    { id: 'maxwell-slow', label: 'Maxwell', sublabel: 'Slow', icon: Clock },
+const modes: { id: SearchMode; label: string; icon: LucideIcon; description: string; color: string }[] = [
+    {
+        id: 'normal',
+        label: 'Standard',
+        icon: MessageSquare,
+        description: 'Quick, standard chat',
+        color: 'text-white'
+    },
+    {
+        id: 'fast',
+        label: 'Fast',
+        icon: Zap,
+        description: 'Quick research',
+        color: 'text-amber-400'
+    },
+    {
+        id: 'balanced',
+        label: 'Balanced',
+        icon: Brain,
+        description: 'Thorough analysis',
+        color: 'text-brand-accent'
+    },
+    {
+        id: 'deep',
+        label: 'Deep',
+        icon: Clock,
+        description: 'Comprehensive report',
+        color: 'text-emerald-400'
+    }
 ];
 
 export default function ModeDropdown({
@@ -123,7 +140,7 @@ export default function ModeDropdown({
         return () => document.removeEventListener('keydown', handleEscape);
     }, [isOpen]);
 
-    const currentOption = MODE_OPTIONS.find((o) => o.id === mode) || MODE_OPTIONS[0];
+    const currentOption = modes.find((o) => o.id === mode) || modes[0];
     const isMaxwell = mode !== 'normal';
     const CurrentIcon = currentOption.icon;
 
@@ -149,10 +166,10 @@ export default function ModeDropdown({
                     exit={{ opacity: 0, y: 8, scale: 0.95 }}
                     transition={{ duration: 0.15, ease: 'easeOut' }}
                     style={menuStyle}
-                    className="w-full max-w-[200px] rounded-2xl bg-[#18151d] border border-white/5 shadow-2xl overflow-hidden z-[9999]"
+                    className="w-full max-w-[240px] rounded-2xl bg-[#18151d] border border-white/5 shadow-2xl overflow-hidden z-[9999]"
                 >
                     <div className="p-1.5 flex flex-col gap-0.5">
-                        {MODE_OPTIONS.map((option) => {
+                        {modes.map((option) => {
                             const isActive = option.id === mode;
                             const Icon = option.icon;
 
@@ -161,33 +178,35 @@ export default function ModeDropdown({
                                     key={option.id}
                                     onClick={() => handleSelect(option.id)}
                                     className={`
-                                        w-full flex items-center justify-between px-3 py-2 rounded-xl text-left transition-all duration-200
+                                        w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-all duration-200
                                         ${isActive
                                             ? 'bg-white/5 text-white'
                                             : 'text-white/40 hover:bg-white/[0.02] hover:text-white/80'
                                         }
                                     `}
                                 >
-                                    <div className="flex items-center gap-2.5">
+                                    <div className="flex items-center gap-3">
                                         {/* Icon */}
-                                        {Icon ? (
+                                        <div className={`
+                                            w-8 h-8 rounded-full flex items-center justify-center border transition-colors
+                                            ${isActive
+                                                ? 'bg-white/10 border-white/10'
+                                                : 'bg-white/5 border-white/5'
+                                            }
+                                        `}>
                                             <Icon
                                                 size={14}
-                                                className={`transition-colors ${isActive ? 'text-white' : 'text-white/30'}`}
+                                                className={`transition-colors ${isActive ? option.color : 'text-white/40'}`}
                                             />
-                                        ) : (
-                                            <div className="w-3.5 h-3.5 rounded-full border border-white/10" />
-                                        )}
+                                        </div>
 
                                         <div className="flex flex-col">
-                                            <span className="text-[13px] font-medium leading-none mb-0.5">
-                                                {option.sublabel || option.label}
+                                            <span className="text-[13px] font-medium leading-none mb-1">
+                                                {option.label}
                                             </span>
-                                            {option.sublabel && (
-                                                <span className="text-[9px] text-white/20 uppercase tracking-wider font-medium">
-                                                    Maxwell
-                                                </span>
-                                            )}
+                                            <span className="text-[10px] text-white/30 leading-tight">
+                                                {option.description}
+                                            </span>
                                         </div>
                                     </div>
 
@@ -230,7 +249,7 @@ export default function ModeDropdown({
                 />
 
                 <span>
-                    {currentOption.sublabel ? currentOption.sublabel : currentOption.label}
+                    {currentOption.label}
                 </span>
             </button>
 

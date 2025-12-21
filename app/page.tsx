@@ -11,7 +11,7 @@ import { MaxwellCanvas } from './components/maxwell';
 import { useChatStore } from './store';
 import { useChatApi } from './hooks/use-chat-api';
 import { useMaxwell } from './hooks/use-maxwell';
-import type { SearchMode } from './components/ModeDropdown';
+import type { SearchMode } from './types';
 
 const blurVariants = {
   relaxed: { opacity: 0 },
@@ -28,11 +28,28 @@ export default function Home() {
     getActiveSession,
     createSession,
     hasHydrated,
-    activeSessionId
+    activeSessionId,
+    setSessionMode
   } = useChatStore();
 
-  // Search mode state
-  const [searchMode, setSearchMode] = useState<SearchMode>('normal');
+  // Search mode state - initialize from active session if available
+  const activeSession = getActiveSession();
+  const [searchMode, setSearchMode] = useState<SearchMode>(activeSession?.mode || 'normal');
+
+  // Sync local search mode when active session changes
+  useEffect(() => {
+    if (activeSession?.mode) {
+      setSearchMode(activeSession.mode);
+    }
+  }, [activeSession?.mode, activeSessionId]);
+
+  // Handle mode change - update local state AND store
+  const handleModeChange = (mode: SearchMode) => {
+    setSearchMode(mode);
+    if (activeSessionId) {
+      setSessionMode(mode, activeSessionId);
+    }
+  };
 
   // Use the chat API hook (base product)
   const { sendMessage, isStreaming } = useChatApi();
@@ -57,8 +74,6 @@ export default function Home() {
     }
   }, [hasHydrated, activeSessionId, createSession]);
 
-  // Get active messages and state
-  const activeSession = getActiveSession();
   const messages = activeSession?.messages || [];
   const agentState = activeSession?.agentState || 'relaxed';
 
@@ -78,9 +93,6 @@ export default function Home() {
       // Reset Maxwell state for new chat
       maxwell.reset();
       setIsCanvasVisible(false);
-
-      // Optionally reset to normal mode on new chat
-      // setSearchMode('normal'); // Uncomment if you want this behavior
     }
   }, [activeSessionId, messages, maxwell]);
 
@@ -207,7 +219,7 @@ export default function Home() {
                   hasMessages={messages.length > 0}
                   onQuery={handleQuery}
                   mode={searchMode}
-                  onModeChange={setSearchMode}
+                  onModeChange={handleModeChange}
                   disabled={isStreaming || maxwell.isLoading}
                   hasMaxwellResults={hasMaxwellResults && !isCanvasVisible}
                   onViewResults={handleViewResults}

@@ -4,7 +4,8 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 import { Mic, ArrowRight, Search, Zap, Globe, FileText, Plus, Paperclip } from 'lucide-react';
 import { AgentState } from '../types';
-import ModeDropdown, { SearchMode } from './ModeDropdown';
+import { SearchMode } from '../types';
+import ModeDropdown from './ModeDropdown';
 
 interface InputInterfaceProps {
   state: AgentState;

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import { AgentState, Message, ChatSession, Source, DebugStep } from './types';
+import { AgentState, Message, ChatSession, Source, DebugStep, SearchMode } from './types';
 
 interface ChatStore {
   // State
@@ -16,6 +16,7 @@ interface ChatStore {
   addMessage: (content: string, role: 'user' | 'agent', verified?: boolean, sessionId?: string, sources?: Source[], debugSteps?: DebugStep[]) => string;
   updateMessage: (messageId: string, content: string, sources?: Source[], sessionId?: string, debugSteps?: DebugStep[], maxwellState?: any) => void;
   setAgentState: (state: AgentState, sessionId?: string) => void;
+  setSessionMode: (mode: SearchMode, sessionId?: string) => void;
   setHasHydrated: (state: boolean) => void;
 
   // Computed Helpers
@@ -37,7 +38,8 @@ export const useChatStore = create<ChatStore>()(
           createdAt: Date.now(),
           updatedAt: Date.now(),
           messages: [],
-          agentState: 'relaxed'
+          agentState: 'relaxed',
+          mode: 'normal'
         };
 
         set((state) => ({
@@ -151,6 +153,23 @@ export const useChatStore = create<ChatStore>()(
               [targetId]: {
                 ...state.sessions[targetId],
                 agentState
+              }
+            }
+          };
+        });
+      },
+
+      setSessionMode: (mode, sessionId) => {
+        set((state) => {
+          const targetId = sessionId || state.activeSessionId;
+          if (!targetId || !state.sessions[targetId]) return state;
+
+          return {
+            sessions: {
+              ...state.sessions,
+              [targetId]: {
+                ...state.sessions[targetId],
+                mode
               }
             }
           };
