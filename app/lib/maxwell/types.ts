@@ -15,6 +15,14 @@
  * A sub-query generated from the original user query.
  * Each sub-query is designed to be searched independently.
  */
+export type TavilySearchTopic = 'general' | 'news';
+export type TavilySearchDepth = 'basic' | 'advanced';
+export type TavilyTimeRange = 'day' | 'week' | 'month' | 'year' | 'd' | 'w' | 'm' | 'y';
+
+/**
+ * A sub-query generated from the original user query.
+ * Each sub-query is designed to be searched independently.
+ */
 export interface SubQuery {
     /** Unique identifier (e.g., "q1", "q2") */
     id: string;
@@ -22,6 +30,16 @@ export interface SubQuery {
     query: string;
     /** Explanation of why this sub-query is needed */
     purpose: string;
+
+    // Smart Search Configuration
+    /** Search topic: 'general' or 'news' */
+    topic: TavilySearchTopic;
+    /** Search depth: 'basic' or 'advanced' */
+    depth: TavilySearchDepth;
+    /** Number of days back to search (optional) */
+    days?: number;
+    /** Specific domains to include (optional) */
+    domains?: string[];
 }
 
 /**

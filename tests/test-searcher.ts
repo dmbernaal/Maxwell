@@ -29,8 +29,8 @@ async function runTests(): Promise<void> {
     // Test 1: Real Search with Progress Callbacks
     console.log('Test 1: "Tesla revenue 2024" (Real API Call)');
     const subQueries: SubQuery[] = [
-        { id: 'q1', query: 'Tesla revenue 2024', purpose: 'Financial data' },
-        { id: 'q2', query: 'BYD revenue 2024', purpose: 'Comparison' },
+        { id: 'q1', query: 'Tesla revenue 2024', purpose: 'Financial data', topic: 'general', depth: 'basic' },
+        { id: 'q2', query: 'BYD revenue 2024', purpose: 'Comparison', topic: 'general', depth: 'basic' },
     ];
 
     try {

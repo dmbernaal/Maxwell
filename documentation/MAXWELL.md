@@ -40,27 +40,49 @@ Maxwell is a **verified search agent** that differentiates from standard Perplex
 
 ---
 
-## Phase 1: Query Decomposition
+## Phase 1: Query Decomposition (Smart Planning)
 
 **File:** `app/lib/maxwell/decomposer.ts`
 
-**Purpose:** Break a complex user query into focused, independently-searchable sub-queries.
+**Purpose:** Break a complex user query into focused, independently-searchable sub-queries with **specific search configurations**.
 
 ### How It Works
 
-1. User asks: *"What's the current state of nuclear fusion research?"*
-2. LLM generates 3-5 sub-queries:
-   - `q1`: "nuclear fusion breakthrough 2024 2025"
-   - `q2`: "ITER fusion reactor progress timeline"  
-   - `q3`: "private fusion companies funding Commonwealth Helion"
-   - `q4`: "fusion energy commercialization predictions scientists"
+1. User asks: *"Why is Bitcoin down today?"*
+2. LLM generates a **Search Plan** (JSON):
 
-### The Math
+```json
+{
+  "reasoning": "Breaking news event requiring recent market data and analysis.",
+  "subQueries": [
+    {
+      "id": "q1",
+      "query": "bitcoin price drop reason today",
+      "topic": "news",
+      "depth": "advanced",
+      "days": 1,
+      "purpose": "Identify the primary catalyst for the drop"
+    },
+    {
+      "id": "q2",
+      "query": "crypto market sentiment index",
+      "topic": "general",
+      "depth": "basic",
+      "days": 1,
+      "purpose": "Check technical indicators"
+    }
+  ]
+}
+```
 
-```
-Input:  1 complex query
-Output: [3, 5] focused sub-queries (capped by schema)
-```
+### The "Smart" Parameters
+
+| Parameter | Values | Purpose |
+|-----------|--------|---------|
+| `topic` | `'news'`, `'general'` | Directs Tavily to news index or general web index |
+| `depth` | `'basic'`, `'advanced'` | Controls search depth and cost (Advanced = 2 credits) |
+| `days` | `1`, `3`, `7`, `30`, `null` | Filters results by recency (e.g., "last 24h") |
+| `domains` | `['github.com']`, etc. | Restricts search to specific high-value domains |
 
 ### Tunable Parameters
 
@@ -70,31 +92,29 @@ Output: [3, 5] focused sub-queries (capped by schema)
 | `MIN_SUB_QUERIES` | `constants.ts` | `3` | Minimum queries generated |
 | `MAX_SUB_QUERIES` | `constants.ts` | `5` | Maximum queries generated |
 
-### Date Injection
-
-The prompt includes `{currentDate}` so the LLM can convert relative terms ("latest", "today") to specific date ranges for better search results.
-
 ---
 
-## Phase 2: Parallel Search
+## Phase 2: Parallel Search (Context-Aware)
 
 **File:** `app/lib/maxwell/searcher.ts`
 
-**Purpose:** Execute all sub-queries in parallel against Tavily, deduplicate results.
+**Purpose:** Execute all sub-queries in parallel using their **specific configurations**.
 
 ### How It Works
 
 ```
-q1 ──┐
-q2 ──┼──▶ [Promise.all] ──▶ Tavily API x N ──▶ Dedupe by URL ──▶ Sources s1, s2, ..., sN
-q3 ──┤
-q4 ──┘
+q1 (News, 1d) ──┐
+q2 (Gen, Basic) ─┼──▶ [Promise.all] ──▶ Tavily API x N ──▶ Dedupe by URL ──▶ Sources
+q3 (Adv, Deep) ──┘
 ```
 
-1. All sub-queries fire simultaneously (`Promise.all`)
-2. Each query returns up to `RESULTS_PER_QUERY` sources
-3. Sources are deduplicated by normalized URL
-4. Sources reassigned sequential IDs: `s1`, `s2`, `s3`, ...
+1.  **Context Mapping:**
+    *   `days: 1` → `time_range: 'day'`
+    *   `depth: 'advanced'` → `include_raw_content: true` (for deep reading)
+2.  **Parallel Execution:** All configured searches run simultaneously.
+3.  **Fail-Safe Retry:**
+    *   If a `basic` search returns **0 results**, Maxwell automatically retries it with `advanced` depth.
+    *   *Why?* Sometimes "basic" indexes miss niche topics. Advanced digs deeper.
 
 ### The Math
 
@@ -103,22 +123,12 @@ Maximum raw sources: SUB_QUERIES × RESULTS_PER_QUERY = 5 × 5 = 25
 Typical unique sources after dedup: 12-20
 ```
 
-### Fail-Safe
-
-```typescript
-if (uniqueSources.length === 0) {
-    throw new Error('Search failed: No sources found...');
-}
-```
-
-**Why?** Continuing to synthesis with 0 sources guarantees hallucinations.
-
 ### Tunable Parameters
 
 | Constant | Location | Default | Purpose |
 |----------|----------|---------|---------|
 | `RESULTS_PER_QUERY` | `constants.ts` | `5` | Sources per sub-query |
-| `SEARCH_DEPTH` | `constants.ts` | `'basic'` | Tavily depth (`'advanced'` = 2x credits) |
+| `SEARCH_DEPTH` | `constants.ts` | *Dynamic* | Default fallback if not specified |
 
 ---
 

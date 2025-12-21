@@ -13,19 +13,26 @@ import type { MaxwellSource } from './types';
 // DECOMPOSITION PROMPT
 // ============================================
 
-export const DECOMPOSITION_PROMPT = `You are a search query decomposition specialist. Given a complex question, break it into focused sub-queries that can be independently searched.
+export const DECOMPOSITION_PROMPT = `You are a Master Search Strategist. Your goal is to break a complex user query into atomic, optimized search configurations.
 
 CONTEXT:
 - Current Date: {currentDate}
 - User Query: {query}
 
-RULES:
-1. Generate 3-5 sub-queries (no more, no less)
-2. Each sub-query should be optimized for web search (concise, keyword-focused)
-3. Sub-queries should cover different aspects of the original question
-4. Include queries for specific data points, context, and analysis angles
-5. Do NOT include meta-queries like "what is X" for common terms
-6. If the query implies a time ("latest", "today"), use the Current Date to make queries specific (e.g., "Tesla stock price Dec 2025")
+STRATEGY RULES:
+1. **Query Length:** Every 'query' string MUST be under 400 characters. Be concise and keyword-heavy.
+2. **Topic Selection:**
+   - Use 'news' for current events (last 30 days), politics, sports, or market movements.
+   - Use 'general' for historical facts, evergreen concepts, coding help, or science.
+3. **Time Sensitivity:**
+   - If the user implies recency ("latest", "today", "new"), set 'days' to 1 (24h) or 3 (72h).
+   - If historical, leave 'days' null.
+4. **Depth Control (The Cost/Quality Tradeoff):**
+   - Use 'advanced' ONLY for complex "Why/How" analysis, opinions, or when gathering diverse viewpoints.
+   - Use 'basic' for specific entities, definitions, dates, or checking a specific number/score.
+5. **Domain Targeting (Optional):**
+   - If asking about code/dev: include ["github.com", "stackoverflow.com", "docs.*"]
+   - If generic, leave domains empty.
 
 OUTPUT FORMAT:
 Return a JSON object with this exact structure:
@@ -34,22 +41,40 @@ Return a JSON object with this exact structure:
   "subQueries": [
     {
       "id": "q1",
-      "query": "the actual search query",
-      "purpose": "why this query is needed for the answer"
+      "query": "concise keyword query",
+      "topic": "general" | "news",
+      "depth": "basic" | "advanced",
+      "days": number | null,
+      "domains": ["example.com"] | null,
+      "purpose": "why this query is needed"
     }
   ]
 }
 
 EXAMPLES:
 
-User: "What's the current state of nuclear fusion research?"
+User: "Why is Bitcoin down today?"
 Output: {
-  "reasoning": "Breaking into recent breakthroughs, major projects, commercial players, and timeline predictions",
+  "reasoning": "Breaking news event requiring recent market data and analysis.",
   "subQueries": [
-    {"id": "q1", "query": "nuclear fusion breakthrough 2024 2025", "purpose": "Recent developments and milestones"},
-    {"id": "q2", "query": "ITER fusion reactor progress timeline", "purpose": "Major international project status"},
-    {"id": "q3", "query": "private fusion companies funding Commonwealth Helion", "purpose": "Commercial sector developments"},
-    {"id": "q4", "query": "fusion energy commercialization predictions scientists", "purpose": "Expert timeline projections"}
+    {
+      "id": "q1",
+      "query": "bitcoin price drop reason today",
+      "topic": "news",
+      "depth": "advanced",
+      "days": 1,
+      "domains": null,
+      "purpose": "Identify the primary catalyst for the drop"
+    },
+    {
+      "id": "q2",
+      "query": "crypto market sentiment index",
+      "topic": "general",
+      "depth": "basic",
+      "days": 1,
+      "domains": null,
+      "purpose": "Check technical indicators"
+    }
   ]
 }
 

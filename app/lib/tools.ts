@@ -23,12 +23,19 @@ interface SearchResponse {
     error?: string;
 }
 
+interface SearchOptions {
+    topic?: 'general' | 'news';
+    search_depth?: 'basic' | 'advanced';
+    max_results?: number;
+    time_range?: 'day' | 'week' | 'month' | 'year';
+}
+
 /**
  * Execute a search using Tavily API
  * Shared implementation used by all tool variants
  */
-async function executeSearch(searchQuery: string): Promise<SearchResponse> {
-    console.log('[Search] Executing search for:', searchQuery);
+async function executeSearch(searchQuery: string, options: SearchOptions = {}): Promise<SearchResponse> {
+    console.log('[Search] Executing search for:', searchQuery, options);
 
     try {
         const response = await fetch('https://api.tavily.com/search', {
@@ -39,8 +46,10 @@ async function executeSearch(searchQuery: string): Promise<SearchResponse> {
             body: JSON.stringify({
                 api_key: env.tavilyApiKey(),
                 query: searchQuery,
-                max_results: 5,
-                search_depth: 'basic',
+                max_results: options.max_results || 5,
+                search_depth: options.search_depth || 'basic',
+                topic: options.topic || 'general',
+                time_range: options.time_range,
                 include_answer: true,
             }),
         });
@@ -74,12 +83,16 @@ async function executeSearch(searchQuery: string): Promise<SearchResponse> {
  * Uses 'query' parameter (required string)
  */
 export const searchTool = tool({
-    description: 'Search the web for current information, news, prices, weather, and facts that require real-time data',
+    description: 'Search the web for information. Use this for current events, facts, or data.',
     // AI SDK v5 uses 'inputSchema' for tool parameters
     inputSchema: z.object({
-        query: z.string().describe('The search query to execute'),
+        query: z.string().describe('The search query. MUST be concise (under 400 chars). Keywords are better than sentences.'),
+        topic: z.enum(['general', 'news']).optional().describe('Set to "news" for recent events, politics, or sports. Set to "general" for evergreen info.'),
+        search_depth: z.enum(['basic', 'advanced']).optional().describe('Set to "advanced" for deep research, analysis, or broad topics. Set to "basic" for simple fact lookups.'),
+        max_results: z.number().optional().default(5),
+        days: z.number().optional().describe('Number of days back to search. Use 1 for "today", 3 for "recent", 7 for "this week".'),
     }),
-    execute: async ({ query }): Promise<SearchResponse> => {
+    execute: async ({ query, topic, search_depth, max_results, days }): Promise<SearchResponse> => {
         console.log('[Search] Raw query:', query, typeof query);
 
         if (!query || typeof query !== 'string') {
@@ -87,7 +100,16 @@ export const searchTool = tool({
             return { error: 'Invalid search query', results: [] };
         }
 
-        return executeSearch(query);
+        // Map days to time_range
+        let time_range: 'day' | 'week' | 'month' | 'year' | undefined;
+        if (days) {
+            if (days <= 1) time_range = 'day';
+            else if (days <= 7) time_range = 'week';
+            else if (days <= 30) time_range = 'month';
+            else time_range = 'year';
+        }
+
+        return executeSearch(query, { topic, search_depth, max_results, time_range });
     },
 });
 

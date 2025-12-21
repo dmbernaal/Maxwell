@@ -45,6 +45,10 @@ const SubQuerySchema = z.object({
     id: z.string().describe('Unique identifier like "q1", "q2"'),
     query: z.string().describe('The search query optimized for web search'),
     purpose: z.string().describe('Why this query is needed for the answer'),
+    topic: z.enum(['general', 'news']).describe('Search topic'),
+    depth: z.enum(['basic', 'advanced']).describe('Search depth'),
+    days: z.number().nullable().optional().describe('Days back to search'),
+    domains: z.array(z.string()).nullable().optional().describe('Domains to include'),
 });
 
 const DecompositionSchema = z.object({
@@ -109,6 +113,10 @@ export async function decomposeQuery(query: string): Promise<DecompositionOutput
             id: `q${index + 1}`,
             query: sq.query.trim(),
             purpose: sq.purpose.trim(),
+            topic: sq.topic,
+            depth: sq.depth,
+            days: sq.days ?? undefined,
+            domains: sq.domains ?? undefined,
         }));
 
         return {

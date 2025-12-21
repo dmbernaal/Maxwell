@@ -275,6 +275,10 @@ interface SubQuery {
     id: string;       // "q1", "q2"
     query: string;    // Search query text
     purpose: string;  // Why this query is needed
+    topic: 'general' | 'news';
+    depth: 'basic' | 'advanced';
+    days?: number;    // Recency filter
+    domains?: string[];
 }
 ```
 

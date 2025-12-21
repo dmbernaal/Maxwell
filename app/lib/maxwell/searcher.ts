@@ -60,20 +60,51 @@ async function searchSingleQuery(
     subQuery: SubQuery
 ): Promise<SingleSearchResult> {
     try {
-        const response = await fetch('https://api.tavily.com/search', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                api_key: apiKey,
-                query: subQuery.query,
-                max_results: RESULTS_PER_QUERY,
-                search_depth: SEARCH_DEPTH,
-                include_answer: false,
-                include_raw_content: false,
-            }),
-        });
+        // Map days to time_range
+        let time_range: 'day' | 'week' | 'month' | 'year' | undefined;
+        if (subQuery.days) {
+            if (subQuery.days <= 1) time_range = 'day';
+            else if (subQuery.days <= 7) time_range = 'week';
+            else if (subQuery.days <= 30) time_range = 'month';
+            else time_range = 'year';
+        }
+
+        // Only request raw content if advanced depth
+        const includeRaw = subQuery.depth === 'advanced';
+
+        const executeTavilySearch = async (depth: 'basic' | 'advanced', raw: boolean) => {
+            return fetch('https://api.tavily.com/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    api_key: apiKey,
+                    query: subQuery.query,
+                    max_results: RESULTS_PER_QUERY,
+                    search_depth: depth,
+                    topic: subQuery.topic,
+                    time_range: time_range,
+                    include_domains: subQuery.domains,
+                    include_answer: false,
+                    include_raw_content: raw,
+                }),
+            });
+        };
+
+        let response = await executeTavilySearch(subQuery.depth, includeRaw);
+
+        // FAIL-SAFE: If Basic search returned 0 results, retry with Advanced
+        if (response.ok) {
+            const data = await response.json();
+            if ((!data.results || data.results.length === 0) && subQuery.depth === 'basic') {
+                console.log(`[Maxwell Search] Basic search failed for "${subQuery.query}". Retrying with Advanced...`);
+                response = await executeTavilySearch('advanced', true);
+            } else {
+                // Return original data if successful
+                return processTavilyResponse(data, subQuery);
+            }
+        }
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -89,29 +120,9 @@ async function searchSingleQuery(
             };
         }
 
-        const data: TavilyResponse = await response.json();
+        const data = await response.json();
+        return processTavilyResponse(data, subQuery);
 
-        // Map Tavily results to our MaxwellSource type
-        const sources: MaxwellSource[] = (data.results || []).map(
-            (result: TavilyResult, index: number) => ({
-                // Temporary ID - will be reassigned after deduplication
-                id: `${subQuery.id}_s${index}`,
-                url: result.url,
-                title: result.title || 'Untitled',
-                snippet: result.content || '',
-                fromQuery: subQuery.id,
-            })
-        );
-
-        return {
-            sources,
-            metadata: {
-                queryId: subQuery.id,
-                query: subQuery.query,
-                sourcesFound: sources.length,
-                status: sources.length > 0 ? 'complete' : 'no_results',
-            },
-        };
     } catch (error) {
         console.error(`[Maxwell Search] Failed for ${subQuery.id} ("${subQuery.query}"):`, error);
 
@@ -125,6 +136,30 @@ async function searchSingleQuery(
             },
         };
     }
+}
+
+function processTavilyResponse(data: TavilyResponse, subQuery: SubQuery): SingleSearchResult {
+    // Map Tavily results to our MaxwellSource type
+    const sources: MaxwellSource[] = (data.results || []).map(
+        (result: TavilyResult, index: number) => ({
+            // Temporary ID - will be reassigned after deduplication
+            id: `${subQuery.id}_s${index}`,
+            url: result.url,
+            title: result.title || 'Untitled',
+            snippet: result.content || '',
+            fromQuery: subQuery.id,
+        })
+    );
+
+    return {
+        sources,
+        metadata: {
+            queryId: subQuery.id,
+            query: subQuery.query,
+            sourcesFound: sources.length,
+            status: sources.length > 0 ? 'complete' : 'no_results',
+        },
+    };
 }
 
 // ============================================

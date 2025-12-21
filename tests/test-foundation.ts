@@ -49,6 +49,8 @@ async function runTest(): Promise<void> {
         id: 'q1',
         query: 'test query',
         purpose: 'testing types',
+        topic: 'general',
+        depth: 'basic'
     };
 
     const testState: MaxwellState = {
@@ -58,6 +60,7 @@ async function runTest(): Promise<void> {
         sources: [],
         answer: '',
         verification: null,
+        adjudication: null,
         error: null,
         phaseDurations: {},
     };

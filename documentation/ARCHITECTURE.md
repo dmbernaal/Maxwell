@@ -105,8 +105,7 @@ export async function* streamAgentWithSources(messages, modelId) {
 | Model Provider | Input Schema |
 |---------------|--------------|
 | Google (Gemini) | `{ queries: string[] }` |
-| Anthropic (Claude) | `{ query: string }` |
-| OpenAI | `{ query: string }` |
+| Anthropic/OpenAI | `{ query, topic?, depth?, days? }` |
 
 ---
 

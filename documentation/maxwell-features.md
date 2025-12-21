@@ -23,7 +23,7 @@ Maxwell uses a robust event-based streaming architecture (`AsyncGenerator`) that
 ### Phase 1: Decomposition
 **Available Data:**
 - **Original Query:** The user's raw input.
-- **Sub-Queries:** List of optimized search queries (`id`, `query`, `purpose`).
+- **Sub-Queries:** List of optimized search queries (`id`, `query`, `purpose`, `topic`, `depth`, `days`, `domains`).
 - **Reasoning:** Strategy explanation for *why* these queries were chosen.
 - **Duration:** Time taken.
 
