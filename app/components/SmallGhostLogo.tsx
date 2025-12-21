@@ -2,16 +2,17 @@
 
 import { MeshGradient } from "@paper-design/shaders-react";
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { GHOST_LOGO_COLORS } from "../lib/ghost-logo-colors";
 
 export function SmallGhostLogo() {
   // State
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
-  const [hasMoved, setHasMoved] = useState(false); // Track if mouse has moved to prevent initial jump
   const [isClient, setIsClient] = useState(false);
   const [isSafariMobile, setIsSafariMobile] = useState(false);
+
+  // Ref for the container to calculate relative position
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // 1. Detect Environment & Client
   useEffect(() => {
@@ -23,46 +24,37 @@ export function SmallGhostLogo() {
     setIsSafariMobile(isSafari && isMobile);
   }, []);
 
-  // 2. Track Mouse
+  // 2. Track Mouse & Calculate Eyes Directly
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
-      setHasMoved(true);
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
+      if (!containerRef.current) return;
 
-  // 3. Calculate Eye Offset (The "Looking" Logic)
-  useEffect(() => {
-    // If mouse hasn't moved, keep eyes centered
-    if (!hasMoved) {
-      setEyeOffset({ x: 0, y: 0 });
-      return;
-    }
-
-    // Get the ghost's bounding box
-    const rect = document.querySelector("#small-ghost-logo")?.getBoundingClientRect();
-    if (rect) {
+      const rect = containerRef.current.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
 
       // Calculate distance from center to mouse
       // Multiply by a factor (e.g., 0.1) to dampen the movement
-      const deltaX = (mousePosition.x - centerX) * 0.1;
-      const deltaY = (mousePosition.y - centerY) * 0.1;
+      const deltaX = (e.clientX - centerX) * 0.1;
+      const deltaY = (e.clientY - centerY) * 0.1;
 
       // Clamp the values so eyes don't leave the face
       const maxOffset = 4;
+
+      // Update state directly - no intermediate 'mousePosition' state
       setEyeOffset({
         x: Math.max(-maxOffset, Math.min(maxOffset, deltaX)),
         y: Math.max(-maxOffset, Math.min(maxOffset, deltaY)),
       });
-    }
-  }, [mousePosition]);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => window.removeEventListener("mousemove", handleMouseMove);
+  }, []);
 
   return (
     <motion.div
+      ref={containerRef}
       id="small-ghost-logo"
       className="relative w-full h-full mx-auto"
       // Floating Animation
