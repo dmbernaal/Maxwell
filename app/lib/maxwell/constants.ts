@@ -71,6 +71,9 @@ export const EMBEDDING_MODEL = 'qwen/qwen3-embedding-8b';
 /** Default verification concurrency - DYNAMICALLY SET BY QUALITY PRESET */
 export const DEFAULT_VERIFICATION_CONCURRENCY = QUALITY_PRESETS[DEFAULT_QUALITY_PRESET].verificationConcurrency;
 
+/** Model for adjudication (fast, authoritative) */
+export const ADJUDICATOR_MODEL = 'google/gemini-3-flash-preview';
+
 // ============================================
 // DECOMPOSITION CONFIGURATION
 // ============================================

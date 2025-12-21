@@ -8,21 +8,21 @@
 Maxwell is a **verified search agent** that differentiates from standard Perplexity-style search by **verifying every claim** in the synthesized answer against source evidence. Unlike competitors that simply retrieve and synthesize, Maxwell provides auditable confidence scores and flags issues like citation mismatches, numeric inconsistencies, and contradictions.
 
 ```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                          MAXWELL PIPELINE                                   │
-│                                                                             │
-│   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌────────────┐  │
-│   │     PHASE 1  │   │    PHASE 2   │   │    PHASE 3   │   │  PHASE 4   │  │
-│   │              │   │              │   │              │   │            │  │
-│   │ DECOMPOSE    │──▶│   SEARCH     │──▶│  SYNTHESIZE  │──▶│  VERIFY    │  │
-│   │              │   │              │   │              │   │            │  │
-│   │ Break query  │   │ Parallel     │   │ Generate     │   │ NLI +      │  │
-│   │ into 3-5     │   │ Tavily       │   │ answer with  │   │ Embeddings │  │
-│   │ sub-queries  │   │ calls        │   │ citations    │   │ + Numerics │  │
-│   └──────────────┘   └──────────────┘   └──────────────┘   └────────────┘  │
-│                                                                             │
-│   🚀 OPTIMIZATION: Evidence prep runs in BACKGROUND during Phase 3         │
-└────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│                                  MAXWELL PIPELINE                                         │
+│                                                                                           │
+│   ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌────────────┐   ┌───────────┐ │
+│   │     PHASE 1  │   │    PHASE 2   │   │    PHASE 3   │   │  PHASE 4   │   │  PHASE 5  │ │
+│   │              │   │              │   │              │   │            │   │           │ │
+│   │ DECOMPOSE    │──▶│   SEARCH     │──▶│  SYNTHESIZE  │──▶│  VERIFY    │──▶│ ADJUDICATE│ │
+│   │              │   │              │   │              │   │            │   │           │ │
+│   │ Break query  │   │ Parallel     │   │ Generate     │   │ NLI +      │   │ Final     │ │
+│   │ into 3-5     │   │ Tavily       │   │ answer with  │   │ Embeddings │   │ Verdict   │ │
+│   │ sub-queries  │   │ calls        │   │ citations    │   │ + Numerics │   │ & Summary │ │
+│   └──────────────┘   └──────────────┘   └──────────────┘   └────────────┘   └───────────┘ │
+│                                                                                           │
+│   🚀 OPTIMIZATION: Evidence prep runs in BACKGROUND during Phase 3                       │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -430,6 +430,38 @@ With CONCURRENCY = 4:
 
 ---
 
+## Phase 5: The Adjudicator (Final Verdict)
+
+**File:** `app/lib/maxwell/adjudicator.ts`
+
+**Purpose:** Provide a final, authoritative verdict on the answer based on the verification report.
+
+### How It Works
+
+The Adjudicator acts as the "Editor-in-Chief". It reads the draft answer and the verification report to issue a final judgment.
+
+**Logic:**
+1.  **High Confidence (>80%) & No Issues:** Generates a **"Verified Summary"**.
+    *   *Tone:* Trusted, Emerald/Teal theme.
+    *   *Content:* Concise executive summary of verified facts.
+2.  **Contradictions Found:** Generates a **"Correction"**.
+    *   *Tone:* Alert, Amber/Gold theme.
+    *   *Content:* Explicitly corrects errors (e.g., "The draft stated X, but evidence confirms Y").
+3.  **Uncertainty/Low Confidence:** Generates a **"Consensus Note"**.
+    *   *Tone:* Cautious, Amber theme.
+    *   *Content:* Summarizes what is known vs. what remains unverified.
+
+**Streaming:**
+The verdict streams into the chat UI immediately after the verification card, creating a seamless "read-verify-adjudicate" flow.
+
+**Tunable Parameters:**
+
+| Constant | Location | Default | Purpose |
+|----------|----------|---------|---------|
+| `ADJUDICATOR_MODEL` | `constants.ts` | `google/gemini-3-flash-preview` | Fast, authoritative output |
+
+---
+
 ## Background Optimization: Evidence Prep
 
 **File:** `app/lib/maxwell/index.ts` (orchestrator)
@@ -484,8 +516,32 @@ export async function* runMaxwell(query: string): AsyncGenerator<MaxwellEvent> {
 | `phase-complete` | Phase ends | `{ phase, data }` |
 | `synthesis-chunk` | Text streams | `{ content }` |
 | `verification-progress` | Claim verified | `{ current, total, status }` |
+| `adjudication-chunk` | Verdict streams | `{ content }` |
 | `complete` | All done | Full response |
 | `error` | Failure | Error message |
+
+---
+
+## Glass Box Observability
+
+Maxwell is designed to be a "Glass Box" AI, providing deep visibility into its reasoning process.
+
+### 1. Interactive Citations (Raw Evidence Peeking)
+*   **Feature:** Hovering over any citation `[1]` in the chat reveals the **raw evidence snippet** used by the agent.
+*   **Goal:** Allows users to verify claims *as they read* without leaving the chat context.
+
+### 2. Search Provenance
+*   **Feature:** The UI groups sources by the specific **sub-query** that found them.
+*   **Goal:** Shows exactly *how* information was discovered.
+
+### 3. Latency Waterfall
+*   **Feature:** A visual breakdown of time spent in each phase (Decomposition, Search, Synthesis, Verification, Adjudication).
+*   **Goal:** Transparency into performance and "thinking" time.
+
+### 4. Live Event Stream
+*   **Feature:** A terminal-like log showing raw system events (`phase-start`, `verification-progress`, etc.) in real-time.
+*   **Goal:** "Matrix mode" visibility for power users.
+
 
 ---
 

@@ -15,6 +15,7 @@ Maxwell uses a robust event-based streaming architecture (`AsyncGenerator`) that
 | `search-progress` | `SearchMetadata` | Show individual sub-queries completing in real-time |
 | `synthesis-chunk` | `{ content: string }` | Stream the answer text token-by-token |
 | `verification-progress` | `{ current, total, status }` | Show progress bar (e.g., "Verifying claim 3 of 8") |
+| `adjudication-chunk` | `{ content: string }` | Stream the final verdict token-by-token |
 | `complete` | `MaxwellResponse` | Final state update, enable "View Results" |
 
 ## 2. Data Availability by Phase
@@ -52,6 +53,11 @@ This phase produces rich data for every factual claim extracted from the answer.
   - `sourceIndex`: Index of the source.
   - `isCitedSource`: Whether this evidence came from a source cited in the answer.
 - **Issues:** List of specific problems (e.g., "Numeric mismatch", "Citation mismatch").
+
+### Phase 5: Adjudication
+**Available Data:**
+- **Verdict Text:** The final authoritative summary or correction.
+- **Status:** Implicitly derived from verification results (Verified vs. Correction).
 
 ## 3. Feature Status: Reasoning & Evidence
 

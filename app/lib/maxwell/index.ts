@@ -11,6 +11,7 @@ import { decomposeQuery } from './decomposer';
 import { parallelSearch } from './searcher';
 import { synthesize } from './synthesizer';
 import { verifyClaims, verifyClaimsStream, prepareEvidence, type PreparedEvidence } from './verifier';
+import { adjudicateAnswer } from './adjudicator';
 
 import type {
     MaxwellSource,
@@ -27,6 +28,7 @@ export { decomposeQuery } from './decomposer';
 export { parallelSearch } from './searcher';
 export { synthesize } from './synthesizer';
 export { verifyClaims } from './verifier';
+export { adjudicateAnswer } from './adjudicator';
 
 /**
  * Runs the complete Maxwell pipeline.
@@ -48,6 +50,7 @@ export async function* runMaxwell(query: string): AsyncGenerator<MaxwellEvent> {
         search: { status: 'pending' },
         synthesis: { status: 'pending' },
         verification: { status: 'pending' },
+        adjudication: { status: 'pending' },
     };
 
     try {
@@ -174,12 +177,40 @@ export async function* runMaxwell(query: string): AsyncGenerator<MaxwellEvent> {
         };
 
         // ═══════════════════════════════════════════════════════════
+        // PHASE 5: ADJUDICATION
+        // ═══════════════════════════════════════════════════════════
+        yield { type: 'phase-start', phase: 'adjudication' };
+        phases.adjudication.status = 'in_progress';
+
+        let adjudicationText = '';
+        const adjudicationStart = Date.now();
+
+        if (verification) {
+            for await (const chunk of adjudicateAnswer(query, answer, verification)) {
+                adjudicationText += chunk;
+                yield { type: 'adjudication-chunk', content: chunk };
+            }
+        }
+
+        phases.adjudication = {
+            status: 'complete',
+            durationMs: Date.now() - adjudicationStart,
+        };
+
+        yield {
+            type: 'phase-complete',
+            phase: 'adjudication',
+            data: { text: adjudicationText, durationMs: phases.adjudication.durationMs },
+        };
+
+        // ═══════════════════════════════════════════════════════════
         // COMPLETE
         // ═══════════════════════════════════════════════════════════
         const response: MaxwellResponse = {
             answer,
             sources,
             verification,
+            adjudication: adjudicationText || null,
             phases,
             totalDurationMs: Date.now() - overallStart,
         };

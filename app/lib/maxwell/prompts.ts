@@ -175,15 +175,15 @@ Now evaluate:`;
  * @returns The filled prompt string
  */
 export function fillPromptTemplate(
-    template: string,
-    values: Record<string, string>
+  template: string,
+  values: Record<string, string>
 ): string {
-    let result = template;
-    for (const [key, value] of Object.entries(values)) {
-        // Replace all instances of {key}
-        result = result.split(`{${key}}`).join(value);
-    }
-    return result;
+  let result = template;
+  for (const [key, value] of Object.entries(values)) {
+    // Replace all instances of {key}
+    result = result.split(`{${key}}`).join(value);
+  }
+  return result;
 }
 
 /**
@@ -194,22 +194,22 @@ export function fillPromptTemplate(
  * @returns Formatted string with numbered sources
  */
 export function formatSourcesForPrompt(sources: MaxwellSource[]): string {
-    if (sources.length === 0) {
-        return 'No sources available.';
-    }
+  if (sources.length === 0) {
+    return 'No sources available.';
+  }
 
-    return sources
-        .map((source, index) => {
-            const num = index + 1;
-            // We do NOT truncate. Quality > Tokens.
-            // We just clean up excessive whitespace.
-            const cleanSnippet = source.snippet.replace(/\s+/g, ' ').trim();
-            return `[${num}] ${source.title}
+  return sources
+    .map((source, index) => {
+      const num = index + 1;
+      // We do NOT truncate. Quality > Tokens.
+      // We just clean up excessive whitespace.
+      const cleanSnippet = source.snippet.replace(/\s+/g, ' ').trim();
+      return `[${num}] ${source.title}
 URL: ${source.url}
 Content: ${cleanSnippet}
 `;
-        })
-        .join('\n');
+    })
+    .join('\n');
 }
 
 /**
@@ -219,14 +219,14 @@ Content: ${cleanSnippet}
  * @returns Complete prompt ready for LLM
  */
 export function createDecompositionPrompt(query: string): string {
-    return fillPromptTemplate(DECOMPOSITION_PROMPT, {
-        query,
-        currentDate: new Date().toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-        }),
-    });
+  return fillPromptTemplate(DECOMPOSITION_PROMPT, {
+    query,
+    currentDate: new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }),
+  });
 }
 
 /**
@@ -237,16 +237,16 @@ export function createDecompositionPrompt(query: string): string {
  * @returns Complete prompt ready for LLM
  */
 export function createSynthesisPrompt(sources: MaxwellSource[], query: string): string {
-    const formattedSources = formatSourcesForPrompt(sources);
-    return fillPromptTemplate(SYNTHESIS_PROMPT, {
-        sources: formattedSources,
-        query,
-        currentDate: new Date().toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-        }),
-    });
+  const formattedSources = formatSourcesForPrompt(sources);
+  return fillPromptTemplate(SYNTHESIS_PROMPT, {
+    sources: formattedSources,
+    query,
+    currentDate: new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }),
+  });
 }
 
 /**
@@ -256,7 +256,7 @@ export function createSynthesisPrompt(sources: MaxwellSource[], query: string): 
  * @returns Complete prompt ready for LLM
  */
 export function createClaimExtractionPrompt(answer: string): string {
-    return fillPromptTemplate(CLAIM_EXTRACTION_PROMPT, { answer });
+  return fillPromptTemplate(CLAIM_EXTRACTION_PROMPT, { answer });
 }
 
 /**
@@ -267,5 +267,68 @@ export function createClaimExtractionPrompt(answer: string): string {
  * @returns Complete prompt ready for LLM
  */
 export function createNLIPrompt(claim: string, evidence: string): string {
-    return fillPromptTemplate(NLI_PROMPT, { claim, evidence });
+  return fillPromptTemplate(NLI_PROMPT, { claim, evidence });
+}
+
+// ============================================
+// ADJUDICATOR PROMPT
+// ============================================
+
+export const ADJUDICATOR_PROMPT = `You are the Adjudicator, the final authority in a verified search pipeline.
+
+INPUTS:
+1. User Query: "{query}"
+2. Draft Answer (written by a synthesizer)
+3. Verification Report (audit of the draft, containing claims and verdicts: SUPPORTED, CONTRADICTED, NEUTRAL)
+
+VERIFICATION REPORT SUMMARY:
+{verificationSummary}
+
+YOUR GOAL: Write a final 'Verdict' paragraph.
+
+RULES:
+* IF Verification contains CONTRADICTED claims: You MUST start with 'Correction:' and explicitly fix the errors. (e.g., 'The draft incorrectly stated revenue was $5B; verified sources confirm it is $4.2B').
+* IF Verification is HIGH (>80%) and NO contradictions: Write a concise 'Executive Summary' that synthesizes the key verified facts. Start with 'Verified Summary:'.
+* IF Verification is LOW/MEDIUM or has UNCERTAINTY: Write a 'Consensus Note' summarizing what is confirmed vs what remains uncertain. Start with 'Consensus Note:'.
+* ALWAYS generate a verdict. Do not skip.
+* Tone: Authoritative, objective, final.
+* Length: Maximum 3-4 sentences. Do not re-write the whole essay. Provide the 'Bottom Line'.
+* Formatting: Use Markdown.
+
+DRAFT ANSWER FOR CONTEXT:
+{draft}
+
+Generate the Verdict:`;
+
+/**
+ * Creates the Adjudicator prompt.
+ *
+ * @param query - User query
+ * @param draft - Draft answer
+ * @param verification - Full verification output
+ */
+export function createAdjudicatorPrompt(
+  query: string,
+  draft: string,
+  verification: any // Using any to avoid circular deps if types aren't exported here, but ideally VerificationOutput
+): string {
+  // Summarize verification for the prompt to save tokens/complexity
+  const summary = `
+    Overall Confidence: ${verification.overallConfidence}%
+    Supported Claims: ${verification.summary.supported}
+    Contradicted Claims: ${verification.summary.contradicted}
+    Uncertain Claims: ${verification.summary.uncertain}
+    
+    Issues Found:
+    ${verification.claims
+      .filter((c: any) => c.issues.length > 0)
+      .map((c: any) => `- Claim: "${c.text}" -> Issues: ${c.issues.join(', ')}`)
+      .join('\n')}
+    `;
+
+  return fillPromptTemplate(ADJUDICATOR_PROMPT, {
+    query,
+    draft: draft.substring(0, 2000), // Truncate draft if too long to save context
+    verificationSummary: summary,
+  });
 }

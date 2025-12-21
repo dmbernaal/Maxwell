@@ -45,6 +45,7 @@ export interface MaxwellUIState {
     searchMetadata: SearchMetadata[];
     verification: VerificationOutput | null;
     verificationProgress: VerificationProgress | null;
+    adjudication: string | null;
     phaseDurations: PhaseDurations;
     phaseStartTimes: Record<string, number>;
     events: MaxwellEvent[];
@@ -59,6 +60,7 @@ const initialState: MaxwellUIState = {
     searchMetadata: [],
     verification: null,
     verificationProgress: null,
+    adjudication: null,
     phaseDurations: {},
     phaseStartTimes: {},
     events: [],
@@ -208,6 +210,13 @@ export function useMaxwell(): UseMaxwellReturn {
                 }
                 break;
 
+            case 'adjudication-chunk':
+                setState((prev) => ({
+                    ...prev,
+                    adjudication: (prev.adjudication || '') + event.content,
+                }));
+                break;
+
             case 'verification-progress':
                 setState((prev) => ({
                     ...prev,
@@ -302,6 +311,14 @@ export function useMaxwell(): UseMaxwellReturn {
                         updates.phaseDurations = {
                             ...prev.phaseDurations,
                             verification: phaseData.durationMs as number,
+                        };
+                        break;
+
+                    case 'adjudication':
+                        updates.adjudication = phaseData.text as string;
+                        updates.phaseDurations = {
+                            ...prev.phaseDurations,
+                            adjudication: phaseData.durationMs as number,
                         };
                         break;
                 }
@@ -428,6 +445,7 @@ export function usePhaseInfo(phase: ExecutionPhase): {
         search: { label: 'Searching', description: 'Finding sources...' },
         synthesis: { label: 'Synthesizing', description: 'Generating answer...' },
         verification: { label: 'Verifying', description: 'Checking claims...' },
+        adjudication: { label: 'Adjudicating', description: 'Finalizing verdict...' },
         complete: { label: 'Complete', description: 'Search finished' },
         error: { label: 'Error', description: 'Something went wrong' },
     };

@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Check, Sparkles, ArrowRight } from 'lucide-react';
 import { Message, Source, AgentState, DebugStep } from '../types';
+import { AdjudicationPanel } from './maxwell/AdjudicationPanel'; // Added AdjudicationPanel import
 
 // ... (rest of imports)
 
@@ -445,7 +446,25 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
             </div>
           </button>
         </motion.div>
-      )}
-    </div>
+      )
+      }
+
+      {/* Adjudication Panel (Phase 5) - Streams in last */}
+      {
+        (message?.maxwellState?.adjudication || message?.maxwellState?.phase === 'adjudication') && (
+          <AdjudicationPanel
+            text={message.maxwellState?.adjudication || ''}
+            isStreaming={message.maxwellState?.phase === 'adjudication'}
+            status={
+              (message.maxwellState?.verification?.summary?.contradicted ?? 0) > 0 ||
+                (message.maxwellState?.verification?.summary?.citationMismatches ?? 0) > 0 ||
+                (message.maxwellState?.verification?.summary?.numericMismatches ?? 0) > 0
+                ? 'correction_needed'
+                : 'verified'
+            }
+          />
+        )
+      }
+    </div >
   );
 }

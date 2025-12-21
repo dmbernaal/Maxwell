@@ -274,6 +274,9 @@ export interface PhaseStatus {
 /**
  * Complete phase tracking for the orchestrator.
  */
+/**
+ * Complete phase tracking for the orchestrator.
+ */
 export interface MaxwellPhases {
     decomposition: PhaseStatus & {
         subQueries?: SubQuery[];
@@ -287,6 +290,7 @@ export interface MaxwellPhases {
         claimsExtracted?: number;
         claimsVerified?: number;
     };
+    adjudication: PhaseStatus;
 }
 
 /**
@@ -299,10 +303,24 @@ export interface MaxwellResponse {
     sources: MaxwellSource[];
     /** Verification results */
     verification: VerificationOutput;
+    /** Adjudication verdict */
+    adjudication: string | null;
     /** Phase execution details */
     phases: MaxwellPhases;
     /** Total execution time in milliseconds */
     totalDurationMs: number;
+}
+
+// ============================================
+// PHASE 5: ADJUDICATION TYPES
+// ============================================
+
+/**
+ * Event emitted during adjudication for streamed content.
+ */
+export interface AdjudicationChunkEvent {
+    type: 'adjudication-chunk';
+    content: string;
 }
 
 // ============================================
@@ -314,7 +332,7 @@ export interface MaxwellResponse {
  */
 export interface PhaseStartEvent {
     type: 'phase-start';
-    phase: 'decomposition' | 'search' | 'synthesis' | 'verification';
+    phase: 'decomposition' | 'search' | 'synthesis' | 'verification' | 'adjudication';
 }
 
 /**
@@ -322,7 +340,7 @@ export interface PhaseStartEvent {
  */
 export interface PhaseCompleteEvent {
     type: 'phase-complete';
-    phase: 'decomposition' | 'search' | 'synthesis' | 'verification';
+    phase: 'decomposition' | 'search' | 'synthesis' | 'verification' | 'adjudication';
     data: unknown;
 }
 
@@ -379,6 +397,7 @@ export type MaxwellEvent =
     | SearchProgressEvent
     | SynthesisChunkEvent
     | VerificationProgressEvent
+    | AdjudicationChunkEvent
     | CompleteEvent
     | ErrorEvent;
 
@@ -395,6 +414,7 @@ export type ExecutionPhase =
     | 'search'
     | 'synthesis'
     | 'verification'
+    | 'adjudication'
     | 'complete'
     | 'error';
 
@@ -406,6 +426,7 @@ export interface PhaseDurations {
     search?: number;
     synthesis?: number;
     verification?: number;
+    adjudication?: number;
     total?: number;
 }
 
@@ -419,6 +440,7 @@ export interface MaxwellState {
     sources: MaxwellSource[];
     answer: string;
     verification: VerificationOutput | null;
+    adjudication: string | null;
     error: string | null;
     phaseDurations: PhaseDurations;
 }
