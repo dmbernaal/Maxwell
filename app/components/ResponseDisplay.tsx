@@ -134,9 +134,18 @@ const CitationBadge = ({ href, number, source }: { href?: string, number: string
               </span>
 
               {/* Title */}
-              <span className="text-xs text-white/90 font-medium leading-snug line-clamp-2 relative z-10 font-sans block">
+              <span className="text-xs text-white/90 font-medium leading-snug line-clamp-2 relative z-10 font-sans block mb-2">
                 {source.title}
               </span>
+
+              {/* Raw Evidence Snippet */}
+              {source.content && (
+                <span className="relative pl-2 border-l border-white/10 block mt-2">
+                  <span className="text-[10px] text-white/50 leading-relaxed italic font-serif line-clamp-4 block">
+                    "{source.content}"
+                  </span>
+                </span>
+              )}
             </span>
 
             {/* Arrow */}
