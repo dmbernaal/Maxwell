@@ -160,6 +160,9 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
   const isActive = status !== 'relaxed' && status !== 'complete';
   const debugSteps = message?.debugSteps || [];
 
+  // State for collapsing sources
+  const [isSourcesExpanded, setIsSourcesExpanded] = useState(false);
+
   // Process content for citations if we have sources
   const processedContent = hasRealSources && message
     ? processCitations(message.content, sources)
@@ -292,7 +295,7 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {sources.map((source, i) => {
+            {(isSourcesExpanded ? sources : sources.slice(0, 4)).map((source, i) => {
               const favicon = getFavicon(source.url);
               let hostname = '';
               try {
@@ -341,6 +344,17 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
               );
             })}
           </div>
+
+          {/* Show More Button */}
+          {!isSourcesExpanded && sources.length > 4 && (
+            <button
+              onClick={() => setIsSourcesExpanded(true)}
+              className="w-full py-2 flex items-center justify-center gap-2 text-[11px] font-medium text-white/30 hover:text-white/60 hover:bg-white/5 rounded-lg transition-all border border-transparent hover:border-white/5"
+            >
+              <span>Show {sources.length - 4} more sources</span>
+              <ArrowRight size={12} className="opacity-50" />
+            </button>
+          )}
         </motion.div>
       )}
 
