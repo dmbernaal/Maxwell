@@ -102,7 +102,7 @@ export default function InputInterface({
       <div className="relative w-full">
         <motion.form
           onSubmit={handleSubmit}
-          className="relative group w-full p-[2px] rounded-[24px] bg-white/5"
+          className="relative group w-full p-[1px] rounded-[24px] bg-gradient-to-b from-white/15 to-white/5"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
