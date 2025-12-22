@@ -16,6 +16,7 @@ import { ChevronUp, Zap, Brain, Clock, LucideIcon, Sparkles, MessageSquare } fro
 import { createPortal } from 'react-dom';
 
 import { SearchMode } from '../types';
+import { TinyGhost } from './TinyGhost';
 
 interface ModeDropdownProps {
     mode: SearchMode;
@@ -25,7 +26,7 @@ interface ModeDropdownProps {
     onViewResults?: () => void;
 }
 
-const modes: { id: SearchMode; label: string; icon: LucideIcon; description: string; color: string }[] = [
+const modes: { id: SearchMode; label: string; icon: any; description: string; color: string }[] = [
     {
         id: 'normal',
         label: 'Standard',
@@ -36,9 +37,9 @@ const modes: { id: SearchMode; label: string; icon: LucideIcon; description: str
     {
         id: 'maxwell',
         label: 'Maxwell',
-        icon: Sparkles,
+        icon: TinyGhost,
         description: 'Verified search',
-        color: 'text-brand-accent'
+        color: 'text-white'
     }
 ];
 
