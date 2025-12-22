@@ -174,6 +174,18 @@ const isFactLookup =
 3. Response streams chunk-by-chunk for real-time UI
 4. Post-processing extracts which sources were cited
 
+### Intelligence Officer Persona (NEW)
+
+The synthesis prompt enforces a professional, dense tone:
+
+| Rule | Description |
+|------|-------------|
+| **TONE** | Objective, journalistic, dense. Just the facts. |
+| **FORBIDDEN** | "I", "me", "Here is", "I found" |
+| **STRUCTURE** | Use Markdown headers (##) to organize by theme |
+| **CONFLICTS** | Explicitly state when sources disagree |
+| **FORMAT** | No conversational filler. Start directly with the answer. |
+
 ### Citation Format
 
 ```markdown
@@ -289,11 +301,11 @@ Output: [
 
 ---
 
-### Step 4.2: Passage Chunking
+### Step 4.2: Passage Chunking (Optimized)
 
 **What:** Break source snippets into sentence-level passages for fine-grained retrieval.
 
-**Why?** Source snippets are often 200-500 characters. A claim may match only one sentence. Chunking creates ~20-60 passages from ~15 sources.
+**Why?** Source snippets are often 200-500 characters. A claim may match only one sentence.
 
 ```typescript
 // Uses Intl.Segmenter for robust sentence detection
@@ -301,13 +313,24 @@ Output: [
 const segmenter = new Intl.Segmenter('en', { granularity: 'sentence' });
 ```
 
-**Overlapping Windows:** Creates passages of 1, 2, and 3 sentences for context flexibility.
+**Optimizations (NEW):**
+
+| Setting | Before | After | Impact |
+|---------|--------|-------|--------|
+| **Window Sizes** | [1, 2, 3] | **[1, 3]** | 33% fewer passages |
+| **Source Cap** | None | **25,000 chars** | Prevents infinite scroll explosion |
+
+**Rationale:**
+- Window 1: Atomic precision
+- Window 3: Context recall
+- Window 2: Redundant (dropped)
 
 **Tunable:**
 
 | Constant | Default | Purpose |
-|----------|---------|---------|
+|----------|---------|---------||
 | `MIN_PASSAGE_LENGTH` | `20` | Filter noise |
+| `MAX_SOURCE_LENGTH` | `25000` | Cap oversized sources |
 
 ---
 
@@ -346,13 +369,27 @@ citationMismatch =
 **Tunable:**
 
 | Constant | Default | Purpose |
-|----------|---------|---------|
-| `EMBEDDING_MODEL` | `google/gemini-embedding-001` | Primary embedding model (top MTEB, reliable) |
+|----------|---------|---------||
+| `EMBEDDING_MODEL` | `google/gemini-embedding-001` | Primary (top MTEB, reliable) |
 | `EMBEDDING_MODEL_FALLBACK` | `qwen/qwen3-embedding-8b` | Fallback if primary fails |
+| `BATCH_SIZE` | `50` | Texts per HTTP request |
+| `CONCURRENCY` | `20` | Parallel requests via p-limit |
 | `CITATION_MISMATCH_THRESHOLD` | `0.12` | Similarity gap to flag |
 | `LOW_RETRIEVAL_THRESHOLD` | `0.45` | "Weak evidence" cutoff |
 
-**Resilience:** The embedding system automatically falls back to the secondary model if the primary returns errors.
+**Saturated Pipeline (NEW):**
+
+The embedding system uses a "saturated pipeline" architecture for maximum throughput:
+
+1. **Deduplication**: Embed each unique text ONCE (can save 20-50%)
+2. **Batch Size 50**: 5x fewer HTTP requests than size 10
+3. **Concurrency 20**: p-limit keeps 20 connections saturated
+4. **Fallback**: Auto-switches to secondary model per batch on failure
+
+```
+[Maxwell] Embedding 5500 texts → 2800 unique (49% dedup)
+[Maxwell] Processing 56 batches with concurrency 20
+```
 
 ---
 
@@ -567,6 +604,19 @@ The Reconstructor acts as the "Final Authority". It discards the original draft 
 
 **Streaming:**
 The reconstructed answer streams into the chat UI immediately after the verification card, effectively replacing the draft as the "Final Word".
+
+### Intelligence Officer Persona (NEW)
+
+The Adjudicator enforces a dense, authoritative tone:
+
+| Rule | Description |
+|------|-------------|
+| **Voice** | High-level Intelligence Analyst briefing a decision-maker |
+| **Forbidden** | "I", "me", "my", "I have found", "I verified" |
+| **Forbidden** | Filler: "Here is the answer", "Hope this helps", "In conclusion" |
+| **Style** | Dense, information-heavy sentences. Prioritize density over politeness. |
+| **Structure** | Lead immediately with the answer. Use bullet points for evidence. |
+| **Uncertainty** | Be precise: "Data regarding X is insufficient" not "I couldn't find X" |
 
 **Tunable Parameters:**
 
