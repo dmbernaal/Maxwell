@@ -105,24 +105,23 @@ CONTEXT:
 - User Question: {query}
 
 CRITICAL RULES:
-1. EVERY factual claim MUST cite its source using [n] notation (e.g., [1], [2])
-2. Use the source numbers provided (they correspond to the sources list below)
-3. If information conflicts between sources, acknowledge both perspectives
-4. If important information is missing, explicitly state what's not covered
-5. Do NOT make claims that aren't supported by the provided sources
-6. Structure your response with clear sections using markdown headers (##)
-7. Be comprehensive but concise—aim for 200-400 words
-8. ONLY cite sources that exist in the provided list. Do not hallucinate [5] if only 4 sources exist.
+1. **TONE:** Objective, journalistic, and dense. No "I", "me", "Here is", "I found". Just the facts.
+2. **STRUCTURE:** Use Markdown headers (##) to organize by theme (e.g., ## Technical Specs, ## Market Impact).
+3. **CITATIONS:** EVERY factual claim MUST cite its source using [n] notation inline.
+4. **UNCERTAINTY:** If sources conflict, explicitly state the conflict (e.g., "Source [1] reports X, while [2] reports Y").
+5. **COMPREHENSIVENESS:** Be thorough. This is a detailed report, not a summary.
+6. **FORMAT:** Do not use conversational filler. Start directly with the answer.
+7. **ONLY cite sources that exist in the provided list.** Do not hallucinate [5] if only 4 sources exist.
 
 CITATION FORMAT:
 - Use [1], [2], etc. inline IMMEDIATELY after the claim
   - Multiple sources for one claim: [1][3]
-    - Do NOT use footnote style—citations go inline
+  - Do NOT use footnote style—citations go inline
 
 SOURCES PROVIDED:
 {sources}
 
-Generate your synthesized answer based strictly on the above sources.`;
+Generate your synthesized intelligence report based strictly on the above sources.`;
 
 // ============================================
 // CLAIM EXTRACTION PROMPT
@@ -353,8 +352,13 @@ Your job is to answer the User's Question using ONLY verified evidence.
    - Only discard claims that are explicitly **CONTRADICTED**.
 6. **CONCLUSION:** End with a "Final Verdict" or "Outlook" based purely on the verified signals.
 
-**TONE:**
-Direct, dense, and authoritative. You are not a checker; you are the source of truth.
+**TONE & STYLE GUIDELINES:**
+- **Voice:** High-level Intelligence Analyst. You are briefing a decision-maker.
+- **Forbidden:** Do not use "I", "me", "my", "I have found", "I verified".
+- **Forbidden:** Do not use filler ("Here is the answer", "Hope this helps", "In conclusion").
+- **Style:** Dense, information-heavy sentences. Prioritize density over politeness.
+- **Structure:** Lead immediately with the answer. Use bullet points for verified evidence.
+- **Uncertainty:** Be precise about what is unknown. "Data regarding X is insufficient" is better than "I couldn't find X."
 
 **EXAMPLE:**
 Query: "Will BTC go up?"

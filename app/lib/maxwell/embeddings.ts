@@ -8,6 +8,7 @@
  * @module maxwell/embeddings
  */
 
+import pLimit from 'p-limit';
 import { EMBEDDING_MODEL, EMBEDDING_MODEL_FALLBACK } from './constants';
 import { getMaxwellEnvConfig } from './env';
 
@@ -166,14 +167,20 @@ export async function embedText(text: string): Promise<number[]> {
 }
 
 // ============================================
-// BATCH EMBEDDING
+// BATCH EMBEDDING (SATURATED PIPELINE)
 // ============================================
 
 /**
  * Generate embedding vectors for multiple texts.
+ * Uses SATURATED PIPELINE with p-limit for controlled concurrency.
+ * 
+ * OPTIMIZATIONS:
+ * - Deduplication: Embed each unique text ONCE
+ * - Batch size 50: 5x fewer HTTP requests (sentences are small)
+ * - Concurrency 20: Stable network, no ECONNRESET
  *
  * @param texts - Array of texts to embed
- * @returns Array of embedding vectors
+ * @returns Array of embedding vectors (guaranteed order)
  * @throws Error if API fails
  */
 export async function embedTexts(texts: string[]): Promise<number[][]> {
@@ -184,14 +191,70 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
         return [];
     }
 
-    // Filter empty strings to avoid API errors
-    const validTexts = texts.map((t) => t.trim()).filter((t) => t.length > 0);
-    if (validTexts.length === 0) {
-        return [];
+    // 1. Sanitize & Deduplicate (Crucial Speedup)
+    // We map unique texts to their original indices so we only embed each unique sentence ONCE.
+    const uniqueMap = new Map<string, number[]>();
+    texts.forEach((t, i) => {
+        const clean = t.replace(/\n/g, ' ').trim();
+        if (clean.length > 0) {
+            if (!uniqueMap.has(clean)) uniqueMap.set(clean, []);
+            uniqueMap.get(clean)!.push(i);
+        }
+    });
+
+    const uniqueTexts = Array.from(uniqueMap.keys());
+    if (uniqueTexts.length === 0) return [];
+
+    console.log(`[Maxwell] Embedding ${texts.length} texts → ${uniqueTexts.length} unique (${Math.round((1 - uniqueTexts.length / texts.length) * 100)}% dedup)`);
+
+    // 2. Prepare Batches (High Density)
+    // For sentences, Google/OpenRouter can handle ~50 per request easily.
+    // Reducing request count by 5x compared to size 10.
+    const BATCH_SIZE = 50;
+    const batches: string[][] = [];
+    for (let i = 0; i < uniqueTexts.length; i += BATCH_SIZE) {
+        batches.push(uniqueTexts.slice(i, i + BATCH_SIZE));
     }
 
+    console.log(`[Maxwell] Processing ${batches.length} batches with concurrency 20`);
+
+    // 3. Execute with SATURATED CONCURRENCY
+    // Limit to 20 parallel requests.
+    // 20 reqs * 50 items = 1000 items processing per cycle.
+    // This is extremely fast but safe for TCP/IP.
+    const limit = pLimit(20);
+
     try {
-        return await callEmbeddingAPI(validTexts);
+        const batchResults = await Promise.all(
+            batches.map((batch) =>
+                limit(async () => {
+                    // This runs inside the limiter
+                    const embeddings = await callEmbeddingAPI(batch);
+                    return embeddings;
+                })
+            )
+        );
+
+        // 4. Remap to Original Indices (De-Duplication)
+        const flatEmbeddings = batchResults.flat();
+
+        // Safety check
+        if (flatEmbeddings.length !== uniqueTexts.length) {
+            throw new Error(`Embedding mismatch: sent ${uniqueTexts.length}, got ${flatEmbeddings.length}`);
+        }
+
+        const finalOutput: number[][] = new Array(texts.length);
+
+        uniqueTexts.forEach((text, idx) => {
+            const embedding = flatEmbeddings[idx];
+            const originalIndices = uniqueMap.get(text)!;
+            originalIndices.forEach((originalIndex) => {
+                finalOutput[originalIndex] = embedding;
+            });
+        });
+
+        return finalOutput;
+
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
         throw new Error(`Batch embedding failed: ${message}`);
