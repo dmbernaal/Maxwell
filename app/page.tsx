@@ -179,7 +179,7 @@ export default function Home() {
       <ChatHistory />
 
       {/* GLOBAL EFFECTS */}
-      <div className="bg-grain opacity-20 pointer-events-none fixed inset-0 z-0" />
+
 
       {/* VIGNETTE - Kaiyros Aesthetic */}
       <div className="fixed inset-0 pointer-events-none z-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_var(--bg-primary)_100%),_radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.4)_100%)]" />
