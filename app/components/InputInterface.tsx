@@ -157,13 +157,7 @@ export default function InputInterface({
 
               {/* Left: Tools & Attachments */}
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#18151d] hover:bg-[#231f29] border border-white/5 transition-all text-xs font-medium text-white/60"
-                >
-                  <Plus size={14} />
-                  <span>Focus</span>
-                </button>
+
 
                 <button
                   type="button"
