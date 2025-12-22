@@ -434,7 +434,27 @@ function numbersMatch(a: string, b: string): boolean {
 }
 
 /**
+ * Helper: Converts string array to sorted number array, filtering out years and nulls.
+ */
+function getNumericValues(strs: string[]): number[] {
+    return strs
+        .map(normalizeNumber)
+        .filter((n): n is number => n !== null && !/^(19|20)\d{2}$/.test(String(n))) // Filter nulls and years (1900-2099)
+        .sort((a, b) => a - b);
+}
+
+/**
+ * Helper: Checks if two numbers match within 10% tolerance.
+ */
+function isRoughlyEqual(a: number, b: number): boolean {
+    if (a === 0) return b === 0;
+    const ratio = a / b;
+    return ratio > 0.90 && ratio < 1.10; // Increased tolerance to 10% for "roughly" checks
+}
+
+/**
  * Checks if numbers in claim match numbers in evidence.
+ * NOW SUPPORTS: Exact matching, Range Overlaps, and Containment.
  *
  * @param claimNumbers - Numbers extracted from claim
  * @param evidenceNumbers - Numbers extracted from evidence
@@ -444,25 +464,90 @@ export function checkNumericConsistency(
     claimNumbers: string[],
     evidenceNumbers: string[]
 ): NumericCheck {
+    // 1. Trivial pass
     if (claimNumbers.length === 0) {
         return { claimNumbers, evidenceNumbers, match: true };
     }
 
-    let allMatch = true;
-
+    // 2. STRICT CHECK (The original logic)
+    // Every claim number must match an evidence number
+    let allStrictMatch = true;
     for (const claimNum of claimNumbers) {
-        // Ignore years in consistency check (context, not stats)
-        if (/^(19|20)\d{2}$/.test(claimNum)) continue;
-
-        // Check if this number exists in evidence
+        if (/^(19|20)\d{2}$/.test(claimNum)) continue; // Skip years
         const found = evidenceNumbers.some((evNum) => numbersMatch(claimNum, evNum));
         if (!found) {
-            allMatch = false;
+            allStrictMatch = false;
             break;
         }
     }
 
-    return { claimNumbers, evidenceNumbers, match: allMatch };
+    // If strict match passes, we are golden.
+    if (allStrictMatch) {
+        return { claimNumbers, evidenceNumbers, match: true };
+    }
+
+    // 3. RANGE / CONTEXT CHECK (The Fix for Battery Costs)
+    // If strict match failed, check if it's a valid range approximation.
+
+    const cVals = getNumericValues(claimNumbers);
+    const eVals = getNumericValues(evidenceNumbers);
+
+    // If we don't have enough numbers to compare ranges/values, fail.
+    if (cVals.length === 0 || eVals.length === 0) {
+        return { claimNumbers, evidenceNumbers, match: false };
+    }
+
+    // SCENARIO A: Range Overlap / Bounds Match
+    // Claim: "400 to 800" (400, 800)
+    // Evidence: "400 to 600" (400, 600)
+    // If the Minimums match OR the Maximums match, we consider it supported.
+    if (cVals.length >= 2 && eVals.length >= 2) {
+        const cMin = cVals[0];
+        const cMax = cVals[cVals.length - 1];
+        const eMin = eVals[0];
+        const eMax = eVals[eVals.length - 1];
+
+        const minMatch = isRoughlyEqual(cMin, eMin);
+        const maxMatch = isRoughlyEqual(cMax, eMax);
+
+        // If at least one bound matches, and the ranges overlap, it's a pass.
+        // Overlap check: start of one <= end of other
+        const overlap = Math.max(cMin, eMin) <= Math.min(cMax, eMax);
+
+        if ((minMatch || maxMatch) && overlap) {
+            return { claimNumbers, evidenceNumbers, match: true };
+        }
+    }
+
+    // SCENARIO B: Containment
+    // Claim: "Bitcoin is $87,500" (87500)
+    // Evidence: "Bitcoin trading between $87,000 and $88,000" (87000, 88000)
+    // The claim is inside the evidence range.
+    if (eVals.length >= 2 && cVals.length === 1) {
+        const val = cVals[0];
+        const eMin = eVals[0];
+        const eMax = eVals[eVals.length - 1];
+
+        if (val >= eMin && val <= eMax) {
+            return { claimNumbers, evidenceNumbers, match: true };
+        }
+    }
+
+    // SCENARIO C: Reverse Containment (Claim is a range, Evidence is a point)
+    // Claim: "Costs between $400-$800"
+    // Evidence: "Costs are $500"
+    // The evidence supports the claim interval.
+    if (cVals.length >= 2 && eVals.length === 1) {
+        const val = eVals[0];
+        const cMin = cVals[0];
+        const cMax = cVals[cVals.length - 1];
+
+        if (val >= cMin && val <= cMax) {
+            return { claimNumbers, evidenceNumbers, match: true };
+        }
+    }
+
+    return { claimNumbers, evidenceNumbers, match: false };
 }
 
 // ============================================
