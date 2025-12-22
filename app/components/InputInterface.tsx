@@ -115,7 +115,7 @@ export default function InputInterface({
               transition-all duration-500 ease-out
               overflow-hidden
               border
-              hover:border-white/10 hover:shadow-[0_0_30px_-10px_rgba(255,255,255,0.05)] hover:scale-[1.002]
+              hover:border-white/10 hover:shadow-[0_0_30px_-10px_rgba(255,255,255,0.05)]
               ${isFocused
                 ? 'border-white/10 shadow-[0_0_30px_-5px_rgba(255,255,255,0.07)]'
                 : 'border-transparent shadow-2xl'
