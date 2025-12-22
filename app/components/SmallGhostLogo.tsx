@@ -5,7 +5,11 @@ import { motion } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
 import { GHOST_LOGO_COLORS } from "../lib/ghost-logo-colors";
 
-export function SmallGhostLogo() {
+interface SmallGhostLogoProps {
+  isActive?: boolean;
+}
+
+export function SmallGhostLogo({ isActive = false }: SmallGhostLogoProps) {
   // State
   const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
   const [isClient, setIsClient] = useState(false);
@@ -57,28 +61,21 @@ export function SmallGhostLogo() {
       ref={containerRef}
       id="small-ghost-logo"
       className="relative w-full h-full mx-auto"
-      // Floating Animation
+      // Floating Animation - faster when active
       animate={{ y: [0, -4, 0], scale: [1, 1.02, 1] }}
-      transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+      transition={{ duration: isActive ? 1.5 : 3, repeat: Infinity, ease: "easeInOut" }}
     >
-      {/* AMBIENT GLOW - The "Soul" Aura */}
-      <motion.div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[140%] -z-10 rounded-full blur-[40px]"
-        animate={{
-          scale: [1, 1.15, 1],
-          opacity: [0.2, 0.4, 0.2],
-        }}
-        transition={{
-          duration: 4,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-        style={{
-          background: "radial-gradient(circle at center, rgba(111, 59, 245, 0.5) 0%, rgba(255, 153, 204, 0.2) 40%, transparent 70%)"
-        }}
-      />
 
-      <svg width="100%" height="100%" viewBox="0 0 48 60" className="w-full h-full overflow-visible drop-shadow-[0_0_15px_rgba(111,59,245,0.3)]">
+
+      <svg
+        width="100%"
+        height="100%"
+        viewBox="0 0 48 60"
+        className={`w-full h-full overflow-visible transition-all duration-500 ${isActive
+            ? 'drop-shadow-[0_0_25px_rgba(111,59,245,0.5)]'
+            : 'drop-shadow-[0_0_15px_rgba(111,59,245,0.3)]'
+          }`}
+      >
         <defs>
           {/* THE SHAPE */}
           <clipPath id="ghostClip">

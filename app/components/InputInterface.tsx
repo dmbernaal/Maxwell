@@ -16,6 +16,7 @@ interface InputInterfaceProps {
   disabled?: boolean;
   hasMaxwellResults?: boolean;
   onViewResults?: () => void;
+  onFocusChange?: (isFocused: boolean) => void;
 }
 
 function SpotlightPill({ icon: Icon, label, onClick }: { icon: any, label: string, onClick: () => void }) {
@@ -30,8 +31,8 @@ function SpotlightPill({ icon: Icon, label, onClick }: { icon: any, label: strin
     >
 
       <div className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#18151d] backdrop-blur-md border border-transparent">
-        <Icon size={12} className="opacity-70 group-hover:opacity-100 transition-opacity text-white" />
-        <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/40 group-hover:text-white transition-colors">{label}</span>
+        <Icon size={12} className="opacity-50 group-hover:opacity-100 transition-opacity text-white" />
+        <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/50 group-hover:text-white/90 transition-colors">{label}</span>
       </div>
     </motion.button>
   );
@@ -46,6 +47,7 @@ export default function InputInterface({
   disabled = false,
   hasMaxwellResults = false,
   onViewResults,
+  onFocusChange,
 }: InputInterfaceProps) {
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -144,8 +146,14 @@ export default function InputInterface({
                     }
                   }
                 }}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
+                onFocus={() => {
+                  setIsFocused(true);
+                  onFocusChange?.(true);
+                }}
+                onBlur={() => {
+                  setIsFocused(false);
+                  onFocusChange?.(false);
+                }}
                 placeholder="Ask anything..."
                 rows={1}
                 className="w-full bg-transparent text-lg text-white placeholder-white/30 focus:outline-none font-light py-2 resize-none max-h-[200px] overflow-y-auto"

@@ -60,6 +60,9 @@ export default function Home() {
   // Track if canvas should be visible (separate from having results)
   const [isCanvasVisible, setIsCanvasVisible] = useState(false);
 
+  // Track input focus for Ghost reaction
+  const [isInputFocused, setIsInputFocused] = useState(false);
+
   const [currentLayout, setCurrentLayout] = useState<'relaxed' | 'active'>('relaxed');
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -178,11 +181,7 @@ export default function Home() {
     <main className="relative min-h-screen w-full bg-[var(--bg-primary)] overflow-hidden selection:bg-brand-accent/30 font-sans">
       <ChatHistory />
 
-      {/* GLOBAL EFFECTS */}
-
-
-      {/* VIGNETTE - Kaiyros Aesthetic */}
-      <div className="fixed inset-0 pointer-events-none z-0 bg-[radial-gradient(circle_at_center,_transparent_0%,_var(--bg-primary)_100%),_radial-gradient(circle_at_center,_transparent_0%,_rgba(0,0,0,0.4)_100%)]" />
+      {/* GLOBAL EFFECTS - Pure Obsidian Void */}
 
       {/* LAYOUT TRANSITIONS */}
       <AnimatePresence mode="wait">
@@ -203,7 +202,7 @@ export default function Home() {
                 transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }} // Cubic bezier for "premium" feel
                 className="w-[160px] h-[200px] mb-8"
               >
-                <SmallGhostLogo />
+                <SmallGhostLogo isActive={isInputFocused} />
               </motion.div>
 
               {/* Input Centered */}
@@ -223,6 +222,7 @@ export default function Home() {
                   disabled={isStreaming || maxwell.isLoading}
                   hasMaxwellResults={hasMaxwellResults && !isCanvasVisible}
                   onViewResults={handleViewResults}
+                  onFocusChange={setIsInputFocused}
                 />
               </motion.div>
             </div>
@@ -250,7 +250,7 @@ export default function Home() {
               <div className="w-full max-w-4xl px-4 md:px-6 pt-8">
                 <div className="w-full max-w-3xl mx-auto">
                   <div className="w-[42px] h-[52px]">
-                    <SmallGhostLogo />
+                    <SmallGhostLogo isActive={isInputFocused} />
                   </div>
                 </div>
               </div>
@@ -280,6 +280,7 @@ export default function Home() {
                   disabled={isStreaming || maxwell.isLoading}
                   hasMaxwellResults={hasMaxwellResults && !isCanvasVisible}
                   onViewResults={handleViewResults}
+                  onFocusChange={setIsInputFocused}
                 />
               </motion.div>
             </motion.div>
