@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react';
 import { useChatStore } from '../store';
-import type { Source, DebugStep } from '../types';
+import type { Source, DebugStep, Attachment } from '../types';
 import { DEFAULT_MODEL } from '../lib/models';
 
 // Must match the delimiter in route.ts
@@ -14,7 +14,7 @@ interface UseChatApiOptions {
 }
 
 interface UseChatApiReturn {
-    sendMessage: (content: string) => Promise<void>;
+    sendMessage: (content: string, attachments?: Attachment[]) => Promise<void>;
     isStreaming: boolean;
     error: string | null;
     currentModel: string;
@@ -47,7 +47,7 @@ function parseStreamContent(text: string): { cleanText: string; sources: Source[
     // Regex to match: DELIMITER + (content) + DELIMITER
     // We use [\s\S]*? for non-greedy multiline match
     const debugRegex = new RegExp(`${DEBUG_DELIMITER}([\\s\\S]*?)${DEBUG_DELIMITER}`, 'g');
-    
+
     let match;
     while ((match = debugRegex.exec(text)) !== null) {
         try {
@@ -69,10 +69,10 @@ function parseStreamContent(text: string): { cleanText: string; sources: Source[
     const partialStart = DEBUG_DELIMITER.substring(0, 10); // Check first few chars
     const lastIndex = cleanText.lastIndexOf(partialStart);
     if (lastIndex !== -1 && lastIndex > cleanText.length - 50) { // Only if near end
-         // Check if it actually matches the start of the full delimiter
-         if (DEBUG_DELIMITER.startsWith(cleanText.substring(lastIndex))) {
-             cleanText = cleanText.substring(0, lastIndex);
-         }
+        // Check if it actually matches the start of the full delimiter
+        if (DEBUG_DELIMITER.startsWith(cleanText.substring(lastIndex))) {
+            cleanText = cleanText.substring(0, lastIndex);
+        }
     }
 
     return { cleanText, sources, debugSteps };
@@ -99,7 +99,7 @@ export function useChatApi(options: UseChatApiOptions = {}): UseChatApiReturn {
     // Abort controller ref for cancellation
     const abortControllerRef = useRef<AbortController | null>(null);
 
-    const sendMessage = useCallback(async (content: string) => {
+    const sendMessage = useCallback(async (content: string, attachments?: Attachment[]) => {
         if (!activeSessionId) {
             setError('No active session');
             return;
@@ -118,21 +118,46 @@ export function useChatApi(options: UseChatApiOptions = {}): UseChatApiReturn {
         abortControllerRef.current = new AbortController();
 
         try {
-            // 1. Add user message
-            addMessage(content, 'user', false, sessionId);
+            // 1. Add user message with attachment previews for display
+            const messageAttachments = attachments?.map(a => ({
+                id: a.id,
+                previewUrl: a.previewUrl,
+                mediaType: a.mediaType,
+            }));
+            addMessage(content, 'user', false, sessionId, undefined, undefined, messageAttachments);
 
             // 2. Set initial state
             setAgentState('thinking', sessionId);
 
-            // 3. Get conversation history for context
+            // 3. Get conversation history for context (always text for history)
             const session = getActiveSession();
-            const messages = session?.messages.map(m => ({
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const messages: Array<{ role: string; content: any }> = session?.messages.map(m => ({
                 role: m.role === 'agent' ? 'assistant' : 'user',
                 content: m.content,
             })) || [];
 
-            // Add the new user message
-            messages.push({ role: 'user', content });
+            // 4. Build the new user message (potentially multimodal)
+            let newUserMessage: { role: string; content: string | Array<{ type: string; text?: string; image?: string; mediaType?: string }> };
+
+            if (attachments && attachments.length > 0) {
+                // Multimodal message: array of content parts
+                const contentParts: Array<{ type: string; text?: string; image?: string; mediaType?: string }> = [
+                    { type: 'text', text: content },
+                    ...attachments.map(a => ({
+                        type: 'image',
+                        image: a.base64,
+                        mediaType: a.mediaType,
+                    })),
+                ];
+                newUserMessage = { role: 'user', content: contentParts };
+                console.log('[useChatApi] Sending multimodal message with', attachments.length, 'images');
+            } else {
+                // Text-only message
+                newUserMessage = { role: 'user', content };
+            }
+
+            messages.push(newUserMessage);
 
             // 4. Make API request
             const response = await fetch('/api/chat', {

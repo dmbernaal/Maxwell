@@ -2,15 +2,15 @@
 
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
-import { Mic, ArrowRight, Search, Zap, Globe, FileText, Plus, Paperclip } from 'lucide-react';
-import { AgentState } from '../types';
-import { SearchMode } from '../types';
+import { Mic, ArrowRight, Search, Zap, Globe, FileText, Plus, Paperclip, X } from 'lucide-react';
+import { AgentState, SearchMode, Attachment, ATTACHMENT_LIMITS } from '../types';
+import { convertToBase64, validateAttachment, generateAttachmentId } from '../lib/file-utils';
 import ModeDropdown from './ModeDropdown';
 
 interface InputInterfaceProps {
   state: AgentState;
   hasMessages: boolean;
-  onQuery: (query: string) => void;
+  onQuery: (query: string, attachments?: Attachment[]) => void;
   mode?: SearchMode;
   onModeChange?: (mode: SearchMode) => void;
   disabled?: boolean;
@@ -51,7 +51,12 @@ export default function InputInterface({
 }: InputInterfaceProps) {
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Is Maxwell mode (attachments disabled)
+  const isMaxwellMode = mode === 'maxwell';
 
   // Reset height when query is cleared
   React.useEffect(() => {
@@ -73,9 +78,59 @@ export default function InputInterface({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
-      onQuery(query);
+      onQuery(query, attachments.length > 0 ? attachments : undefined);
       setQuery('');
+      // Clear attachments from input (URLs are kept for display in chat)
+      setAttachments([]);
     }
+  };
+
+  // Handle file selection
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    // Check if adding these would exceed limit
+    const remainingSlots = ATTACHMENT_LIMITS.MAX_FILES - attachments.length;
+    const filesToProcess = files.slice(0, remainingSlots);
+
+    for (const file of filesToProcess) {
+      const error = validateAttachment(file);
+      if (error) {
+        console.warn('[Attachment]', error);
+        continue;
+      }
+
+      try {
+        const base64 = await convertToBase64(file);
+        const attachment: Attachment = {
+          id: generateAttachmentId(),
+          file,
+          previewUrl: URL.createObjectURL(file),
+          base64,
+          mediaType: file.type as Attachment['mediaType'],
+        };
+        setAttachments(prev => [...prev, attachment]);
+      } catch (err) {
+        console.error('[Attachment] Failed to process:', err);
+      }
+    }
+
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Remove an attachment
+  const removeAttachment = (id: string) => {
+    setAttachments(prev => {
+      const toRemove = prev.find(a => a.id === id);
+      if (toRemove) {
+        URL.revokeObjectURL(toRemove.previewUrl);
+      }
+      return prev.filter(a => a.id !== id);
+    });
   };
 
   const handlePillClick = (text: string) => {
@@ -127,6 +182,41 @@ export default function InputInterface({
             {/* Subtle top highlight gradient */}
             <div className="absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent pointer-events-none" />
 
+            {/* Attachment Preview Row */}
+            {attachments.length > 0 && (
+              <div className="px-4 pt-4 pb-2 flex items-center gap-2 border-b border-white/5">
+                {attachments.map((attachment) => (
+                  <div
+                    key={attachment.id}
+                    className="relative group w-12 h-12 rounded-lg overflow-hidden border border-white/10 bg-white/5"
+                  >
+                    <img
+                      src={attachment.previewUrl}
+                      alt="Attachment preview"
+                      className="w-full h-full object-cover"
+                    />
+                    {/* Remove button */}
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(attachment.id)}
+                      className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                    >
+                      <X size={16} className="text-white" />
+                    </button>
+                  </div>
+                ))}
+                {attachments.length < ATTACHMENT_LIMITS.MAX_FILES && !isMaxwellMode && (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-12 h-12 rounded-lg border border-dashed border-white/20 flex items-center justify-center text-white/30 hover:text-white/60 hover:border-white/40 transition-colors"
+                  >
+                    <Plus size={20} />
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Top Section: Text Area */}
             <div className="p-4 pb-2">
               <textarea
@@ -165,15 +255,42 @@ export default function InputInterface({
 
               {/* Left: Tools & Attachments */}
               <div className="flex items-center gap-2">
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  multiple
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
 
-
-                <button
-                  type="button"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#18151d] hover:bg-[#231f29] border border-white/5 transition-all text-xs font-medium text-white/60"
-                >
-                  <Paperclip size={14} />
-                  <span>Attach</span>
-                </button>
+                {/* Attach button with Maxwell mode guard */}
+                <div className="relative group/attach">
+                  <button
+                    type="button"
+                    onClick={() => !isMaxwellMode && fileInputRef.current?.click()}
+                    disabled={isMaxwellMode || attachments.length >= ATTACHMENT_LIMITS.MAX_FILES}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/5 transition-all text-xs font-medium ${isMaxwellMode || attachments.length >= ATTACHMENT_LIMITS.MAX_FILES
+                      ? 'bg-[#18151d] text-white/30 cursor-not-allowed'
+                      : 'bg-[#18151d] hover:bg-[#231f29] text-white/60'
+                      }`}
+                  >
+                    <Paperclip size={14} />
+                    <span>Attach</span>
+                    {attachments.length > 0 && (
+                      <span className="ml-1 px-1.5 py-0.5 bg-white/10 rounded-full text-[10px]">
+                        {attachments.length}
+                      </span>
+                    )}
+                  </button>
+                  {/* Tooltip for Maxwell mode */}
+                  {isMaxwellMode && (
+                    <div className="absolute left-0 bottom-full mb-2 px-3 py-1.5 bg-[#18151d] border border-white/10 rounded-lg text-[11px] text-white/70 whitespace-nowrap opacity-0 group-hover/attach:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
+                      Image analysis not available in Verified Research mode
+                    </div>
+                  )}
+                </div>
 
                 {onModeChange && (
                   <ModeDropdown

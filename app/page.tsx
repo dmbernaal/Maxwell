@@ -175,15 +175,15 @@ export default function Home() {
   }, [agentState, messages.length]);
 
   // Handle query submission - routes to correct API based on mode
-  const handleQuery = (q: string) => {
+  const handleQuery = (q: string, attachments?: import('./types').Attachment[]) => {
     if (!activeSessionId) return;
 
     if (searchMode === 'normal') {
-      // Base product - use chat API
+      // Base product - use chat API (supports attachments)
       if (isStreaming) return;
-      sendMessage(q);
+      sendMessage(q, attachments);
     } else {
-      // Maxwell mode - use Maxwell API
+      // Maxwell mode - use Maxwell API (attachments not supported)
       if (maxwell.isLoading) return;
       maxwell.search(q);
     }
@@ -415,7 +415,7 @@ export default function Home() {
                   return (
                     <div key={msg.id} className="w-full">
                       {msg.role === 'user' ? (
-                        <UserMessage content={msg.content} isHistory={isHistory} />
+                        <UserMessage content={msg.content} attachments={msg.attachments} isHistory={isHistory} />
                       ) : (
                         <ResponseDisplay
                           message={msg}

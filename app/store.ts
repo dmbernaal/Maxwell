@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
-import { AgentState, Message, ChatSession, Source, DebugStep, SearchMode } from './types';
+import { AgentState, Message, ChatSession, Source, DebugStep, SearchMode, MessageAttachment } from './types';
 
 interface ChatStore {
   // State
@@ -13,7 +13,7 @@ interface ChatStore {
   createSession: () => string;
   switchSession: (sessionId: string) => void;
   deleteSession: (sessionId: string) => void;
-  addMessage: (content: string, role: 'user' | 'agent', verified?: boolean, sessionId?: string, sources?: Source[], debugSteps?: DebugStep[]) => string;
+  addMessage: (content: string, role: 'user' | 'agent', verified?: boolean, sessionId?: string, sources?: Source[], debugSteps?: DebugStep[], attachments?: MessageAttachment[]) => string;
   updateMessage: (messageId: string, content: string, sources?: Source[], sessionId?: string, debugSteps?: DebugStep[], maxwellState?: any) => void;
   setAgentState: (state: AgentState, sessionId?: string) => void;
   setSessionMode: (mode: SearchMode, sessionId?: string) => void;
@@ -71,7 +71,7 @@ export const useChatStore = create<ChatStore>()(
         });
       },
 
-      addMessage: (content, role, verified = false, sessionId, sources, debugSteps) => {
+      addMessage: (content, role, verified = false, sessionId, sources, debugSteps, attachments) => {
         const messageId = uuidv4();
         set((state) => {
           // Use provided sessionId or fallback to activeSessionId
@@ -88,6 +88,7 @@ export const useChatStore = create<ChatStore>()(
             timestamp: Date.now(),
             sources,
             debugSteps,
+            attachments, // Store attachments for display
           };
 
           // Auto-generate title from first user message if it's "New Conversation"
