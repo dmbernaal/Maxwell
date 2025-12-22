@@ -49,6 +49,14 @@ export default function InputInterface({
 }: InputInterfaceProps) {
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Reset height when query is cleared
+  React.useEffect(() => {
+    if (!query && textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+  }, [query]);
 
   // Spotlight effect logic
   const mouseX = useMotionValue(0);
@@ -119,14 +127,28 @@ export default function InputInterface({
 
             {/* Top Section: Text Area */}
             <div className="p-4 pb-2">
-              <input
-                type="text"
+              <textarea
+                ref={textareaRef}
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  // Auto-resize
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (query.trim()) {
+                      handleSubmit(e);
+                    }
+                  }
+                }}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
                 placeholder="Ask anything..."
-                className="w-full bg-transparent text-lg text-white placeholder-white/30 focus:outline-none font-light py-2"
+                rows={1}
+                className="w-full bg-transparent text-lg text-white placeholder-white/30 focus:outline-none font-light py-2 resize-none max-h-[200px] overflow-y-auto"
               />
             </div>
 
