@@ -4,8 +4,6 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
 [![AI SDK](https://img.shields.io/badge/AI_SDK-5.0-green)](https://sdk.vercel.ai/docs)
 
-> **Submission for Tenex Engineering Take-Home**
-
 Maxwell is an adaptive, self-correcting search engine designed to solve the **Hallucination Problem** in Enterprise AI. Unlike standard RAG systems that simply summarize search results, Maxwell audits its own answers using a multi-signal verification pipeline.
 
 ---
