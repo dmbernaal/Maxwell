@@ -65,8 +65,11 @@ export const CLAIM_EXTRACTION_MODEL = 'google/gemini-3-flash-preview';
 /** Model for NLI entailment checking (fast, works with strict prompts) */
 export const NLI_MODEL = 'google/gemini-3-flash-preview';
 
-/** Model for embeddings (via OpenRouter, modern and efficient) */
-export const EMBEDDING_MODEL = 'qwen/qwen3-embedding-8b';
+/** Primary embedding model - Gemini for reliability and broad domain coverage (top MTEB scores) */
+export const EMBEDDING_MODEL = 'google/gemini-embedding-001';
+
+/** Fallback embedding model - Qwen3 as backup if primary fails */
+export const EMBEDDING_MODEL_FALLBACK = 'qwen/qwen3-embedding-8b';
 
 /** Default verification concurrency - DYNAMICALLY SET BY QUALITY PRESET */
 export const DEFAULT_VERIFICATION_CONCURRENCY = QUALITY_PRESETS[DEFAULT_QUALITY_PRESET].verificationConcurrency;

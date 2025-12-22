@@ -3,11 +3,12 @@
  *
  * Provides text embedding and similarity calculation functions.
  * Uses OpenRouter's Embedding API via native fetch.
+ * Implements model fallback for resilience.
  *
  * @module maxwell/embeddings
  */
 
-import { EMBEDDING_MODEL } from './constants';
+import { EMBEDDING_MODEL, EMBEDDING_MODEL_FALLBACK } from './constants';
 import { getMaxwellEnvConfig } from './env';
 
 // ============================================
@@ -32,16 +33,17 @@ interface OpenRouterEmbeddingResponse {
 // ============================================
 
 /**
- * Call OpenRouter Embeddings API directly.
+ * Call OpenRouter Embeddings API directly with a specific model.
  *
  * @param texts - Array of texts to embed
+ * @param model - The embedding model to use
  * @returns Array of embedding vectors
  * @throws Error if API call fails
  */
-async function callEmbeddingAPI(texts: string[]): Promise<number[][]> {
+async function callEmbeddingAPIWithModel(texts: string[], model: string): Promise<number[][]> {
     const { OPENROUTER_API_KEY } = getMaxwellEnvConfig();
-    const MAX_RETRIES = 3;
-    const RETRY_DELAY = 1000;
+    const MAX_RETRIES = 2; // Reduced from 3 since we have fallback
+    const RETRY_DELAY = 500;
 
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
         try {
@@ -52,7 +54,7 @@ async function callEmbeddingAPI(texts: string[]): Promise<number[][]> {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    model: EMBEDDING_MODEL,
+                    model: model,
                     input: texts,
                 }),
             });
@@ -67,30 +69,71 @@ async function callEmbeddingAPI(texts: string[]): Promise<number[][]> {
                 throw new Error('Empty response from Embedding API');
             }
 
-            let data: OpenRouterEmbeddingResponse;
+            let data: Record<string, unknown>;
             try {
                 data = JSON.parse(text);
             } catch (e) {
                 throw new Error(`Failed to parse Embedding API response: ${e instanceof Error ? e.message : 'Unknown error'}`);
             }
 
-            if (!data.data || !Array.isArray(data.data)) {
-                throw new Error('Invalid response format from Embedding API');
+            // Handle OpenRouter's standard format: { data: [{ embedding: [...], index: n }] }
+            if (data.data && Array.isArray(data.data)) {
+                const embeddings = data.data as { embedding: number[]; index: number }[];
+                return embeddings.sort((a, b) => a.index - b.index).map((d) => d.embedding);
             }
 
-            // Sort by index to ensure order matches input
-            return data.data.sort((a, b) => a.index - b.index).map((d) => d.embedding);
+            // Handle alternative format: { embeddings: [[...], [...]] } (some models)
+            if (data.embeddings && Array.isArray(data.embeddings)) {
+                return data.embeddings as number[][];
+            }
+
+            // Handle single embedding format: { embedding: [...] }
+            if (data.embedding && Array.isArray(data.embedding)) {
+                return [data.embedding as number[]];
+            }
+
+            // Unknown format - log it and fail
+            console.error(`[Maxwell] Unknown embedding response format:`, JSON.stringify(data).slice(0, 500));
+            throw new Error(`Invalid response format from Embedding API. Keys: ${Object.keys(data).join(', ')}`);
 
         } catch (error) {
             const isLastAttempt = attempt === MAX_RETRIES;
-            console.warn(`[Maxwell] Embedding attempt ${attempt}/${MAX_RETRIES} failed:`, error);
+            console.warn(`[Maxwell] Embedding attempt ${attempt}/${MAX_RETRIES} with ${model} failed:`, error);
 
             if (isLastAttempt) throw error;
             await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * attempt));
         }
     }
 
-    throw new Error('Embedding API failed after retries');
+    throw new Error(`Embedding API (${model}) failed after retries`);
+}
+
+/**
+ * Call OpenRouter Embeddings API with automatic fallback.
+ * Tries primary model first, falls back to secondary on failure.
+ *
+ * @param texts - Array of texts to embed
+ * @returns Array of embedding vectors
+ * @throws Error if both models fail
+ */
+async function callEmbeddingAPI(texts: string[]): Promise<number[][]> {
+    // Try primary model first
+    try {
+        return await callEmbeddingAPIWithModel(texts, EMBEDDING_MODEL);
+    } catch (primaryError) {
+        console.warn(`[Maxwell] Primary embedding model (${EMBEDDING_MODEL}) failed, trying fallback...`);
+
+        // Try fallback model
+        try {
+            const result = await callEmbeddingAPIWithModel(texts, EMBEDDING_MODEL_FALLBACK);
+            console.log(`[Maxwell] Fallback embedding model (${EMBEDDING_MODEL_FALLBACK}) succeeded`);
+            return result;
+        } catch (fallbackError) {
+            // Both models failed
+            console.error(`[Maxwell] Both embedding models failed`);
+            throw new Error(`Embedding failed: Primary (${EMBEDDING_MODEL}) and fallback (${EMBEDDING_MODEL_FALLBACK}) both failed`);
+        }
+    }
 }
 
 // ============================================

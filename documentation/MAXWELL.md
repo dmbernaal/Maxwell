@@ -347,9 +347,12 @@ citationMismatch =
 
 | Constant | Default | Purpose |
 |----------|---------|---------|
-| `EMBEDDING_MODEL` | `qwen/qwen3-embedding-8b` | Vector embedding model |
+| `EMBEDDING_MODEL` | `google/gemini-embedding-001` | Primary embedding model (top MTEB, reliable) |
+| `EMBEDDING_MODEL_FALLBACK` | `qwen/qwen3-embedding-8b` | Fallback if primary fails |
 | `CITATION_MISMATCH_THRESHOLD` | `0.12` | Similarity gap to flag |
 | `LOW_RETRIEVAL_THRESHOLD` | `0.45` | "Weak evidence" cutoff |
+
+**Resilience:** The embedding system automatically falls back to the secondary model if the primary returns errors.
 
 ---
 
