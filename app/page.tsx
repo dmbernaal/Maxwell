@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SmallGhostLogo } from './components/SmallGhostLogo';
 import InputInterface from './components/InputInterface';
@@ -99,12 +99,71 @@ export default function Home() {
     }
   }, [activeSessionId, messages, maxwell]);
 
-  // Auto-scroll to bottom
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  // Smart auto-scroll with throttling to prevent jitter
+  const userScrolledAway = useRef(false);
+  const lastScrollTop = useRef(0);
+  const scrollThrottleRef = useRef<number | null>(null);
+
+  // Throttled scroll to bottom - prevents jitter during rapid streaming
+  const scrollToBottom = useCallback(() => {
+    if (scrollThrottleRef.current) return; // Already scheduled
+
+    scrollThrottleRef.current = requestAnimationFrame(() => {
+      const el = scrollRef.current;
+      if (el && !userScrolledAway.current) {
+        el.scrollTop = el.scrollHeight;
+      }
+      scrollThrottleRef.current = null;
+    });
+  }, []);
+
+  // Detect if user manually scrolled UP (indicating they want to read something)
+  const handleChatScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const currentScrollTop = el.scrollTop;
+    const isNearBottom = el.scrollHeight - currentScrollTop - el.clientHeight < 200;
+
+    // User scrolled UP - they want to stay where they are
+    if (currentScrollTop < lastScrollTop.current - 20) {
+      userScrolledAway.current = true;
     }
-  }, [messages, agentState]);
+
+    // User scrolled back to bottom - re-enable auto-scroll
+    if (isNearBottom) {
+      userScrolledAway.current = false;
+    }
+
+    lastScrollTop.current = currentScrollTop;
+  }, []);
+
+  // GENERAL SOLUTION: Use MutationObserver to watch for ANY content changes
+  // This handles sources, analysis complete, verification, or any future additions
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const observer = new MutationObserver(() => {
+      // Content changed - scroll to bottom if user hasn't scrolled away
+      scrollToBottom();
+    });
+
+    observer.observe(el, {
+      childList: true,      // Watch for added/removed children
+      subtree: true,        // Watch all descendants
+      characterData: true,  // Watch for text content changes
+    });
+
+    return () => observer.disconnect();
+  }, [scrollToBottom]);
+
+  // Reset scroll tracking when agent starts a new response
+  useEffect(() => {
+    if (agentState === 'thinking' || agentState === 'orchestrating') {
+      userScrolledAway.current = false;
+    }
+  }, [agentState]);
 
   // Update layout based on state
   useEffect(() => {
@@ -320,8 +379,10 @@ export default function Home() {
         {/* Scrollable Chat Area */}
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto w-full flex flex-col items-center scroll-smooth no-scrollbar"
+          onScroll={handleChatScroll}
+          className="flex-1 overflow-y-auto w-full flex flex-col items-center no-scrollbar"
           style={{
+            overflowAnchor: 'auto',
             maskImage: 'linear-gradient(to bottom, transparent 0%, black 200px, black calc(100% - 300px), transparent calc(100% - 100px))',
             WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 200px, black calc(100% - 300px), transparent calc(100% - 100px))'
           }}

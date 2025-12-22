@@ -468,11 +468,7 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
 
       {/* Adjudication - Rendered as regular text (Phase 5) */}
       {(message?.maxwellState?.adjudication || message?.maxwellState?.phase === 'adjudication') && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="mt-8 pt-6 prose prose-invert prose-lg leading-relaxed text-white/70"
-        >
+        <div className="mt-8 pt-6 prose prose-invert prose-lg leading-relaxed text-white/70">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
@@ -486,7 +482,7 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
           >
             {message.maxwellState.adjudication || ''}
           </ReactMarkdown>
-        </motion.div>
+        </div>
       )}
     </div >
   );

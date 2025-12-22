@@ -17,12 +17,24 @@ interface EventLogProps {
 }
 
 export function EventLog({ events }: EventLogProps) {
-    const bottomRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const isAutoScrollEnabled = useRef(true);
 
-    // Auto-scroll to bottom
+    // Track if user has scrolled up manually
+    const handleScroll = () => {
+        const el = containerRef.current;
+        if (!el) return;
+
+        // If user is near bottom (within 30px), enable auto-scroll
+        const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
+        isAutoScrollEnabled.current = isNearBottom;
+    };
+
+    // Auto-scroll to bottom only if auto-scroll is enabled
     useEffect(() => {
-        if (bottomRef.current) {
-            bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+        const el = containerRef.current;
+        if (el && isAutoScrollEnabled.current) {
+            el.scrollTop = el.scrollHeight;
         }
     }, [events]);
 
@@ -37,7 +49,11 @@ export function EventLog({ events }: EventLogProps) {
                 </h3>
             </div>
 
-            <div className="h-32 overflow-y-auto font-mono text-[10px] space-y-1 pr-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+            <div
+                ref={containerRef}
+                onScroll={handleScroll}
+                className="h-32 overflow-y-auto font-mono text-[10px] space-y-1 pr-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+            >
                 {events.map((event, idx) => (
                     <div key={idx} className="flex items-start gap-3 text-white/40 hover:text-white/60 transition-colors">
                         <span className="text-white/20 shrink-0">
@@ -49,7 +65,6 @@ export function EventLog({ events }: EventLogProps) {
                         </div>
                     </div>
                 ))}
-                <div ref={bottomRef} />
             </div>
         </div>
     );
