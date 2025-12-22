@@ -184,6 +184,7 @@ export function chunkSourcesIntoPassages(sources: MaxwellSource[]): Passage[] {
                 sourceId: source.id,
                 sourceIndex,
                 sourceTitle: source.title,
+                sourceDate: source.date,
             });
             continue;
         }
@@ -201,6 +202,7 @@ export function chunkSourcesIntoPassages(sources: MaxwellSource[]): Passage[] {
                         sourceId: source.id,
                         sourceIndex,
                         sourceTitle: source.title,
+                        sourceDate: source.date,
                     });
                 }
             }
@@ -306,14 +308,17 @@ export function retrieveEvidence(
 
 /**
  * Checks if evidence supports, contradicts, or is neutral to a claim.
+ * Now includes temporal awareness - older evidence cannot contradict current claims.
  *
  * @param claim - The factual claim to verify
  * @param evidence - The evidence passage to check against
+ * @param sourceDate - Optional date of the evidence source
  * @returns Verdict and reasoning from NLI model
  */
 export async function checkEntailment(
     claim: string,
-    evidence: string
+    evidence: string,
+    sourceDate?: string
 ): Promise<{ verdict: EntailmentVerdict; reasoning: string }> {
     if (!claim || !evidence) {
         return { verdict: 'NEUTRAL', reasoning: 'Missing claim or evidence' };
@@ -321,7 +326,7 @@ export async function checkEntailment(
 
     try {
         const openrouter = getOpenRouterClient();
-        const prompt = createNLIPrompt(claim, evidence);
+        const prompt = createNLIPrompt(claim, evidence, sourceDate);
 
         const { object } = await generateObject({
             model: openrouter(NLI_MODEL),
@@ -709,9 +714,11 @@ export async function verifyClaims(
                 );
 
                 // 4c. Check entailment via NLI (network-bound, now parallel)
+                // Pass source date for temporal awareness
                 const entailment = await checkEntailment(
                     claim.text,
-                    retrieval.bestPassage.text
+                    retrieval.bestPassage.text,
+                    retrieval.bestPassage.sourceDate
                 );
 
                 // 4d. Check numeric consistency (CPU-bound, fast)

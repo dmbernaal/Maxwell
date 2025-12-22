@@ -118,6 +118,8 @@ export interface MaxwellSource {
     snippet: string;
     /** Which sub-query found this source (e.g., "q1") */
     fromQuery: string;
+    /** Published date of the source (from Tavily) */
+    date?: string;
 }
 
 /**
@@ -198,6 +200,8 @@ export interface Passage {
     sourceIndex: number;
     /** Title of the source */
     sourceTitle: string;
+    /** Published date of the source */
+    sourceDate?: string;
 }
 
 /**

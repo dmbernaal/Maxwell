@@ -33,7 +33,13 @@ STRATEGY RULES:
 5. **Domain Targeting (Optional):**
    - If asking about code/dev: include ["github.com", "stackoverflow.com", "docs.*"]
    - If generic, leave domains empty.
-6. **COMPLEXITY ASSESSMENT (CRITICAL):**
+6. **System of Record Targeting (CRITICAL for accuracy):**
+   - For specific data, target the PRIMARY authority source:
+   - If asking for "release date/version" -> include ["github.com", official docs domain] in 'domains'.
+   - If asking for "financials/SEC filings" -> include ["sec.gov", "investor.*"] in 'domains'.
+   - If asking for "company announcements" -> include the company's official domain in 'domains'.
+   - Do NOT rely on third-party aggregators if the primary source is available.
+7. **COMPLEXITY ASSESSMENT (CRITICAL):**
    - 'simple': Fact lookups, specific data points, definitions, weather, stock prices.
    - 'standard': Explanations, summaries of recent events, comparisons, how-to guides.
    - 'deep_research': Multi-faceted analysis, future predictions, medical/legal queries, or requests for "comprehensive" reports.
@@ -163,29 +169,34 @@ export const NLI_PROMPT = `You are a strict fact-checker performing Natural Lang
 TASK: Determine if the EVIDENCE supports, contradicts, or does not address the CLAIM.
 
 CLAIM: "{claim}"
-
 EVIDENCE: "{evidence}"
+METADATA: Evidence Date: {sourceDate} | Current Date: {currentDate}
 
-DEFINITIONS:
-- SUPPORTED: The evidence DIRECTLY states or strongly implies the claim is true.
-- CONTRADICTED: The evidence DIRECTLY states or strongly implies the claim is false.
-- NEUTRAL: The evidence does not address this specific claim, is too ambiguous, OR talks about a different entity/time.
+RULES:
+1. **TEMPORAL SUPERIORITY (CRITICAL):**
+   - Check the "Evidence Date". If the evidence is significantly older than the Claim or the Current Date, it CANNOT be used to contradict a claim about "current" status.
+   - Example: If Claim says "X is CEO" and 2022 Evidence says "Y is CEO", the verdict is NEUTRAL (outdated), not CONTRADICTED.
+   - If Evidence is NEWER than the claim and refutes it, the verdict is CONTRADICTED.
 
-BE STRICT - Apply these rules:
-
-1. NUMBERS MUST MATCH:
+2. **NUMBERS MUST MATCH:**
    - Claim: "$96.8 billion" + Evidence: "$96.8B" → SUPPORTED
-   - Claim: "grew 18%" + Evidence: "grew 15%" → CONTRADICTED
+   - Claim: "grew 18%" + Evidence: "grew 15%" → CONTRADICTED (unless evidence is outdated)
 
-2. DIRECTION MUST MATCH:
-   - Claim: "grew" + Evidence: "declined" → CONTRADICTED
+3. **DIRECTION MUST MATCH:**
+   - Claim: "grew" + Evidence: "declined" → CONTRADICTED (unless evidence is outdated)
 
-3. ENTITIES MUST MATCH:
+4. **ENTITIES MUST MATCH:**
    - Claim: "Tesla" + Evidence: "BYD" → NEUTRAL (irrelevant evidence)
 
-4. SPECIFICITY MATTERS:
+5. **SPECIFICITY MATTERS:**
    - Claim: "confirmed" + Evidence: "plans to" → NEUTRAL
    - Claim: "released today" + Evidence: "coming soon" → NEUTRAL
+   - If the claim is specific (e.g. "v16.1.0"), and the evidence is broad/old (e.g. "v15 is stable"), ignore it → NEUTRAL
+
+VERDICTS:
+- SUPPORTED: Recent evidence explicitly confirms the claim.
+- CONTRADICTED: Recent, authoritative evidence proves the claim FALSE.
+- NEUTRAL: Evidence is outdated, irrelevant to the specific metrics, or ambiguous.
 
 RESPONSE FORMAT:
 {
@@ -293,14 +304,24 @@ export function createClaimExtractionPrompt(answer: string): string {
 }
 
 /**
- * Creates the NLI entailment prompt.
+ * Creates the NLI entailment prompt with temporal awareness.
  *
  * @param claim - The factual claim to verify
  * @param evidence - The evidence passage to check against
+ * @param sourceDate - Optional date of the evidence source
  * @returns Complete prompt ready for LLM
  */
-export function createNLIPrompt(claim: string, evidence: string): string {
-  return fillPromptTemplate(NLI_PROMPT, { claim, evidence });
+export function createNLIPrompt(claim: string, evidence: string, sourceDate?: string): string {
+  return fillPromptTemplate(NLI_PROMPT, {
+    claim,
+    evidence,
+    sourceDate: sourceDate || 'Unknown',
+    currentDate: new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }),
+  });
 }
 
 // ============================================
@@ -322,7 +343,15 @@ Your job is to answer the User's Question using ONLY verified evidence.
 2. **SYNTHESIZE VERIFIED FACTS:** Construct a direct answer to the User Query using *only* the Verified Facts.
 3. **INTEGRATE CORRECTIONS:** If a Disputed Fact is relevant, state the *Corrected* version directly. (e.g., instead of "The draft said X but it is Y", just say "Current data confirms Y").
 4. **HANDLE GAPS:** If the verified facts are insufficient to answer the question fully, admit *specifically* what is unknown, but synthesize what *is* known.
-5. **CONCLUSION:** End with a "Final Verdict" or "Outlook" based purely on the verified signals.
+5. **HANDLING UNCERTAINTY (THE REASONING BRIDGE):**
+   - If a claim is marked "UNCERTAIN" or "NEUTRAL" (but NOT "CONTRADICTED"):
+     - Do NOT discard it if it seems central to the answer.
+     - Instead, KEEP it but use "hedging language" to indicate it is likely true but strictly unverified.
+     - **Bad:** "The release date is unknown."
+     - **Good:** "Current documentation indicates version 16.1.0 is the active release, though the precise calendar date was not explicitly retrieved."
+     - **Good:** "While specific pricing is unverified, reports suggest a range of..."
+   - Only discard claims that are explicitly **CONTRADICTED**.
+6. **CONCLUSION:** End with a "Final Verdict" or "Outlook" based purely on the verified signals.
 
 **TONE:**
 Direct, dense, and authoritative. You are not a checker; you are the source of truth.

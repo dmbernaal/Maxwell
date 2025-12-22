@@ -35,6 +35,8 @@ interface TavilyResult {
     title: string;
     content: string;
     score: number;
+    published_date?: string;
+    raw_content?: string;
 }
 
 interface TavilyResponse {
@@ -70,8 +72,14 @@ async function searchSingleQuery(
             else time_range = 'year';
         }
 
-        // Only request raw content if advanced depth
-        const includeRaw = subQuery.depth === 'advanced';
+        // Detect if the user is hunting for specific facts (Dates, Versions, Names, Numbers)
+        // Fetch raw content for precision - snippets are too short for specific data points
+        const isFactLookup =
+            subQuery.depth === 'advanced' ||
+            /^(who|what|when|where|which|version|release|date|price|cost)/i.test(subQuery.query) ||
+            subQuery.purpose.toLowerCase().includes('specific');
+
+        const includeRaw = isFactLookup;
 
         const executeTavilySearch = async (depth: 'basic' | 'advanced', raw: boolean) => {
             return fetch('https://api.tavily.com/search', {
@@ -147,8 +155,11 @@ function processTavilyResponse(data: TavilyResponse, subQuery: SubQuery): Single
             id: `${subQuery.id}_s${index}`,
             url: result.url,
             title: result.title || 'Untitled',
-            snippet: result.content || '',
+            // Prefer raw_content if available (more detailed), fallback to content
+            snippet: result.raw_content || result.content || '',
             fromQuery: subQuery.id,
+            // Map published_date from Tavily
+            date: result.published_date,
         })
     );
 

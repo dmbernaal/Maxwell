@@ -130,6 +130,35 @@ Typical unique sources after dedup: 12-20
 | `RESULTS_PER_QUERY` | `constants.ts` | `5` | Sources per sub-query |
 | `SEARCH_DEPTH` | `constants.ts` | *Dynamic* | Default fallback if not specified |
 
+### Surgical Vision (Fact-Lookup Detection)
+
+**Problem:** Short snippets (~200 chars) often miss specific data points like dates, versions, and prices.
+
+**Solution:** Maxwell detects **fact-lookup queries** and automatically fetches **full raw content** instead of snippets.
+
+**Detection Patterns:**
+```typescript
+const isFactLookup = 
+    subQuery.depth === 'advanced' || 
+    /^(who|what|when|where|which|version|release|date|price|cost)/i.test(subQuery.query) ||
+    subQuery.purpose.toLowerCase().includes('specific');
+```
+
+**Behavior:**
+- If `isFactLookup = true` → Request `include_raw_content: true` from Tavily
+- Prefer `raw_content` over `content` when building `MaxwellSource.snippet`
+
+### System of Record Targeting
+
+**Problem:** Third-party aggregators often have outdated or incorrect data.
+
+**Solution:** The decomposition prompt now instructs the LLM to target **primary authority sources**.
+
+**Examples:**
+- Release dates/versions → `["github.com", "official docs domain"]`
+- Financial data → `["sec.gov", "investor.*"]`
+- Company announcements → Company's official domain
+
 ---
 
 ## Phase 3: Synthesis (Streaming)
@@ -167,15 +196,41 @@ if (num > maxSourceIndex) {
 | `SYNTHESIS_MODEL` | `constants.ts` | From quality preset | Answer generation model |
 | `SYNTHESIS_MAX_TOKENS` | `constants.ts` | `1500` | Response length cap |
 
-### Quality Presets (The Dropdown)
+### Adaptive Compute Architecture
 
-The dropdown selection (`Maxwell Fast`, `Medium`, `Slow`) controls this:
+Maxwell uses **Adaptive Compute** to dynamically adjust its execution parameters based on query complexity. Instead of manual mode selection, Maxwell analyzes each query and chooses the optimal configuration automatically.
 
-| Preset | Synthesis Model | Speed | Quality |
-|--------|-----------------|-------|---------|
-| **Fast** | `google/gemini-3-flash-preview` | ~3-5s | Good |
-| **Medium** | `anthropic/claude-sonnet-4.5` | ~6-8s | Better |
-| **Slow** | `anthropic/claude-sonnet-4.5` | ~10s+ | Best |
+**File:** `app/lib/maxwell/configFactory.ts`
+
+**How It Works:**
+
+1. During decomposition, the LLM assesses query complexity (`simple`, `standard`, `deep_research`)
+2. The `createExecutionConfig()` function generates an `ExecutionConfig` based on complexity
+3. All downstream functions use this config for dynamic parameter tuning
+
+**Complexity Levels:**
+
+| Level | Example Queries | Behavior |
+|-------|-----------------|----------|
+| `simple` | "What's the weather?", "AAPL stock price" | Fast model, fewer results, parallel verification |
+| `standard` | "Explain quantum computing", "Compare iPhone vs Android" | Balanced model and depth |
+| `deep_research` | "Comprehensive analysis of AI regulation", "Medical research on X" | Premium model, maximum sources, thorough verification |
+
+**Dynamic Parameters:**
+
+| Parameter | Simple | Standard | Deep Research |
+|-----------|--------|----------|---------------|
+| `synthesisModel` | gemini-3-flash | claude-sonnet-4.5 | claude-sonnet-4.5 |
+| `resultsPerQuery` | 4 | 5 | 8 |
+| `maxClaimsToVerify` | 4 | 8 | 12 |
+| `verificationConcurrency` | 6 | 4 | 3 |
+
+**UI Integration:**
+
+A `PlanningCard` component displays the chosen configuration in the Maxwell Canvas, showing:
+- Mode label (Speed Mode / Standard / Deep Research)
+- Complexity reasoning
+- Technical parameters (Model, Depth, Verification settings)
 
 ---
 
@@ -298,13 +353,24 @@ citationMismatch =
 
 ---
 
-### Step 4.4: NLI Entailment Check
+### Step 4.4: NLI Entailment Check (Temporal-Aware)
 
 **What:** Natural Language Inference - does evidence support, contradict, or not address the claim?
 
+**NEW: Temporal Superiority Rule**
+
+The NLI model now considers **evidence dates** when determining verdicts. Older evidence cannot contradict claims about current status.
+
+```
+Claim:    "X is currently CEO" (2024)
+Evidence: "Y was appointed CEO" (2022)
+Old Verdict: CONTRADICTED ❌
+New Verdict: NEUTRAL (outdated evidence) ✓
+```
+
 ```
 Claim:    "Tesla's revenue grew 18% in Q3"
-Evidence: "Tesla reported 15% year-over-year revenue growth"
+Evidence: "Tesla reported 15% year-over-year revenue growth" (same date)
 Verdict:  CONTRADICTED (18% ≠ 15%)
 ```
 
@@ -312,14 +378,16 @@ Verdict:  CONTRADICTED (18% ≠ 15%)
 
 | Verdict | Meaning | Base Confidence |
 |---------|---------|-----------------|
-| `SUPPORTED` | Evidence directly supports claim | `1.0` |
-| `NEUTRAL` | Evidence doesn't address claim | `0.55` |
-| `CONTRADICTED` | Evidence contradicts claim | `0.15` |
+| `SUPPORTED` | **Recent** evidence explicitly confirms the claim | `1.0` |
+| `NEUTRAL` | Evidence is outdated, irrelevant, or ambiguous | `0.55` |
+| `CONTRADICTED` | **Recent** evidence proves the claim FALSE | `0.15` |
 
 **Strict Rules in Prompt:**
-- Numbers must match: `"$96.8 billion"` = `"$96.8B"` ✓
-- Direction must match: `"grew"` vs `"declined"` = CONTRADICTED
-- Entities must match: Claim about Tesla, evidence about BYD = NEUTRAL
+1. **TEMPORAL SUPERIORITY:** Old evidence cannot contradict current claims
+2. Numbers must match: `"$96.8 billion"` = `"$96.8B"` ✓
+3. Direction must match: `"grew"` vs `"declined"` = CONTRADICTED
+4. Entities must match: Claim about Tesla, evidence about BYD = NEUTRAL
+5. Specificity matters: Old broad claims can't contradict new specific ones
 
 **Tunable:**
 
@@ -332,15 +400,28 @@ Verdict:  CONTRADICTED (18% ≠ 15%)
 
 ---
 
-### Step 4.5: Numeric Consistency Check
+### Step 4.5: Numeric Consistency Check (Range-Aware)
 
 **What:** Extract numbers from claim and evidence, verify they match.
+
+**NEW: Range Logic**
+
+The numeric checker now supports **range overlaps**, **containment**, and **reverse containment** to reduce false negatives.
+
+**Scenarios Supported:**
+
+| Scenario | Claim | Evidence | Result |
+|----------|-------|----------|--------|
+| **Exact Match** | "$96.8B" | "$96.8 billion" | ✓ Match |
+| **Range Overlap** | "$400-$800" | "$400-$600" | ✓ Match (min bounds match) |
+| **Containment** | "$87,500" | "$87,000-$88,000" | ✓ Match (claim inside range) |
+| **Reverse Containment** | "$400-$800" | "$500" | ✓ Match (evidence inside claim range) |
 
 **Number Patterns Detected:**
 - Currency: `$96.8 billion`, `€50M`, `¥1.2T`
 - Percentages: `18.5%`, `grew 12 percent`
 - Large numbers: `192 lasers`, `1,000,000 units`
-- Years: `2024`, `1969`
+- Years: `2024`, `1969` (excluded from consistency checks)
 
 **Normalization Examples:**
 
@@ -353,8 +434,8 @@ Verdict:  CONTRADICTED (18% ≠ 15%)
 ```
 
 **Tolerance:**
-- Percentages: ±0.5 absolute
-- Other numbers: ±5% relative
+- Percentages: ±0.5 absolute (strict matching)
+- Other numbers: ±5% relative (strict), ±10% for range matching
 
 **Tunable:**
 
@@ -424,19 +505,19 @@ With CONCURRENCY = 4:
   Batch 2: c5, c6, c7, c8 (parallel)
 ```
 
-**Quality Preset Impact:**
+**Adaptive Compute Impact:**
 
-| Preset | Concurrency | Why |
-|--------|-------------|-----|
-| Fast | 8 | Maximum speed |
-| Medium | 6 | Balanced |
-| Slow | 4 | Thorough, less API pressure |
+| Complexity Level | Concurrency | Why |
+|------------------|-------------|-----|
+| `simple` | 6 | Maximum speed for quick lookups |
+| `standard` | 4 | Balanced |
+| `deep_research` | 3 | Thorough, less API pressure |
 
 **Tunable:**
 
 | Constant | Location | Default |
 |----------|----------|---------|
-| `DEFAULT_VERIFICATION_CONCURRENCY` | `constants.ts` | From preset |
+| `verificationConcurrency` | `configFactory.ts` | From complexity level |
 
 ---
 
@@ -461,6 +542,25 @@ The Reconstructor acts as the "Final Authority". It discards the original draft 
     *   It explicitly corrects any **Disputed Facts** using the evidence (e.g., "Contrary to some reports of X, verified data confirms Y").
 3.  **Output:**
     *   A clean, authoritative answer that represents the "Verified Truth".
+
+### The Reasoning Bridge (NEW)
+
+**Problem:** Previously, claims marked "UNCERTAIN" or "NEUTRAL" were discarded, leading to information loss even when the claim was likely true.
+
+**Solution:** The Reconstructor now uses **hedging language** for uncertain claims instead of discarding them.
+
+**Rules:**
+- If a claim is `UNCERTAIN` or `NEUTRAL` (but NOT `CONTRADICTED`):
+  - Do NOT discard if central to the answer
+  - Use hedging language to indicate "likely true but unverified"
+- Only discard explicitly `CONTRADICTED` claims
+
+**Examples:**
+
+| Bad (Information Loss) | Good (Reasoning Bridge) |
+|------------------------|-------------------------|
+| "The release date is unknown." | "Current documentation indicates version 16.1.0 is the active release, though the precise calendar date was not explicitly retrieved." |
+| "Pricing is unverified." | "While specific pricing is unverified, reports suggest a range of..." |
 
 **Streaming:**
 The reconstructed answer streams into the chat UI immediately after the verification card, effectively replacing the draft as the "Final Word".
@@ -683,14 +783,16 @@ Presets could be extended to control:
 
 ```
 app/lib/maxwell/
-├── index.ts          # Orchestrator - runs the 4-phase pipeline
+├── index.ts          # Orchestrator - runs the 5-phase pipeline
 ├── types.ts          # All TypeScript interfaces
 ├── constants.ts      # All tunable parameters
-├── prompts.ts        # LLM prompts with helpers
-├── decomposer.ts     # Phase 1: Query → Sub-queries
-├── searcher.ts       # Phase 2: Sub-queries → Sources
+├── configFactory.ts  # Adaptive Compute - generates ExecutionConfig from complexity
+├── prompts.ts        # LLM prompts with helpers (NLI, Decomposition, Synthesis)
+├── decomposer.ts     # Phase 1: Query → Sub-queries + Complexity Assessment
+├── searcher.ts       # Phase 2: Sub-queries → Sources (with Surgical Vision)
 ├── synthesizer.ts    # Phase 3: Sources → Answer (streaming)
-├── verifier.ts       # Phase 4: Answer → Verified claims
+├── verifier.ts       # Phase 4: Answer → Verified claims (Temporal + Range-Aware)
+├── adjudicator.ts    # Phase 5: Verified claims → Reconstructed answer
 ├── embeddings.ts     # Vector embedding utilities
 └── env.ts            # Environment variable access
 
@@ -702,6 +804,7 @@ app/hooks/
 
 app/components/maxwell/
 ├── MaxwellCanvas.tsx     # Right panel container
+├── PlanningCard.tsx      # Adaptive Compute visualization
 ├── PhaseProgress.tsx     # Phase indicator
 ├── SubQueryList.tsx      # Shows decomposition
 ├── SourcesPanel.tsx      # Shows sources
