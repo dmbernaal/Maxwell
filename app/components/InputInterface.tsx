@@ -189,12 +189,20 @@ export default function InputInterface({
               {/* Right: Actions */}
               <div className="flex items-center gap-3">
 
-                <button
-                  type="button"
-                  className="text-white/30 hover:text-white transition-colors p-2"
-                >
-                  <Mic size={18} />
-                </button>
+                {/* Mic - Disabled with tooltip */}
+                <div className="relative group/mic">
+                  <button
+                    type="button"
+                    disabled
+                    className="text-white/20 cursor-not-allowed p-2"
+                  >
+                    <Mic size={18} />
+                  </button>
+                  {/* Tooltip - positioned to the left to avoid clipping */}
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2 mr-10 px-3 py-1.5 bg-[#18151d] border border-white/10 rounded-lg text-[11px] text-white/70 whitespace-nowrap opacity-0 group-hover/mic:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
+                    Companion mode coming soon
+                  </div>
+                </div>
 
                 <button
                   type="submit"
