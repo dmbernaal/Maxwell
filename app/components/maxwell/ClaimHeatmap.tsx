@@ -209,19 +209,19 @@ function HeatmapStats({ stats }: { stats: ClaimMappingResult['stats'] }) {
                 <span className="text-white/60 font-medium">{stats.coveragePercent}%</span>
             </div>
 
-            <div className="flex items-center gap-2 ml-auto">
-                <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500/50" />
-                    High
-                </span>
-                <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-amber-500/50" />
-                    Medium
-                </span>
-                <span className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-rose-500/50" />
-                    Low
-                </span>
+            <div className="flex items-center gap-4 ml-auto">
+                <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span className="text-[10px] font-medium text-white/40 uppercase tracking-wider">High</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    <span className="text-[10px] font-medium text-white/40 uppercase tracking-wider">Medium</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    <span className="text-[10px] font-medium text-white/40 uppercase tracking-wider">Low</span>
+                </div>
             </div>
         </div>
     );

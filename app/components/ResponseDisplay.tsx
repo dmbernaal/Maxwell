@@ -224,32 +224,23 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
         </div>
       )}
 
-      {/* Heatmap Toggle Button - Only show for Maxwell with verification */}
+      {/* Heatmap Toggle Button - Linear Style (Minimal & Functional) */}
       {hasVerification && !isActive && (
         <div className="flex justify-end mb-2">
           <button
             onClick={() => setShowHeatmap(!showHeatmap)}
             className={`
-              flex items-center gap-1.5 px-2.5 py-1.5
-              text-[10px] font-medium uppercase tracking-wider
-              rounded-full border transition-all duration-200
+              flex items-center gap-2 px-3 py-1.5 rounded-lg
+              border transition-all duration-200 ease-out
+              text-[11px] font-medium tracking-wide
               ${showHeatmap
-                ? 'bg-brand-accent/20 text-brand-accent border-brand-accent/30 hover:bg-brand-accent/30'
-                : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10 hover:text-white/60'
+                ? 'bg-[#231f29] border-white/10 text-white shadow-inner'
+                : 'bg-[#18151d] border-white/5 text-white/40 hover:bg-[#231f29] hover:border-white/10 hover:text-white/80'
               }
             `}
           >
-            {showHeatmap ? (
-              <>
-                <Eye size={10} />
-                <span>Confidence Heatmap</span>
-              </>
-            ) : (
-              <>
-                <EyeOff size={10} />
-                <span>Show Heatmap</span>
-              </>
-            )}
+            {showHeatmap ? <Eye size={13} /> : <EyeOff size={13} />}
+            <span>{showHeatmap ? 'Hide Heatmap' : 'View Heatmap'}</span>
           </button>
         </div>
       )}
