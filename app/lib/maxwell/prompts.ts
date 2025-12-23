@@ -115,11 +115,13 @@ CRITICAL RULES:
 
 MARKDOWN FORMATTING (CRITICAL):
 - Use proper Markdown: headers (##), bold (**text**), and lists.
-- **LISTS MUST BE INLINE:** Never put a number or bullet on its own line.
-  - CORRECT: "1. **Item Title** - Description here"
-  - WRONG: "1.\\nItem Title\\n- Description"
-- For nested structures, use: "1. **Title:** Explanation [1]" on ONE line, then indented bullets below.
-- Use horizontal rules (---) to separate major sections.
+- Headers (##, ###) provide sufficient visual separation between sections.
+- **NUMBERED LISTS (CRITICAL - Models often break this):**
+  - The number (1., 2., etc.) and content MUST be on the SAME LINE.
+  - CORRECT: "1. **Security Gaps:** While both countries maintain..."
+  - WRONG: "1.\\n**Security Gaps:** While both..." (NEVER newline after number)
+  - If making a titled list: "1. **Title:** Rest of content on same line"
+- Do NOT use horizontal rules (---) - headers provide enough separation.
 - **TABLES:** Use proper GFM pipe syntax. Example:
   | Column1 | Column2 | Column3 |
   |---------|---------|---------|
@@ -242,9 +244,24 @@ export function fillPromptTemplate(
   return result;
 }
 
+// ============================================
+// CONTEXT BUDGET
+// ============================================
+
+/**
+ * Maximum characters per source to prevent context overflow.
+ * 
+ * 15,000 chars ≈ 3,500-4,000 tokens
+ * 56 sources × 4k tokens = ~224k tokens (well under 1M limit)
+ * 
+ * This captures ~3,000 words (~6-8 pages of text).
+ * Per the "Inverted Pyramid" rule, critical info is at the top of articles.
+ */
+const MAX_CHARS_PER_SOURCE = 15000;
+
 /**
  * Formats sources for inclusion in the synthesis prompt.
- * We include the FULL snippet to ensure no data loss.
+ * Includes "Smart Truncation" to prevent context overflow while preserving deep reading.
  *
  * @param sources - Array of MaxwellSource objects
  * @returns Formatted string with numbered sources
@@ -257,15 +274,27 @@ export function formatSourcesForPrompt(sources: MaxwellSource[]): string {
   return sources
     .map((source, index) => {
       const num = index + 1;
-      // We do NOT truncate. Quality > Tokens.
-      // We just clean up excessive whitespace.
-      const cleanSnippet = source.snippet.replace(/\s+/g, ' ').trim();
+
+      // 1. Aggressive Cleanup
+      // Replace multiple spaces/newlines with a single space.
+      // This compresses the "noise" (HTML formatting gaps) significantly
+      // before we even apply the character limit.
+      let cleanSnippet = source.snippet.replace(/\s+/g, ' ').trim();
+
+      // 2. Safety Check: Truncate massive blobs
+      // If a source is > 15k chars (e.g. a raw PDF dump or Terms of Service),
+      // we truncate it. 15k chars is enough to capture the full body of 
+      // 99% of useful articles/docs.
+      if (cleanSnippet.length > MAX_CHARS_PER_SOURCE) {
+        cleanSnippet = cleanSnippet.substring(0, MAX_CHARS_PER_SOURCE) + '... [TRUNCATED FOR CONTEXT BUDGET]';
+      }
+
       return `[${num}] ${source.title}
 URL: ${source.url}
 Content: ${cleanSnippet}
 `;
     })
-    .join('\n');
+    .join('\n\n'); // Add breathing room between sources for the LLM
 }
 
 /**
@@ -371,10 +400,11 @@ Your job is to answer the User's Question using ONLY verified evidence.
 - **Forbidden:** Do not use filler ("Here is the answer", "Hope this helps", "In conclusion").
 - **Style:** Dense, information-heavy sentences. Prioritize density over politeness.
 - **Structure & Format (CRITICAL):**
-  - Use Markdown headers (##, ###) to separate distinct sections of the analysis.
-  - Use Markdown lists (-) for evidence points. **LISTS MUST BE INLINE:** "1. **Title** - Description" on ONE line.
+  - Use Markdown headers (##, ###) to separate distinct sections - these provide sufficient visual separation.
+  - **NUMBERED LISTS:** Number and content MUST be on the SAME line. "1. **Title:** Description"
+  - Use bullet points (-) for evidence points.
   - Use **Bold** for key entities or verdicts.
-  - Use \`---\` for major sectional breaks.
+  - Do NOT use horizontal rules (---) - headers provide enough separation.
   - **TABLES:** Use proper GFM pipe syntax (pipes | and dashes ---). Never use tab-aligned text.
 - **Uncertainty:** Be precise about what is unknown. "Data regarding X is insufficient" is better than "I couldn't find X."
 

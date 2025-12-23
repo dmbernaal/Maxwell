@@ -188,20 +188,24 @@ export function useMaxwell(): UseMaxwellReturn {
                                 : prev.verificationProgress,
                     };
 
-                    // FORCE SYNC: Update global store with new phase immediately
-                    // Wrapped in setTimeout to avoid "Cannot update component while rendering" error
-                    if (agentMessageIdRef.current) {
+                    // LIGHTWEIGHT PHASE SYNC: Only persist the phase (not full state)
+                    // This allows ResponseDisplay to show sources panel when phase changes
+                    // to 'verification' or 'adjudication', without the memory-heavy full state.
+                    // The full state is only persisted on 'complete'.
+                    if (agentMessageIdRef.current &&
+                        (event.phase === 'verification' || event.phase === 'adjudication')) {
                         setTimeout(() => {
                             const session = getActiveSession();
                             const message = session?.messages.find((m) => m.id === agentMessageIdRef.current);
                             if (message) {
+                                // Pass ONLY the phase in a minimal object - NOT the full sources/claims
                                 updateMessage(
                                     agentMessageIdRef.current!,
                                     message.content,
                                     undefined,
                                     sessionId,
                                     undefined,
-                                    newState // Pass updated state to store
+                                    { phase: event.phase } // Minimal state - just the phase
                                 );
                             }
                         }, 0);
@@ -225,6 +229,27 @@ export function useMaxwell(): UseMaxwellReturn {
 
                     updateMessage(agentMessageIdRef.current, currentContent, sources, sessionId);
                 }
+
+                // If verification is complete, persist JUST the confidence score
+                // This allows the Analysis Complete card to show % immediately
+                if (event.phase === 'verification' && agentMessageIdRef.current) {
+                    const verificationData = event.data as { overallConfidence?: number };
+                    const session = getActiveSession();
+                    const message = session?.messages.find((m) => m.id === agentMessageIdRef.current);
+                    if (message && verificationData.overallConfidence !== undefined) {
+                        updateMessage(
+                            agentMessageIdRef.current,
+                            message.content,
+                            undefined,
+                            sessionId,
+                            undefined,
+                            {
+                                phase: 'adjudication',
+                                verification: { overallConfidence: verificationData.overallConfidence }
+                            }
+                        );
+                    }
+                }
                 break;
 
             case 'synthesis-chunk':
@@ -244,28 +269,33 @@ export function useMaxwell(): UseMaxwellReturn {
                         ...prev,
                         adjudication: (prev.adjudication || '') + event.content,
                     };
-
-                    // FORCE SYNC: Stream adjudication text to global store
-                    // Wrapped in setTimeout to avoid "Cannot update component while rendering" error
-                    if (agentMessageIdRef.current) {
-                        setTimeout(() => {
-                            const session = getActiveSession();
-                            const message = session?.messages.find((m) => m.id === agentMessageIdRef.current);
-                            if (message) {
-                                updateMessage(
-                                    agentMessageIdRef.current!,
-                                    message.content,
-                                    undefined,
-                                    sessionId,
-                                    undefined,
-                                    newState // Pass updated state with adjudication text
-                                );
-                            }
-                        }, 0);
-                    }
-
                     return newState;
                 });
+
+                // Stream adjudication text to store's maxwellState.adjudication
+                // NOT to message.content (that would put it before sources)
+                // This enables live streaming in ResponseDisplay at the correct position
+                if (agentMessageIdRef.current) {
+                    const session = getActiveSession();
+                    const message = session?.messages.find((m) => m.id === agentMessageIdRef.current);
+                    if (message) {
+                        // Get current adjudication text and append chunk
+                        const currentAdjudication = message.maxwellState?.adjudication || '';
+                        updateMessage(
+                            agentMessageIdRef.current,
+                            message.content, // Keep content unchanged!
+                            undefined,
+                            sessionId,
+                            undefined,
+                            {
+                                phase: 'adjudication',
+                                adjudication: currentAdjudication + event.content,
+                                // Preserve existing verification data if present
+                                verification: message.maxwellState?.verification
+                            }
+                        );
+                    }
+                }
                 break;
 
             case 'planning-complete':
