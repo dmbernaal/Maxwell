@@ -290,7 +290,7 @@ export const DEFAULT_QUALITY_PRESET: QualityPreset = 'fast';
 
 | Constant | Default | Purpose |
 |----------|---------|---------|
-| `MAX_CLAIMS_TO_VERIFY` | 12 | Cap on claim count |
+| `MAX_CLAIMS_TO_VERIFY` | 30 | Fallback cap (adaptive by complexity: 5/30/100) |
 | `HIGH_CONFIDENCE_THRESHOLD` | 0.72 | High confidence cutoff |
 | `MEDIUM_CONFIDENCE_THRESHOLD` | 0.42 | Medium confidence cutoff |
 

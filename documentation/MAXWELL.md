@@ -237,8 +237,8 @@ Maxwell uses **Adaptive Compute** to dynamically adjust its execution parameters
 |-----------|--------|----------|---------------|
 | `synthesisModel` | gemini-3-flash | claude-sonnet-4.5 | claude-sonnet-4.5 |
 | `resultsPerQuery` | 4 | 5 | 8 |
-| `maxClaimsToVerify` | 4 | 8 | 12 |
-| `verificationConcurrency` | 6 | 4 | 3 |
+| `maxClaimsToVerify` | 5 | 30 | 100 |
+| `verificationConcurrency` | 8 | 6 | 8 |
 
 **UI Integration:**
 
@@ -299,7 +299,7 @@ Output: [
 
 | Constant | Default | Purpose |
 |----------|---------|---------|
-| `MAX_CLAIMS_TO_VERIFY` | `12` | Cap for performance |
+| `MAX_CLAIMS_TO_VERIFY` | `30` | Cap for performance (default; adaptive: 5/30/100) |
 | `CLAIM_EXTRACTION_MODEL` | `google/gemini-3-flash-preview` | Fast, simple task |
 
 ---
@@ -786,7 +786,7 @@ interface MaxwellUIState {
 | `MAX_SUB_QUERIES` | `constants.ts` | `5` | Maximum decomposition |
 | `RESULTS_PER_QUERY` | `constants.ts` | `5` | Sources per search |
 | `SEARCH_DEPTH` | `constants.ts` | `'basic'` | Tavily depth |
-| `MAX_CLAIMS_TO_VERIFY` | `constants.ts` | `12` | Verification cap |
+| `MAX_CLAIMS_TO_VERIFY` | `constants.ts` | `30` | Fallback verification cap (adaptive: 5/30/100 by complexity) |
 | `SYNTHESIS_MAX_TOKENS` | `constants.ts` | `1500` | Answer length |
 
 ### Confidence Scoring
@@ -835,6 +835,51 @@ Presets could be extended to control:
 
 ---
 
+## Claim Heatmap (Attention Map Visualization)
+
+**File:** `app/components/maxwell/ClaimHeatmap.tsx`  
+**Utility:** `app/lib/maxwell/claimMatcher.ts`
+
+**Purpose:** Visualize verification confidence as an "attention map" overlay on the synthesized text, similar to transformer attention visualizations.
+
+### How It Works
+
+1. **Sentence Segmentation:** The synthesized text is split into sentences using `Intl.Segmenter`
+2. **Claim Matching:** Each sentence is matched to verified claims using Jaccard similarity (keyword overlap)
+3. **Confidence Overlay:** Matched sentences get background colors based on their verification confidence:
+   - **Green:** High confidence (≥0.72), SUPPORTED
+   - **Yellow:** Medium confidence (0.42-0.72), NEUTRAL
+   - **Red:** Low confidence (<0.42), CONTRADICTED
+
+### User Experience
+
+- **Toggle Button:** "Show Heatmap" button appears after verification completes
+- **Hover Tooltips:** Hovering over highlighted text reveals:
+  - The matched claim text
+  - Confidence percentage
+  - Entailment verdict
+  - Evidence snippet from the source
+  - Match quality score
+
+### Matching Algorithm
+
+```typescript
+// Jaccard-like similarity with claim coverage weighting
+const score = (claimCoverage * 0.7) + (jaccardSimilarity * 0.3);
+
+// Match threshold: 40% minimum similarity
+const MATCH_THRESHOLD = 0.4;
+```
+
+### Statistics Bar
+
+The heatmap shows coverage statistics:
+- Total sentences vs matched sentences
+- Coverage percentage
+- Average confidence
+
+---
+
 ## File Map
 
 ```
@@ -850,6 +895,7 @@ app/lib/maxwell/
 ├── verifier.ts       # Phase 4: Answer → Verified claims (Temporal + Range-Aware)
 ├── adjudicator.ts    # Phase 5: Verified claims → Reconstructed answer
 ├── embeddings.ts     # Vector embedding utilities
+├── claimMatcher.ts   # Maps verified claims to text sentences for heatmap
 └── env.ts            # Environment variable access
 
 app/api/maxwell/
@@ -865,5 +911,7 @@ app/components/maxwell/
 ├── SubQueryList.tsx      # Shows decomposition
 ├── SourcesPanel.tsx      # Shows sources
 ├── VerificationPanel.tsx # Shows verified claims
+├── ClaimHeatmap.tsx      # Confidence heatmap overlay
 └── index.ts              # Exports
 ```
+

@@ -37,8 +37,8 @@ export function createExecutionConfig(
             reasoning,
             maxSubQueries: 7,              // Go wide
             resultsPerQuery: 8,            // Go deep
-            verificationConcurrency: 10,   // High parallelism
-            maxClaimsToVerify: 24,         // Verify everything
+            verificationConcurrency: 8,    // High parallelism (Gemini Flash handles this easily)
+            maxClaimsToVerify: 100,        // Effectively "Verify All" - no unverified hallucination-bait
             // Use Sonnet 4.5 for high-quality human-like synthesis
             synthesisModel: 'anthropic/claude-sonnet-4.5',
             // Use Gemini 3 Pro for Adjudication (Massive 1M context to read ALL sources + draft)
@@ -54,8 +54,8 @@ export function createExecutionConfig(
             reasoning,
             maxSubQueries: 2,
             resultsPerQuery: 4,
-            verificationConcurrency: 4,
-            maxClaimsToVerify: 4,
+            verificationConcurrency: 8,    // Fast parallel checks, keep it sub-3s
+            maxClaimsToVerify: 5,          // Tight cap for speed - just check the basics
             // Gemini 3 Flash is blazing fast and cheap
             synthesisModel: 'google/gemini-3-flash-preview',
             adjudicatorModel: 'google/gemini-3-flash-preview',
@@ -69,8 +69,8 @@ export function createExecutionConfig(
         reasoning,
         maxSubQueries: 4,
         resultsPerQuery: 5,
-        verificationConcurrency: 6,
-        maxClaimsToVerify: 10,
+        verificationConcurrency: 6,     // Balanced parallelism
+        maxClaimsToVerify: 30,          // Covers 90% of normal queries - no more "partial verification"
         // Sonnet 4.5 is the best all-rounder
         synthesisModel: 'anthropic/claude-sonnet-4.5',
         adjudicatorModel: 'google/gemini-3-flash-preview', // Flash is fine for standard adjudication

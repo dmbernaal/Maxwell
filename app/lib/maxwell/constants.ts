@@ -108,8 +108,8 @@ export const SYNTHESIS_MAX_TOKENS = 1500;
 // VERIFICATION CONFIGURATION
 // ============================================
 
-/** Maximum claims to verify (for performance) */
-export const MAX_CLAIMS_TO_VERIFY = 12;
+/** Maximum claims to verify (fallback default - standard mode) */
+export const MAX_CLAIMS_TO_VERIFY = 30;
 
 // Confidence thresholds
 /** Threshold for high confidence (>= this value) */
