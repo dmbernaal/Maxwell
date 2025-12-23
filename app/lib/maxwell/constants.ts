@@ -156,7 +156,7 @@ export const MIN_PASSAGE_LENGTH = 20;
 // ============================================
 
 /** Maximum query length (characters) */
-export const MAX_QUERY_LENGTH = 1000;
+export const MAX_QUERY_LENGTH = 50000;
 
 /** API route timeout (seconds) */
 export const API_TIMEOUT_SECONDS = 60;
