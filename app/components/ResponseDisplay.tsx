@@ -226,6 +226,18 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{
+            // Headers - styled for dark mode
+            h1: ({ children }) => (
+              <h1 className="text-xl font-bold text-white mt-6 mb-3">{children}</h1>
+            ),
+            h2: ({ children }) => (
+              <h2 className="text-lg font-bold text-white/95 mt-5 mb-2 border-b border-white/10 pb-1">{children}</h2>
+            ),
+            h3: ({ children }) => (
+              <h3 className="text-base font-bold text-white/90 mt-4 mb-2">{children}</h3>
+            ),
+            // Horizontal rule
+            hr: () => <hr className="my-6 border-white/10" />,
             p: ({ children }) => (
               <p className="mb-3 last:mb-0 leading-relaxed text-[17px]">{children}</p>
             ),
@@ -282,6 +294,27 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
             },
             sup: ({ children }) => (
               <sup className="text-brand-accent text-xs font-medium">{children}</sup>
+            ),
+            // Table components for GFM tables
+            table: ({ children }) => (
+              <div className="overflow-x-auto my-4">
+                <table className="min-w-full border-collapse text-sm">{children}</table>
+              </div>
+            ),
+            thead: ({ children }) => (
+              <thead className="border-b border-white/20">{children}</thead>
+            ),
+            tbody: ({ children }) => (
+              <tbody className="divide-y divide-white/10">{children}</tbody>
+            ),
+            tr: ({ children }) => (
+              <tr className="hover:bg-white/5">{children}</tr>
+            ),
+            th: ({ children }) => (
+              <th className="px-3 py-2 text-left font-semibold text-white/90">{children}</th>
+            ),
+            td: ({ children }) => (
+              <td className="px-3 py-2 text-white/70">{children}</td>
             ),
           }}
         >
@@ -472,12 +505,42 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
+              h1: ({ children }) => (
+                <h1 className="text-xl font-bold text-white mt-6 mb-3">{children}</h1>
+              ),
+              h2: ({ children }) => (
+                <h2 className="text-lg font-bold text-white/95 mt-5 mb-2 border-b border-white/10 pb-1">{children}</h2>
+              ),
+              h3: ({ children }) => (
+                <h3 className="text-base font-bold text-white/90 mt-4 mb-2">{children}</h3>
+              ),
+              hr: () => <hr className="my-6 border-white/10" />,
               p: ({ children }) => (
                 <p className="mb-3 last:mb-0 leading-relaxed text-[17px]">{children}</p>
               ),
               strong: ({ children }) => (
                 <strong className="font-semibold text-white">{children}</strong>
               ),
+              ul: ({ children }) => (
+                <ul className="list-disc list-outside ml-4 mb-3 space-y-1">{children}</ul>
+              ),
+              ol: ({ children }) => (
+                <ol className="list-decimal list-outside ml-4 mb-3 space-y-1">{children}</ol>
+              ),
+              li: ({ children }) => (
+                <li className="pl-1">{children}</li>
+              ),
+              // Table components
+              table: ({ children }) => (
+                <div className="overflow-x-auto my-4">
+                  <table className="min-w-full border-collapse text-sm">{children}</table>
+                </div>
+              ),
+              thead: ({ children }) => <thead className="border-b border-white/20">{children}</thead>,
+              tbody: ({ children }) => <tbody className="divide-y divide-white/10">{children}</tbody>,
+              tr: ({ children }) => <tr className="hover:bg-white/5">{children}</tr>,
+              th: ({ children }) => <th className="px-3 py-2 text-left font-semibold text-white/90">{children}</th>,
+              td: ({ children }) => <td className="px-3 py-2 text-white/70">{children}</td>,
             }}
           >
             {message.maxwellState.adjudication || ''}

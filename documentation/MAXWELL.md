@@ -174,9 +174,9 @@ const isFactLookup =
 3. Response streams chunk-by-chunk for real-time UI
 4. Post-processing extracts which sources were cited
 
-### Intelligence Officer Persona (NEW)
+### Intelligence Officer Persona
 
-The synthesis prompt enforces a professional, dense tone:
+The synthesis prompt enforces a professional, dense tone with strict markdown formatting:
 
 | Rule | Description |
 |------|-------------|
@@ -185,6 +185,9 @@ The synthesis prompt enforces a professional, dense tone:
 | **STRUCTURE** | Use Markdown headers (##) to organize by theme |
 | **CONFLICTS** | Explicitly state when sources disagree |
 | **FORMAT** | No conversational filler. Start directly with the answer. |
+| **LISTS** | Must be inline: "1. **Title** - Description" on ONE line |
+| **TABLES** | Use GFM pipe syntax (| col | col |), never tab-aligned text |
+| **SEPARATORS** | Use horizontal rules (---) between major sections |
 
 ### Citation Format
 
