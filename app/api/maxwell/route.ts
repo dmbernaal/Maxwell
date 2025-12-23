@@ -1,11 +1,22 @@
 /**
- * Maxwell API Route
+ * Maxwell API Route (LEGACY - Single Endpoint)
+ *
+ * ⚠️ DEPRECATED: This monolithic endpoint is kept for backwards compatibility
+ * and local development where Vercel's 60s timeout doesn't apply.
+ *
+ * For production on Vercel, use the multi-endpoint architecture:
+ * - POST /api/maxwell/decompose
+ * - POST /api/maxwell/search
+ * - POST /api/maxwell/synthesize
+ * - POST /api/maxwell/verify
+ * - POST /api/maxwell/adjudicate
+ *
+ * The multi-endpoint approach avoids the 60s serverless timeout by splitting
+ * the pipeline into discrete phases, each with its own timeout budget.
  *
  * Streaming endpoint using Server-Sent Events (SSE).
- * POST /api/maxwell - Run Maxwell pipeline
+ * POST /api/maxwell - Run Maxwell pipeline (legacy)
  * GET /api/maxwell - Health check
- *
- * Uses the same proven streaming pattern as /api/chat.
  */
 
 import { NextRequest } from 'next/server';

@@ -10,8 +10,18 @@ maxwell-v2/
 │   ├── api/
 │   │   ├── chat/
 │   │   │   └── route.ts          # POST /api/chat - streaming endpoint
-│   │   └── maxwell/              # Maxwell API (Phase 9)
-│   │       └── route.ts          # SSE streaming endpoint
+│   │   └── maxwell/              # Maxwell Multi-Endpoint API (Phase 12)
+│   │       ├── route.ts          # Legacy monolithic SSE (local dev)
+│   │       ├── decompose/
+│   │       │   └── route.ts      # Phase 1: Query decomposition
+│   │       ├── search/
+│   │       │   └── route.ts      # Phase 2: Search + pre-embedding
+│   │       ├── synthesize/
+│   │       │   └── route.ts      # Phase 3: SSE synthesis
+│   │       ├── verify/
+│   │       │   └── route.ts      # Phase 4: SSE verification
+│   │       └── adjudicate/
+│   │           └── route.ts      # Phase 5: SSE adjudication
 │   ├── components/               # React components
 │   │   ├── AgentSphere.tsx       # 3D animated sphere (R3F)
 │   │   ├── ChatHistory.tsx       # Session sidebar
@@ -75,6 +85,12 @@ maxwell-v2/
 | File | Purpose | Key Exports |
 |------|---------|-------------|
 | `app/api/chat/route.ts` | Streaming chat endpoint | `POST`, `SOURCES_DELIMITER` |
+| `app/api/maxwell/route.ts` | Legacy monolithic Maxwell (local dev) | `POST`, `GET` |
+| `app/api/maxwell/decompose/route.ts` | Phase 1: Query decomposition | `POST` |
+| `app/api/maxwell/search/route.ts` | Phase 2: Search + pre-embedding | `POST` |
+| `app/api/maxwell/synthesize/route.ts` | Phase 3: SSE synthesis | `POST` |
+| `app/api/maxwell/verify/route.ts` | Phase 4: SSE verification | `POST` |
+| `app/api/maxwell/adjudicate/route.ts` | Phase 5: SSE adjudication | `POST` |
 
 ### Core Logic (`app/lib/`)
 
@@ -91,16 +107,19 @@ maxwell-v2/
 | File | Purpose | Key Exports |
 |------|---------|-------------|
 | `types.ts` | All Maxwell interfaces | `SubQuery`, `MaxwellSource`, `VerifiedClaim`, `MaxwellState`, etc. |
+| `api-types.ts` | Multi-endpoint API types | `DecomposeRequest`, `SearchResponse`, `PreparedEvidence`, encoding utils |
 | `env.ts` | Environment validation | `getMaxwellEnvConfig()`, `validateMaxwellEnv()` |
 | `constants.ts` | Config values | `DECOMPOSITION_MODEL`, `EMBEDDING_MODEL`, thresholds |
 | `prompts.ts` | LLM prompts | `DECOMPOSITION_PROMPT`, `SYNTHESIS_PROMPT`, `createDecompositionPrompt()`, etc. |
+| `configFactory.ts` | Adaptive compute | `createExecutionConfig()`, `ExecutionConfig` |
 | `decomposer.ts` | Query → sub-queries | `decomposeQuery()`, `validateDecompositionOutput()` |
 | `searcher.ts` | Parallel search | `parallelSearch()`, `getSearchStats()`, `validateSearchOutput()` |
 | `synthesizer.ts` | Answer synthesis | `synthesize()`, `synthesizeComplete()`, `countCitations()` |
 | `embeddings.ts` | Embedding utilities | `embedText()`, `embedTexts()`, `cosineSimilarity()`, `findTopMatches()` |
-| `verifier.ts` | Multi-signal verification | `verifyClaims()`, `extractClaims()`, `chunkSourcesIntoPassages()`, `checkEntailment()`, `aggregateSignals()` |
+| `verifier.ts` | Multi-signal verification | `verifyClaims()`, `verifyClaimsWithPrecomputedEvidence()`, `prepareEvidence()` |
 | `claimMatcher.ts` | Claim-to-text mapping for heatmap | `mapClaimsToText()`, `getConfidenceColorClass()`, `getEntailmentLabel()` |
-| `index.ts` | Main orchestrator | `runMaxwell()`, `runMaxwellComplete()`, re-exports |
+| `adjudicator.ts` | Final verdict synthesis | `adjudicateAnswer()` |
+| `index.ts` | Main orchestrator (local dev) | `runMaxwell()`, `runMaxwellComplete()`, re-exports |
 
 ### Hooks (`app/hooks/`)
 
@@ -161,7 +180,11 @@ maxwell-v2/
 | Maxwell phase display | `app/components/maxwell/PhaseProgress.tsx` |
 | Maxwell verification UI | `app/components/maxwell/VerificationPanel.tsx` |
 | Maxwell prompts | `app/lib/maxwell/prompts.ts` |
-| Maxwell orchestration | `app/lib/maxwell/orchestrator.ts` |
+| Maxwell orchestration (local) | `app/lib/maxwell/index.ts` |
+| Maxwell client orchestration | `app/hooks/use-maxwell.ts` |
+| Maxwell API types | `app/lib/maxwell/api-types.ts` |
+| Maxwell endpoint timeouts | `app/api/maxwell/[phase]/route.ts` |
+| Adaptive compute config | `app/lib/maxwell/configFactory.ts` |
 
 ---
 
@@ -184,8 +207,19 @@ import { AVAILABLE_MODELS, DEFAULT_MODEL } from '@/app/lib/models';
 import { env } from '@/app/lib/env';
 
 // From Maxwell lib
-import { runMaxwellPipeline } from '@/app/lib/maxwell/orchestrator';
-import type { MaxwellSource, VerificationOutput } from '@/app/lib/maxwell/types';
+import { runMaxwell, runMaxwellComplete } from '@/app/lib/maxwell';
+import { createExecutionConfig } from '@/app/lib/maxwell/configFactory';
+import { prepareEvidence } from '@/app/lib/maxwell/verifier';
+import type { MaxwellSource, VerificationOutput, ExecutionConfig } from '@/app/lib/maxwell/types';
+
+// From Maxwell API types (for multi-endpoint)
+import type { 
+  DecomposeRequest, DecomposeResponse,
+  SearchRequest, SearchResponse,
+  SynthesizeRequest, VerifyRequest,
+  AdjudicateRequest, PreparedEvidence
+} from '@/app/lib/maxwell/api-types';
+import { encodeEmbeddings, decodeEmbeddings } from '@/app/lib/maxwell/api-types';
 
 // From hooks
 import { useChatApi } from '@/app/hooks/use-chat-api';

@@ -4,6 +4,16 @@
  * React hook for interacting with the Maxwell verified search agent API.
  * Handles SSE streaming, state management, and store integration.
  *
+ * ARCHITECTURE: Multi-endpoint orchestration
+ * Instead of a single long-running request, this hook orchestrates calls to:
+ * 1. /api/maxwell/decompose - Query decomposition
+ * 2. /api/maxwell/search - Parallel search + pre-embedding
+ * 3. /api/maxwell/synthesize - Answer synthesis (SSE streaming)
+ * 4. /api/maxwell/verify - Claim verification (SSE streaming)
+ * 5. /api/maxwell/adjudicate - Final verdict (SSE streaming)
+ *
+ * This architecture avoids Vercel's 60s timeout by splitting the pipeline.
+ *
  * Uses the SHARED store (useChatStore) for message persistence,
  * but manages Maxwell-specific state (phases, verification) locally.
  *
@@ -23,9 +33,13 @@ import type {
     MaxwellEvent,
     ExecutionPhase,
     PhaseDurations,
-    PlanningCompleteEvent, // Added import
 } from '../lib/maxwell/types';
-import type { ExecutionConfig } from '../lib/maxwell/configFactory'; // Added import
+import type { ExecutionConfig } from '../lib/maxwell/configFactory';
+import type {
+    DecomposeResponse,
+    SearchResponse,
+    PreparedEvidence,
+} from '../lib/maxwell/api-types';
 
 // ============================================
 // STATE TYPES
@@ -53,7 +67,7 @@ export interface MaxwellUIState {
     events: MaxwellEvent[];
     error: string | null;
     reasoning?: string;
-    config?: ExecutionConfig; // Added config
+    config?: ExecutionConfig;
 }
 
 const initialState: MaxwellUIState = {
@@ -69,7 +83,7 @@ const initialState: MaxwellUIState = {
     events: [],
     error: null,
     reasoning: undefined,
-    config: undefined, // Added config
+    config: undefined,
 };
 
 // ============================================
@@ -96,7 +110,7 @@ function mapMaxwellSourceToSource(maxwellSource: MaxwellSource): Source {
         title: maxwellSource.title,
         url: maxwellSource.url,
         content: maxwellSource.snippet,
-        score: undefined, // MaxwellSource doesn't have score
+        score: undefined,
     };
 }
 
@@ -115,12 +129,45 @@ function mapPhaseToAgentState(phase: ExecutionPhase): 'relaxed' | 'thinking' | '
             return 'synthesizing';
         case 'verification':
         case 'adjudication':
-            return 'thinking'; // Keep active during verification/adjudication
+            return 'thinking';
         case 'complete':
         case 'error':
             return 'complete';
         default:
             return 'relaxed';
+    }
+}
+
+/**
+ * Parse SSE stream and yield events.
+ */
+async function* parseSSEStream(response: Response): AsyncGenerator<any> {
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('No response body');
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+            if (line.startsWith('data: ')) {
+                const data = line.slice(6).trim();
+                if (data === '[DONE]') continue;
+
+                try {
+                    yield JSON.parse(data);
+                } catch (parseError) {
+                    console.warn('[useMaxwell] SSE Parse Error:', parseError);
+                }
+            }
+        }
     }
 }
 
@@ -134,7 +181,7 @@ export function useMaxwell(): UseMaxwellReturn {
     const abortControllerRef = useRef<AbortController | null>(null);
     const agentMessageIdRef = useRef<string | null>(null);
 
-    // Shared store integration - Use selectors to avoid unnecessary re-renders
+    // Shared store integration
     const activeSessionId = useChatStore(s => s.activeSessionId);
     const addMessage = useChatStore(s => s.addMessage);
     const updateMessage = useChatStore(s => s.updateMessage);
@@ -161,262 +208,60 @@ export function useMaxwell(): UseMaxwellReturn {
 
     const hydrate = useCallback((maxwellState: MaxwellUIState) => {
         setState(maxwellState);
-        // Also update isLoading based on the hydrated state's phase
         setIsLoading(maxwellState.phase !== 'idle' && maxwellState.phase !== 'complete' && maxwellState.phase !== 'error');
     }, []);
 
-    const handleEvent = useCallback((event: MaxwellEvent, sessionId: string) => {
-        // Append event to history (keep last 100)
+    /**
+     * Adds an event to the event log.
+     */
+    const logEvent = useCallback((event: MaxwellEvent) => {
         setState((prev) => ({
             ...prev,
             events: [...prev.events, event].slice(-100)
         }));
+    }, []);
 
-        switch (event.type) {
-            case 'phase-start':
-                setState((prev) => {
-                    const newState = {
-                        ...prev,
-                        phase: event.phase as ExecutionPhase,
-                        phaseStartTimes: {
-                            ...prev.phaseStartTimes,
-                            [event.phase]: Date.now(),
-                        },
-                        verificationProgress:
-                            event.phase === 'verification'
-                                ? { current: 0, total: 0, status: 'Starting verification...' }
-                                : prev.verificationProgress,
-                    };
+    /**
+     * Updates phase and notifies store.
+     */
+    const setPhase = useCallback((phase: ExecutionPhase, sessionId: string) => {
+        setState((prev) => ({
+            ...prev,
+            phase,
+            phaseStartTimes: {
+                ...prev.phaseStartTimes,
+                [phase]: Date.now(),
+            },
+            verificationProgress: phase === 'verification'
+                ? { current: 0, total: 0, status: 'Starting verification...' }
+                : prev.verificationProgress,
+        }));
 
-                    // LIGHTWEIGHT PHASE SYNC: Only persist the phase (not full state)
-                    // This allows ResponseDisplay to show sources panel when phase changes
-                    // to 'verification' or 'adjudication', without the memory-heavy full state.
-                    // The full state is only persisted on 'complete'.
-                    if (agentMessageIdRef.current &&
-                        (event.phase === 'verification' || event.phase === 'adjudication')) {
-                        setTimeout(() => {
-                            const session = getActiveSession();
-                            const message = session?.messages.find((m) => m.id === agentMessageIdRef.current);
-                            if (message) {
-                                // Pass ONLY the phase in a minimal object - NOT the full sources/claims
-                                updateMessage(
-                                    agentMessageIdRef.current!,
-                                    message.content,
-                                    undefined,
-                                    sessionId,
-                                    undefined,
-                                    { phase: event.phase } // Minimal state - just the phase
-                                );
-                            }
-                        }, 0);
-                    }
+        setAgentState(mapPhaseToAgentState(phase), sessionId);
 
-                    return newState;
-                });
-                setAgentState(mapPhaseToAgentState(event.phase as ExecutionPhase), sessionId);
-                break;
+        // Log phase-start event
+        logEvent({ type: 'phase-start', phase: phase as any });
 
-            case 'phase-complete':
-                handlePhaseComplete(event, sessionId);
-
-                // If search is complete, update the chat message with sources immediately
-                if (event.phase === 'search' && agentMessageIdRef.current) {
-                    const session = getActiveSession();
-                    const message = session?.messages.find((m) => m.id === agentMessageIdRef.current);
-                    const currentContent = message?.content || '';
-                    const phaseData = event.data as { sources?: MaxwellSource[] };
-                    const sources = (phaseData.sources || []).map(mapMaxwellSourceToSource);
-
-                    updateMessage(agentMessageIdRef.current, currentContent, sources, sessionId);
-                }
-
-                // If verification is complete, persist JUST the confidence score
-                // This allows the Analysis Complete card to show % immediately
-                if (event.phase === 'verification' && agentMessageIdRef.current) {
-                    const verificationData = event.data as { overallConfidence?: number };
-                    const session = getActiveSession();
-                    const message = session?.messages.find((m) => m.id === agentMessageIdRef.current);
-                    if (message && verificationData.overallConfidence !== undefined) {
-                        updateMessage(
-                            agentMessageIdRef.current,
-                            message.content,
-                            undefined,
-                            sessionId,
-                            undefined,
-                            {
-                                phase: 'adjudication',
-                                verification: { overallConfidence: verificationData.overallConfidence }
-                            }
-                        );
-                    }
-                }
-                break;
-
-            case 'synthesis-chunk':
-                // Update the agent message in the store with streaming content
-                if (agentMessageIdRef.current) {
-                    // Get current content and append chunk
-                    const session = getActiveSession();
-                    const message = session?.messages.find((m) => m.id === agentMessageIdRef.current);
-                    const currentContent = message?.content || '';
-                    updateMessage(agentMessageIdRef.current, currentContent + event.content, undefined, sessionId);
-                }
-                break;
-
-            case 'adjudication-chunk':
-                setState((prev) => {
-                    const newState = {
-                        ...prev,
-                        adjudication: (prev.adjudication || '') + event.content,
-                    };
-                    return newState;
-                });
-
-                // Stream adjudication text to store's maxwellState.adjudication
-                // NOT to message.content (that would put it before sources)
-                // This enables live streaming in ResponseDisplay at the correct position
-                if (agentMessageIdRef.current) {
-                    const session = getActiveSession();
-                    const message = session?.messages.find((m) => m.id === agentMessageIdRef.current);
-                    if (message) {
-                        // Get current adjudication text and append chunk
-                        const currentAdjudication = message.maxwellState?.adjudication || '';
-                        updateMessage(
-                            agentMessageIdRef.current,
-                            message.content, // Keep content unchanged!
-                            undefined,
-                            sessionId,
-                            undefined,
-                            {
-                                phase: 'adjudication',
-                                adjudication: currentAdjudication + event.content,
-                                // Preserve existing verification data if present
-                                verification: message.maxwellState?.verification
-                            }
-                        );
-                    }
-                }
-                break;
-
-            case 'planning-complete':
-                setState((prev) => ({
-                    ...prev,
-                    config: event.config,
-                }));
-                break;
-
-            case 'verification-progress':
-                setState((prev) => ({
-                    ...prev,
-                    verificationProgress: event.data,
-                }));
-                break;
-
-            case 'complete':
-                setState((prev) => {
-                    const newState = {
-                        ...prev,
-                        phase: 'complete' as const,
-                        verificationProgress: null,
-                        phaseDurations: {
-                            ...prev.phaseDurations,
-                            total: event.data.totalDurationMs,
-                        },
-                    };
-
-                    // Final update with sources AND full state persistence
-                    if (agentMessageIdRef.current && event.data.sources) {
-                        const baseSources = event.data.sources.map(mapMaxwellSourceToSource);
-
-                        // Persist the FULL Maxwell state to the message
-                        // This allows us to re-hydrate the canvas later
-                        // Wrap in setTimeout to avoid "cannot update during render" error
-                        setTimeout(() => {
-                            updateMessage(
-                                agentMessageIdRef.current!,
-                                event.data.answer,
-                                baseSources,
-                                sessionId,
-                                undefined,
-                                newState // Pass the full UI state
-                            );
-                        }, 0);
-                    }
-
-                    return newState;
-                });
-                setAgentState('complete', sessionId);
-                break;
-
-            case 'error':
-                setState((prev) => ({
-                    ...prev,
-                    phase: 'error',
-                    error: event.message,
-                }));
-                setAgentState('complete', sessionId);
-                break;
+        // Update message with phase for UI sync
+        if (agentMessageIdRef.current && (phase === 'verification' || phase === 'adjudication')) {
+            const session = getActiveSession();
+            const message = session?.messages.find((m) => m.id === agentMessageIdRef.current);
+            if (message) {
+                updateMessage(
+                    agentMessageIdRef.current,
+                    message.content,
+                    undefined,
+                    sessionId,
+                    undefined,
+                    { phase }
+                );
+            }
         }
-    }, [getActiveSession, setAgentState, updateMessage]);
+    }, [setAgentState, logEvent, getActiveSession, updateMessage]);
 
-    const handlePhaseComplete = useCallback(
-        (event: MaxwellEvent & { type: 'phase-complete' }, sessionId: string) => {
-            const { phase, data } = event;
-            const phaseData = data as Record<string, unknown>;
-
-            setState((prev) => {
-                const updates: Partial<MaxwellUIState> = {};
-
-                switch (phase) {
-                    case 'decomposition':
-                        updates.subQueries = (phaseData.subQueries as SubQuery[]) || [];
-                        updates.reasoning = (phaseData.reasoning as string) || undefined;
-                        updates.phaseDurations = {
-                            ...prev.phaseDurations,
-                            decomposition: phaseData.durationMs as number,
-                        };
-                        break;
-
-                    case 'search':
-                        updates.sources = (phaseData.sources as MaxwellSource[]) || [];
-                        updates.searchMetadata = (phaseData.searchMetadata as SearchMetadata[]) || [];
-                        updates.phaseDurations = {
-                            ...prev.phaseDurations,
-                            search: phaseData.durationMs as number,
-                        };
-                        break;
-
-                    case 'synthesis':
-                        // Answer is already streamed in, just store duration
-                        updates.phaseDurations = {
-                            ...prev.phaseDurations,
-                            synthesis: phaseData.durationMs as number,
-                        };
-                        break;
-
-                    case 'verification':
-                        updates.verification = phaseData as unknown as VerificationOutput;
-                        updates.phaseDurations = {
-                            ...prev.phaseDurations,
-                            verification: phaseData.durationMs as number,
-                        };
-                        break;
-
-                    case 'adjudication':
-                        updates.adjudication = phaseData.text as string;
-                        updates.phaseDurations = {
-                            ...prev.phaseDurations,
-                            adjudication: phaseData.durationMs as number,
-                        };
-                        break;
-                }
-
-                return { ...prev, ...updates };
-            });
-        },
-        []
-    );
-
+    /**
+     * Main search function - orchestrates all 5 phases.
+     */
     const search = useCallback(
         async (query: string) => {
             if (!activeSessionId) {
@@ -428,68 +273,398 @@ export function useMaxwell(): UseMaxwellReturn {
                 return;
             }
 
-            // Capture session ID
             const sessionId = activeSessionId;
-
-            // Reset and start
             reset();
             setIsLoading(true);
-
             abortControllerRef.current = new AbortController();
 
             try {
-                // 1. Add user message to shared store
+                // Add user message to store
                 addMessage(query, 'user', false, sessionId);
-
-                // 2. Set initial agent state
                 setAgentState('thinking', sessionId);
 
-                // 3. Create placeholder agent message
+                // Create placeholder agent message
                 const agentMessageId = addMessage('', 'agent', false, sessionId);
                 agentMessageIdRef.current = agentMessageId;
 
-                // 4. Make request to Maxwell API
-                const response = await fetch('/api/maxwell', {
+                const overallStart = Date.now();
+
+                // ═══════════════════════════════════════════════════════════
+                // PHASE 1: DECOMPOSITION
+                // ═══════════════════════════════════════════════════════════
+                setPhase('decomposition', sessionId);
+
+                const decomposeRes = await fetch('/api/maxwell/decompose', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ query }),
                     signal: abortControllerRef.current.signal,
                 });
 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error || `HTTP ${response.status}`);
+                if (!decomposeRes.ok) {
+                    const errorData = await decomposeRes.json().catch(() => ({}));
+                    throw new Error(errorData.error || `Decomposition failed: HTTP ${decomposeRes.status}`);
                 }
 
-                // 5. Stream SSE response
-                const reader = response.body?.getReader();
-                if (!reader) throw new Error('No response body');
+                const decomposition: DecomposeResponse = await decomposeRes.json();
 
-                const decoder = new TextDecoder();
-                let buffer = '';
+                setState((prev) => ({
+                    ...prev,
+                    subQueries: decomposition.subQueries,
+                    config: decomposition.config,
+                    reasoning: decomposition.reasoning,
+                    phaseDurations: {
+                        ...prev.phaseDurations,
+                        decomposition: decomposition.durationMs,
+                    },
+                }));
 
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
+                // Log decomposition events
+                logEvent({
+                    type: 'phase-complete',
+                    phase: 'decomposition',
+                    data: decomposition,
+                });
+                logEvent({
+                    type: 'planning-complete',
+                    config: decomposition.config,
+                });
 
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop() || '';
+                // ═══════════════════════════════════════════════════════════
+                // PHASE 2: SEARCH (with pre-embedding)
+                // ═══════════════════════════════════════════════════════════
+                setPhase('search', sessionId);
 
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            const data = line.slice(6).trim();
-                            if (data === '[DONE]') continue;
+                const searchRes = await fetch('/api/maxwell/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        subQueries: decomposition.subQueries,
+                        config: decomposition.config,
+                    }),
+                    signal: abortControllerRef.current.signal,
+                });
 
-                            try {
-                                const event: MaxwellEvent = JSON.parse(data);
-                                handleEvent(event, sessionId);
-                            } catch (parseError) {
-                                console.warn('[useMaxwell] SSE Parse Error:', parseError);
-                            }
+                if (!searchRes.ok) {
+                    const errorData = await searchRes.json().catch(() => ({}));
+                    throw new Error(errorData.error || `Search failed: HTTP ${searchRes.status}`);
+                }
+
+                const searchOutput: SearchResponse = await searchRes.json();
+
+                // Store prepared evidence for verification phase
+                const preparedEvidence: PreparedEvidence = searchOutput.preparedEvidence;
+
+                setState((prev) => ({
+                    ...prev,
+                    sources: searchOutput.sources,
+                    searchMetadata: searchOutput.searchMetadata,
+                    phaseDurations: {
+                        ...prev.phaseDurations,
+                        search: searchOutput.durationMs,
+                    },
+                }));
+
+                // Update message with sources
+                if (agentMessageIdRef.current) {
+                    const baseSources = searchOutput.sources.map(mapMaxwellSourceToSource);
+                    updateMessage(agentMessageIdRef.current, '', baseSources, sessionId);
+                }
+
+                logEvent({
+                    type: 'phase-complete',
+                    phase: 'search',
+                    data: {
+                        sources: searchOutput.sources,
+                        searchMetadata: searchOutput.searchMetadata,
+                        totalSources: searchOutput.sources.length,
+                        durationMs: searchOutput.durationMs,
+                    },
+                });
+
+                // ═══════════════════════════════════════════════════════════
+                // PHASE 3: SYNTHESIS (SSE streaming)
+                // ═══════════════════════════════════════════════════════════
+                setPhase('synthesis', sessionId);
+
+                const synthesizeRes = await fetch('/api/maxwell/synthesize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query,
+                        sources: searchOutput.sources,
+                        synthesisModel: decomposition.config.synthesisModel,
+                    }),
+                    signal: abortControllerRef.current.signal,
+                });
+
+                if (!synthesizeRes.ok) {
+                    const errorData = await synthesizeRes.json().catch(() => ({}));
+                    throw new Error(errorData.error || `Synthesis failed: HTTP ${synthesizeRes.status}`);
+                }
+
+                let answer = '';
+                let sourcesUsed: string[] = [];
+                let synthesisDuration = 0;
+
+                for await (const event of parseSSEStream(synthesizeRes)) {
+                    if (abortControllerRef.current?.signal.aborted) break;
+
+                    if (event.type === 'synthesis-chunk') {
+                        // Stream chunk to message
+                        if (agentMessageIdRef.current) {
+                            const session = getActiveSession();
+                            const message = session?.messages.find((m) => m.id === agentMessageIdRef.current);
+                            const currentContent = message?.content || '';
+                            updateMessage(agentMessageIdRef.current, currentContent + event.content, undefined, sessionId);
                         }
+                        logEvent({ type: 'synthesis-chunk', content: event.content });
+                    } else if (event.type === 'synthesis-complete') {
+                        answer = event.answer;
+                        sourcesUsed = event.sourcesUsed;
+                        synthesisDuration = event.durationMs;
+                    } else if (event.type === 'error') {
+                        throw new Error(event.message);
                     }
                 }
+
+                setState((prev) => ({
+                    ...prev,
+                    phaseDurations: {
+                        ...prev.phaseDurations,
+                        synthesis: synthesisDuration,
+                    },
+                }));
+
+                logEvent({
+                    type: 'phase-complete',
+                    phase: 'synthesis',
+                    data: { answer, sourcesUsed, durationMs: synthesisDuration },
+                });
+
+                // ═══════════════════════════════════════════════════════════
+                // PHASE 4: VERIFICATION (SSE streaming)
+                // ═══════════════════════════════════════════════════════════
+                setPhase('verification', sessionId);
+
+                const verifyRes = await fetch('/api/maxwell/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        answer,
+                        sources: searchOutput.sources,
+                        preparedEvidence,
+                        maxClaimsToVerify: decomposition.config.maxClaimsToVerify,
+                        verificationConcurrency: decomposition.config.verificationConcurrency,
+                    }),
+                    signal: abortControllerRef.current.signal,
+                });
+
+                if (!verifyRes.ok) {
+                    const errorData = await verifyRes.json().catch(() => ({}));
+                    throw new Error(errorData.error || `Verification failed: HTTP ${verifyRes.status}`);
+                }
+
+                let verification: VerificationOutput | null = null;
+
+                for await (const event of parseSSEStream(verifyRes)) {
+                    if (abortControllerRef.current?.signal.aborted) break;
+
+                    if (event.type === 'verification-progress') {
+                        setState((prev) => ({
+                            ...prev,
+                            verificationProgress: event.data,
+                        }));
+                        logEvent({ type: 'verification-progress', data: event.data });
+                    } else if (event.type === 'verification-complete') {
+                        verification = event.data;
+                    } else if (event.type === 'error') {
+                        throw new Error(event.message);
+                    }
+                }
+
+                if (!verification) {
+                    throw new Error('Verification did not complete');
+                }
+
+                setState((prev) => ({
+                    ...prev,
+                    verification,
+                    phaseDurations: {
+                        ...prev.phaseDurations,
+                        verification: verification!.durationMs,
+                    },
+                }));
+
+                // Update message with verification confidence
+                if (agentMessageIdRef.current) {
+                    const session = getActiveSession();
+                    const message = session?.messages.find((m) => m.id === agentMessageIdRef.current);
+                    if (message) {
+                        updateMessage(
+                            agentMessageIdRef.current,
+                            message.content,
+                            undefined,
+                            sessionId,
+                            undefined,
+                            {
+                                phase: 'adjudication',
+                                verification: { overallConfidence: verification.overallConfidence }
+                            }
+                        );
+                    }
+                }
+
+                logEvent({
+                    type: 'phase-complete',
+                    phase: 'verification',
+                    data: verification,
+                });
+
+                // ═══════════════════════════════════════════════════════════
+                // PHASE 5: ADJUDICATION (SSE streaming)
+                // ═══════════════════════════════════════════════════════════
+                setPhase('adjudication', sessionId);
+
+                const adjudicateRes = await fetch('/api/maxwell/adjudicate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query,
+                        answer,
+                        verification,
+                    }),
+                    signal: abortControllerRef.current.signal,
+                });
+
+                if (!adjudicateRes.ok) {
+                    const errorData = await adjudicateRes.json().catch(() => ({}));
+                    throw new Error(errorData.error || `Adjudication failed: HTTP ${adjudicateRes.status}`);
+                }
+
+                let adjudicationText = '';
+                let adjudicationDuration = 0;
+
+                for await (const event of parseSSEStream(adjudicateRes)) {
+                    if (abortControllerRef.current?.signal.aborted) break;
+
+                    if (event.type === 'adjudication-chunk') {
+                        adjudicationText += event.content;
+                        setState((prev) => ({
+                            ...prev,
+                            adjudication: adjudicationText,
+                        }));
+
+                        // Stream to store for live UI updates
+                        if (agentMessageIdRef.current) {
+                            const session = getActiveSession();
+                            const message = session?.messages.find((m) => m.id === agentMessageIdRef.current);
+                            if (message) {
+                                updateMessage(
+                                    agentMessageIdRef.current,
+                                    message.content,
+                                    undefined,
+                                    sessionId,
+                                    undefined,
+                                    {
+                                        phase: 'adjudication',
+                                        adjudication: adjudicationText,
+                                        verification: message.maxwellState?.verification
+                                    }
+                                );
+                            }
+                        }
+
+                        logEvent({ type: 'adjudication-chunk', content: event.content });
+                    } else if (event.type === 'adjudication-complete') {
+                        adjudicationDuration = event.durationMs;
+                    } else if (event.type === 'error') {
+                        throw new Error(event.message);
+                    }
+                }
+
+                setState((prev) => ({
+                    ...prev,
+                    phaseDurations: {
+                        ...prev.phaseDurations,
+                        adjudication: adjudicationDuration,
+                    },
+                }));
+
+                logEvent({
+                    type: 'phase-complete',
+                    phase: 'adjudication',
+                    data: { text: adjudicationText, durationMs: adjudicationDuration },
+                });
+
+                // ═══════════════════════════════════════════════════════════
+                // COMPLETE
+                // ═══════════════════════════════════════════════════════════
+                const totalDurationMs = Date.now() - overallStart;
+
+                const finalState: MaxwellUIState = {
+                    phase: 'complete',
+                    subQueries: decomposition.subQueries,
+                    sources: searchOutput.sources,
+                    searchMetadata: searchOutput.searchMetadata,
+                    verification,
+                    verificationProgress: null,
+                    adjudication: adjudicationText || null,
+                    phaseDurations: {
+                        decomposition: decomposition.durationMs,
+                        search: searchOutput.durationMs,
+                        synthesis: synthesisDuration,
+                        verification: verification.durationMs,
+                        adjudication: adjudicationDuration,
+                        total: totalDurationMs,
+                    },
+                    phaseStartTimes: {},
+                    events: [],
+                    error: null,
+                    reasoning: decomposition.reasoning,
+                    config: decomposition.config,
+                };
+
+                setState((prev) => ({
+                    ...prev,
+                    phase: 'complete',
+                    verificationProgress: null,
+                    phaseDurations: finalState.phaseDurations,
+                }));
+
+                // Final update with full state persistence
+                if (agentMessageIdRef.current) {
+                    const baseSources = searchOutput.sources.map(mapMaxwellSourceToSource);
+                    updateMessage(
+                        agentMessageIdRef.current,
+                        answer,
+                        baseSources,
+                        sessionId,
+                        undefined,
+                        finalState
+                    );
+                }
+
+                setAgentState('complete', sessionId);
+
+                logEvent({
+                    type: 'complete',
+                    data: {
+                        answer,
+                        sources: searchOutput.sources,
+                        verification,
+                        adjudication: adjudicationText || null,
+                        phases: {
+                            decomposition: { status: 'complete', durationMs: decomposition.durationMs },
+                            search: { status: 'complete', durationMs: searchOutput.durationMs },
+                            synthesis: { status: 'complete', durationMs: synthesisDuration },
+                            verification: { status: 'complete', durationMs: verification.durationMs },
+                            adjudication: { status: 'complete', durationMs: adjudicationDuration },
+                        },
+                        totalDurationMs,
+                    },
+                });
+
             } catch (error) {
                 if (error instanceof Error && error.name === 'AbortError') return;
 
@@ -503,12 +678,14 @@ export function useMaxwell(): UseMaxwellReturn {
                 // Add error message to chat
                 addMessage(`Sorry, I encountered an error: ${errorMessage}`, 'agent', false, sessionId);
                 setAgentState('complete', sessionId);
+
+                logEvent({ type: 'error', message: errorMessage });
             } finally {
                 setIsLoading(false);
                 abortControllerRef.current = null;
             }
         },
-        [activeSessionId, reset, addMessage, setAgentState, handleEvent]
+        [activeSessionId, reset, addMessage, setAgentState, getActiveSession, updateMessage, setPhase, logEvent]
     );
 
     return { ...state, isLoading, search, reset, abort, hydrate };

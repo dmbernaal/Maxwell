@@ -23,12 +23,15 @@ import type {
 
 // Re-export types for convenience
 export * from './types';
+export * from './api-types';
 
 // Re-export module functions for consumers
 export { decomposeQuery } from './decomposer';
+export { createExecutionConfig } from './configFactory';
 export { parallelSearch } from './searcher';
 export { synthesize } from './synthesizer';
-export { verifyClaims } from './verifier';
+export { verifyClaims, verifyClaimsWithPrecomputedEvidence, prepareEvidence } from './verifier';
+export type { PreparedEvidence } from './verifier';
 export { adjudicateAnswer } from './adjudicator';
 
 export async function* runMaxwell(query: string): AsyncGenerator<MaxwellEvent> {

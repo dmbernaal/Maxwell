@@ -1,6 +1,7 @@
 # Maxwell: Adaptive Verified Search Architecture
 
-> **Core Feature:** Multi-signal verification pipeline with "Glass Box" reasoning and Adaptive Compute.
+> **Core Feature:** Multi-signal verification pipeline with "Glass Box" reasoning and Adaptive Compute.  
+> **Deployment:** Multi-endpoint architecture optimized for Vercel serverless (60s timeout per function)
 
 ## The 5-Phase Pipeline
 
@@ -15,6 +16,31 @@ graph LR
     E --> F(Phase 5: Reconstruct);
     F --> G[Verified Answer];
 ```
+
+## Multi-Endpoint Architecture (Production)
+
+For Vercel deployment, the pipeline is split into 5 independent serverless functions:
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                CLIENT-SIDE ORCHESTRATION                          │
+│                                                                   │
+│  useMaxwell hook                                                  │
+│       │                                                           │
+│       ├──▶ /api/maxwell/decompose   → subQueries, config         │
+│       ├──▶ /api/maxwell/search      → sources, preparedEvidence  │
+│       ├──▶ /api/maxwell/synthesize  → answer (SSE stream)        │
+│       ├──▶ /api/maxwell/verify      → verification (SSE stream)  │
+│       └──▶ /api/maxwell/adjudicate  → verdict (SSE stream)       │
+│                                                                   │
+│  Key: preparedEvidence contains pre-computed embeddings!          │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Why Multi-Endpoint?** Embedding 3000+ passages takes ~45s. A single 60s function times out. By splitting:
+- `/search` does the heavy embedding work (~5s)
+- `/verify` receives embeddings and only embeds claims (~8s)
+- Each endpoint completes well under 60s ✓
 
 ---
 
@@ -127,12 +153,13 @@ The Maxwell Canvas provides full transparency into the pipeline:
 
 | Layer | Technology |
 |-------|------------|
-| **Orchestration** | AI SDK + Custom Async Generator Pipeline |
+| **Orchestration** | Client-side hook + 5 serverless endpoints |
 | **Search** | Tavily API (Context-Aware, Raw Content) |
 | **LLMs** | OpenRouter (Gemini Flash, Claude Sonnet) |
-| **Embeddings** | Qwen-3-8B (via OpenRouter) |
+| **Embeddings** | Google Gemini Embedding 001 (Primary) / Qwen-3-8B (Fallback) |
 | **Frontend** | Next.js 16 + Framer Motion |
-| **State** | Zustand + Event Stream |
+| **State** | Zustand + IndexedDB (idb-keyval) |
+| **Streaming** | Server-Sent Events (SSE) |
 
 ---
 
@@ -140,7 +167,8 @@ The Maxwell Canvas provides full transparency into the pipeline:
 
 ```
 app/lib/maxwell/
-├── index.ts          # Orchestrator - runs the 5-phase pipeline
+├── index.ts          # Orchestrator - runs 5-phase pipeline (local dev)
+├── api-types.ts      # Request/Response types for multi-endpoint API (NEW)
 ├── configFactory.ts  # Adaptive Compute - ExecutionConfig from complexity
 ├── decomposer.ts     # Phase 1: Query → Sub-queries + Complexity
 ├── searcher.ts       # Phase 2: Sub-queries → Sources (Surgical Vision)
@@ -148,8 +176,19 @@ app/lib/maxwell/
 ├── verifier.ts       # Phase 4: Draft → Verified claims (Temporal + Range)
 ├── adjudicator.ts    # Phase 5: Verified → Reconstructed answer
 ├── prompts.ts        # All LLM prompts
-├── embeddings.ts     # Vector utilities
+├── embeddings.ts     # Vector utilities (saturated pipeline)
 └── types.ts          # TypeScript interfaces
+
+app/api/maxwell/
+├── route.ts              # Legacy monolithic endpoint (local dev)
+├── decompose/route.ts    # Phase 1 endpoint (30s max)
+├── search/route.ts       # Phase 2 endpoint + pre-embedding (60s max)
+├── synthesize/route.ts   # Phase 3 SSE stream (30s max)
+├── verify/route.ts       # Phase 4 SSE stream (60s max)
+└── adjudicate/route.ts   # Phase 5 SSE stream (30s max)
+
+app/hooks/
+└── use-maxwell.ts        # Client orchestrator for multi-endpoint flow
 
 app/components/maxwell/
 ├── MaxwellCanvas.tsx     # Main container
@@ -157,5 +196,6 @@ app/components/maxwell/
 ├── PhaseProgress.tsx     # Phase indicator
 ├── SubQueryList.tsx      # Decomposition view
 ├── SourcesPanel.tsx      # Sources view
-└── VerificationPanel.tsx # Claims view
+├── VerificationPanel.tsx # Claims view
+└── ClaimHeatmap.tsx      # Confidence overlay
 ```

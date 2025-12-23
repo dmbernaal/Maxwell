@@ -407,3 +407,94 @@ This file tracks the completion of each implementation phase.
 - Surface: `#18151d`
 - Brand Accent: `#6F3BF5`
 - Typography: uppercase tracking-[0.2em] headers
+
+---
+
+## Phase 12: Multi-Endpoint Architecture (Vercel Optimization)
+**Status**: ✅ Complete  
+**Completed**: December 23, 2024
+
+### Problem Solved
+Vercel serverless functions have a 60-second timeout. The original monolithic `/api/maxwell` route would timeout during embedding-heavy queries:
+- Embedding 3046 texts took ~45 seconds alone
+- Total pipeline exceeded 60 seconds
+- Verification phase never completed
+
+### Solution: Multi-Endpoint Pipeline
+Split the Maxwell pipeline into 5 independent serverless functions, each with its own timeout budget.
+
+### Files Created
+- `app/lib/maxwell/api-types.ts` - Request/Response interfaces + embedding encoding utilities
+- `app/api/maxwell/decompose/route.ts` - Phase 1: Query decomposition (30s max)
+- `app/api/maxwell/search/route.ts` - Phase 2: Search + pre-embedding (60s max)
+- `app/api/maxwell/synthesize/route.ts` - Phase 3: SSE synthesis (30s max)
+- `app/api/maxwell/verify/route.ts` - Phase 4: SSE verification (60s max)
+- `app/api/maxwell/adjudicate/route.ts` - Phase 5: SSE adjudication (30s max)
+
+### Files Modified
+- `app/hooks/use-maxwell.ts` - Refactored to orchestrate 5 endpoint calls
+- `app/lib/maxwell/verifier.ts` - Added `verifyClaimsWithPrecomputedEvidence()`
+- `app/api/maxwell/route.ts` - Preserved as fallback for local development
+
+### Key Optimization: Pre-Embedding in Search Phase
+The critical insight: move embedding from verify to search phase.
+
+**Before:**
+```
+Search (2s) → Synthesize (5s) → Verify [embed 3046 texts ~45s] → TIMEOUT ❌
+```
+
+**After:**
+```
+Search [embed 61 passages ~3s] → Synthesize (5s) → Verify [embed 5 claims ~1s] → Complete ✅
+```
+
+### Architecture
+
+| Endpoint | Purpose | Timeout | Data Flow |
+|----------|---------|---------|-----------|
+| `/decompose` | Query analysis | 30s | → `subQueries`, `config` |
+| `/search` | Search + embed | 60s | → `sources`, `preparedEvidence` |
+| `/synthesize` | Answer gen | 30s | → `answer` (SSE) |
+| `/verify` | Claim check | 60s | → `verification` (SSE) |
+| `/adjudicate` | Final verdict | 30s | → verdict (SSE) |
+
+### Embedding Encoding
+Float32Array embeddings are base64-encoded for JSON transport:
+```typescript
+// Encode (search endpoint)
+const base64 = Buffer.from(new Float32Array(embedding).buffer).toString('base64');
+
+// Decode (verify endpoint)
+const embedding = new Float32Array(Buffer.from(base64, 'base64').buffer);
+```
+
+### Performance Results
+Real-world test: "What is the capital of France?"
+
+| Phase | Duration |
+|-------|----------|
+| Decompose | 2.1s |
+| Search (with 61 embeddings) | 1.5s |
+| Synthesize | 5.1s |
+| Verify (using pre-computed) | 7.9s |
+| Adjudicate | 4.6s |
+| **Total** | **~21s** ✅ |
+
+Each phase completes well under the 60-second limit.
+
+### Tests Passed
+- [x] All 5 endpoints return 200
+- [x] Pre-computed embeddings passed from search to verify
+- [x] SSE streaming works for synthesize/verify/adjudicate
+- [x] Full pipeline completes on Vercel deployment
+- [x] UI updates correctly for each phase
+- [x] No timeouts on complex queries
+
+### Documentation Updated
+- `MAXWELL.md` - Multi-endpoint API section
+- `MAXWELL_ARCHITECTURE.md` - Updated file map
+- `API.md` - All 6 Maxwell endpoints documented
+- `FILE-MAP.md` - New files listed
+- `ARCHITECTURE.md` - Maxwell mode architecture
+- `README.md` - Project structure updated

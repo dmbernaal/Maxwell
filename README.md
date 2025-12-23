@@ -26,6 +26,8 @@ graph LR
 
 | Feature | Description |
 |---------|-------------|
+| **Multi-Endpoint Architecture** | Pipeline split into 5 independent serverless functions for Vercel compatibility. Each phase stays under 60s timeout. |
+| **Pre-Embedding Optimization** | Embeddings computed during search phase, not verification. Reduces verify time from ~45s to ~8s. |
 | **Adaptive Compute** | Analyzes query complexity before acting. Simple queries get Gemini Flash + 6x concurrency (low latency). Deep research gets Claude Sonnet + 3x concurrency + raw content fetching (high precision). |
 | **Temporal Verification** | NLI enforces "Recency Superiority" — old evidence cannot contradict current status (e.g., software versions, CEOs). |
 | **Reasoning Bridge** | Instead of deleting unverified data, the Adjudicator uses hedging language ("Reports suggest...") to preserve utility while maintaining honesty. |
@@ -39,22 +41,31 @@ graph LR
 ```
 app/
 ├── api/
-│   ├── chat/route.ts          # Standard chat endpoint
-│   └── maxwell/route.ts       # Maxwell SSE streaming endpoint
+│   ├── chat/route.ts              # Standard chat endpoint
+│   └── maxwell/                   # Maxwell Multi-Endpoint API
+│       ├── route.ts               # Legacy monolithic (local dev)
+│       ├── decompose/route.ts     # Phase 1: Query decomposition
+│       ├── search/route.ts        # Phase 2: Search + pre-embedding
+│       ├── synthesize/route.ts    # Phase 3: SSE synthesis
+│       ├── verify/route.ts        # Phase 4: SSE verification
+│       └── adjudicate/route.ts    # Phase 5: SSE adjudication
 ├── components/
-│   ├── maxwell/               # Maxwell Canvas UI components
-│   └── InputInterface.tsx     # Main input with mode toggle
+│   ├── maxwell/                   # Maxwell Canvas UI components
+│   └── InputInterface.tsx         # Main input with mode toggle
+├── hooks/
+│   └── use-maxwell.ts             # Client orchestrator for multi-endpoint
 └── lib/
     └── maxwell/
-        ├── index.ts           # 5-phase orchestrator
-        ├── configFactory.ts   # Adaptive compute configuration
-        ├── decomposer.ts      # Phase 1: Query → Sub-queries
-        ├── searcher.ts        # Phase 2: Surgical search
-        ├── synthesizer.ts     # Phase 3: Draft synthesis
-        ├── verifier.ts        # Phase 4: Multi-signal verification
-        ├── adjudicator.ts     # Phase 5: Reconstruction
-        ├── embeddings.ts      # Saturated pipeline embeddings
-        └── prompts.ts         # All LLM prompts
+        ├── index.ts               # 5-phase orchestrator (local dev)
+        ├── api-types.ts           # Multi-endpoint request/response types
+        ├── configFactory.ts       # Adaptive compute configuration
+        ├── decomposer.ts          # Phase 1: Query → Sub-queries
+        ├── searcher.ts            # Phase 2: Surgical search
+        ├── synthesizer.ts         # Phase 3: Draft synthesis
+        ├── verifier.ts            # Phase 4: Multi-signal verification
+        ├── adjudicator.ts         # Phase 5: Reconstruction
+        ├── embeddings.ts          # Saturated pipeline embeddings
+        └── prompts.ts             # All LLM prompts
 ```
 
 ---
@@ -64,10 +75,13 @@ app/
 | Layer | Technology |
 |-------|------------|
 | **Framework** | Next.js 16 (App Router, Turbopack) |
-| **Orchestration** | Vercel AI SDK 5.0 + Custom Async Generators |
+| **Architecture** | Multi-endpoint serverless (5 functions) |
+| **Orchestration** | Client-side hook + Vercel AI SDK 5.0 |
 | **Search** | Tavily API (Context-Aware w/ Raw Content) |
 | **Models** | Google Gemini 3 Flash (Speed) / Claude Sonnet 4.5 (Reasoning) |
 | **Embeddings** | Google Gemini Embedding 001 (Primary) / Qwen 3 (Fallback) |
+| **Streaming** | Server-Sent Events (SSE) for real-time UI |
+| **State** | Zustand + IndexedDB (idb-keyval) |
 | **Performance** | p-limit for network throttling & parallel batching |
 
 ---
@@ -116,12 +130,28 @@ Tests cover:
 
 ## 📦 Deployment
 
-Optimized for Vercel:
+Optimized for Vercel with multi-endpoint architecture:
 
 1. Push to GitHub
 2. Import project in Vercel
-3. Add environment variables in Vercel Dashboard
+3. Add environment variables in Vercel Dashboard:
+   - `OPENROUTER_API_KEY`
+   - `TAVILY_API_KEY`
 4. Deploy
+
+### Why Multi-Endpoint?
+
+The Maxwell pipeline is split into 5 serverless functions to stay within Vercel's 60-second timeout:
+
+| Endpoint | Purpose | Timeout |
+|----------|---------|---------|
+| `/api/maxwell/decompose` | Query analysis | 30s |
+| `/api/maxwell/search` | Search + pre-embed | 60s |
+| `/api/maxwell/synthesize` | Answer generation | 30s |
+| `/api/maxwell/verify` | Claim verification | 60s |
+| `/api/maxwell/adjudicate` | Final verdict | 30s |
+
+The key optimization: **pre-embedding passages during search** so verification only embeds claims (~5-30 texts, not ~3000).
 
 ---
 

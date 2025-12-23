@@ -629,13 +629,55 @@ The Adjudicator enforces a dense, authoritative tone:
 
 ---
 
-## Background Optimization: Evidence Prep
+## Optimization: Pre-Embedding in Search Phase
+
+> **Architecture:** Multi-endpoint (Vercel production)
+
+**The Problem:** In a serverless environment, embedding 3000+ passages during verification causes timeouts.
+
+**The Solution:** Move embedding to the `/search` endpoint:
+
+```typescript
+// In /api/maxwell/search/route.ts
+export async function POST(request: NextRequest) {
+  const { subQueries, config } = await request.json();
+  
+  // 1. Run parallel searches
+  const searchOutput = await parallelSearch(subQueries, config.resultsPerQuery);
+  
+  // 2. PRE-EMBED all passages HERE (the key optimization!)
+  const preparedEvidence = await prepareEvidence(searchOutput.sources);
+  
+  // 3. Return both sources AND embeddings
+  return Response.json({
+    sources: searchOutput.sources,
+    preparedEvidence, // { passages: [...], embeddings: [...] }
+  });
+}
+```
+
+**Why This Works:**
+- Search phase has plenty of time budget (~2s for search, ~3s for embedding = ~5s total)
+- Verify phase receives pre-computed embeddings and only embeds claims (~5-30 texts)
+- Each phase stays well under the 60-second timeout
+
+**Embedding Encoding:** Float32Array embeddings are base64-encoded for JSON transport:
+```typescript
+// Encode (in search endpoint)
+const base64 = Buffer.from(new Float32Array(embedding).buffer).toString('base64');
+
+// Decode (in verify endpoint)  
+const buffer = Buffer.from(base64, 'base64');
+const embedding = new Float32Array(buffer.buffer);
+```
+
+---
+
+### Local Development: Background Promise Pattern
 
 **File:** `app/lib/maxwell/index.ts` (orchestrator)
 
-**The Problem:** Embedding passages is slow (~2-3s). Waiting until after synthesis wastes time.
-
-**The Solution:**
+For local development (no timeout constraints), the original pattern is preserved:
 
 ```typescript
 // Start evidence prep in BACKGROUND during synthesis
@@ -712,9 +754,201 @@ Maxwell is designed to be a "Glass Box" AI, providing deep visibility into its r
 
 ---
 
-## API Route
+## API Architecture: Multi-Endpoint Pipeline
+
+> **Status:** Production-ready (Vercel-optimized)  
+> **Key Innovation:** Each phase has its own serverless endpoint with independent timeout budgets
+
+**Problem Solved:** Vercel serverless functions have a 60-second timeout limit. The original monolithic `/api/maxwell` route would timeout during embedding-heavy queries (3000+ texts).
+
+**Solution:** Split the pipeline into 5 independent API endpoints, each under 60 seconds:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────┐
+│                      MULTI-ENDPOINT ARCHITECTURE                                │
+│                                                                                 │
+│   Client Orchestrator (useMaxwell hook)                                         │
+│         │                                                                       │
+│         ├──▶ POST /api/maxwell/decompose  (30s max)                            │
+│         │         └── Returns: subQueries, config, complexity                   │
+│         │                                                                       │
+│         ├──▶ POST /api/maxwell/search     (60s max) ⬅ PRE-EMBEDS PASSAGES     │
+│         │         └── Returns: sources, preparedEvidence (passages + embeddings)│
+│         │                                                                       │
+│         ├──▶ POST /api/maxwell/synthesize (30s max) [SSE Stream]               │
+│         │         └── Streams: synthesis-chunk events → synthesis-complete      │
+│         │                                                                       │
+│         ├──▶ POST /api/maxwell/verify     (60s max) [SSE Stream]               │
+│         │         └── Streams: claim verification events (uses pre-embeddings!) │
+│         │                                                                       │
+│         └──▶ POST /api/maxwell/adjudicate (30s max) [SSE Stream]               │
+│                   └── Streams: final verdict chunks                             │
+└────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Why This Architecture?
+
+| Approach | Total Time Budget | Problem |
+|----------|-------------------|---------|
+| Monolithic | 60s (single function) | Embedding 3000+ texts takes ~45s alone |
+| Multi-endpoint | 5 × 60s = 300s total | Each phase fits within its budget ✓ |
+
+### The Key Optimization: Pre-Embedding in Search Phase
+
+The **`/search` endpoint** now performs passage chunking AND embedding before returning:
+
+```typescript
+// In /api/maxwell/search/route.ts
+const searchOutput = await parallelSearch(subQueries, config.resultsPerQuery);
+const preparedEvidence = await prepareEvidence(searchOutput.sources); // ⬅ Pre-embed!
+
+return { sources, preparedEvidence }; // Embeddings included in response
+```
+
+The **`/verify` endpoint** receives pre-computed embeddings and only needs to:
+1. Embed claims (5-30 texts, not 3000+)
+2. Run NLI checks
+3. Aggregate signals
+
+**Result:** Verification phase drops from ~45s to ~8s.
+
+---
+
+### Endpoint Reference
+
+#### POST `/api/maxwell/decompose`
+
+**Purpose:** Query decomposition and complexity assessment
+
+**Timeout:** 30 seconds
+
+**Request:**
+```json
+{ "query": "What's the current state of nuclear fusion?" }
+```
+
+**Response:**
+```json
+{
+  "subQueries": [...],
+  "config": { "synthesisModel": "...", "resultsPerQuery": 5, ... },
+  "complexity": "standard",
+  "complexityReasoning": "...",
+  "durationMs": 2100
+}
+```
+
+---
+
+#### POST `/api/maxwell/search`
+
+**Purpose:** Parallel search + passage embedding (the heavy lifting)
+
+**Timeout:** 60 seconds
+
+**Request:**
+```json
+{
+  "subQueries": [...],
+  "config": { "resultsPerQuery": 5, ... }
+}
+```
+
+**Response:**
+```json
+{
+  "sources": [...],
+  "searchMetadata": [...],
+  "preparedEvidence": {
+    "passages": [...],
+    "embeddings": [...] // Base64-encoded Float32Arrays
+  },
+  "durationMs": 2500
+}
+```
+
+---
+
+#### POST `/api/maxwell/synthesize`
+
+**Purpose:** Generate answer with citations (SSE streaming)
+
+**Timeout:** 30 seconds
+
+**Request:**
+```json
+{
+  "query": "...",
+  "sources": [...],
+  "config": { "synthesisModel": "..." }
+}
+```
+
+**Response:** Server-Sent Events
+```
+data: {"type":"synthesis-chunk","content":"The "}
+data: {"type":"synthesis-chunk","content":"reactor "}
+data: {"type":"synthesis-complete","answer":"...","sourcesUsed":["s1","s2"],"durationMs":4800}
+data: [DONE]
+```
+
+---
+
+#### POST `/api/maxwell/verify`
+
+**Purpose:** Multi-signal claim verification (SSE streaming)
+
+**Timeout:** 60 seconds
+
+**Request:**
+```json
+{
+  "answer": "...",
+  "sources": [...],
+  "preparedEvidence": { "passages": [...], "embeddings": [...] },
+  "config": { "maxClaimsToVerify": 30, "verificationConcurrency": 6 }
+}
+```
+
+**Response:** Server-Sent Events
+```
+data: {"type":"verification-start","claimsCount":5}
+data: {"type":"claim-verified","claim":{...},"current":1,"total":5}
+data: {"type":"verification-complete","verification":{...},"durationMs":7800}
+data: [DONE]
+```
+
+---
+
+#### POST `/api/maxwell/adjudicate`
+
+**Purpose:** Final verdict synthesis (SSE streaming)
+
+**Timeout:** 30 seconds
+
+**Request:**
+```json
+{
+  "query": "...",
+  "answer": "...",
+  "verification": { "claims": [...], "summary": {...} }
+}
+```
+
+**Response:** Server-Sent Events
+```
+data: {"type":"adjudication-chunk","content":"Based on "}
+data: {"type":"adjudication-complete","durationMs":4400}
+data: [DONE]
+```
+
+---
+
+### Legacy Endpoint (Local Development)
 
 **File:** `app/api/maxwell/route.ts`
+
+The original monolithic endpoint is preserved for local development where timeout limits don't apply.
 
 **Endpoint:** `POST /api/maxwell`
 
@@ -742,19 +976,59 @@ data: [DONE]
 
 **Hook:** `app/hooks/use-maxwell.ts`
 
-**State Exposed:**
+### Multi-Endpoint Orchestration
+
+The `useMaxwell` hook now acts as a **client-side orchestrator**, calling each endpoint sequentially and managing state handoff between them:
+
+```typescript
+// Simplified orchestration flow
+async function runMaxwellPipeline(query: string) {
+  // 1. Decompose
+  const { subQueries, config } = await fetch('/api/maxwell/decompose', { query });
+  
+  // 2. Search (returns pre-computed embeddings!)
+  const { sources, preparedEvidence } = await fetch('/api/maxwell/search', { subQueries, config });
+  
+  // 3. Synthesize (SSE stream)
+  const answer = await streamSSE('/api/maxwell/synthesize', { query, sources, config });
+  
+  // 4. Verify (SSE stream, uses preparedEvidence)
+  const verification = await streamSSE('/api/maxwell/verify', { 
+    answer, sources, preparedEvidence, config 
+  });
+  
+  // 5. Adjudicate (SSE stream)
+  await streamSSE('/api/maxwell/adjudicate', { query, answer, verification });
+}
+```
+
+### State Exposed
 
 ```typescript
 interface MaxwellUIState {
     phase: ExecutionPhase;        // 'idle' | 'decomposition' | ... | 'complete'
-    subQueries: SubQuery[];       // From phase 1
-    sources: MaxwellSource[];     // From phase 2
-    verification: VerificationOutput | null;  // From phase 4
+    subQueries: SubQuery[];       // From /decompose
+    sources: MaxwellSource[];     // From /search
+    preparedEvidence: PreparedEvidence | null; // Pre-computed embeddings (internal)
+    verification: VerificationOutput | null;   // From /verify
     verificationProgress: { current, total, status } | null;
-    phaseDurations: { decomposition?, search?, synthesis?, verification?, total? };
+    phaseDurations: { decomposition?, search?, synthesis?, verification?, adjudication?, total? };
     error: string | null;
 }
 ```
+
+### State Handoff
+
+The hook maintains intermediate state between API calls:
+
+| Phase Complete | Data Stored | Passed To Next Phase |
+|---------------|-------------|---------------------|
+| Decompose | `subQueries`, `config` | Search |
+| Search | `sources`, `preparedEvidence` | Synthesize, Verify |
+| Synthesize | `answer`, `sourcesUsed` | Verify, Adjudicate |
+| Verify | `verification` | Adjudicate |
+
+**Key:** `preparedEvidence` contains base64-encoded embeddings that are decoded and passed directly to the verify endpoint, eliminating the need to re-embed 3000+ passages.
 
 **Store Integration:** Maxwell uses the *shared* Zustand store for message persistence but manages Maxwell-specific state locally.
 
@@ -884,8 +1158,9 @@ The heatmap shows coverage statistics:
 
 ```
 app/lib/maxwell/
-├── index.ts          # Orchestrator - runs the 5-phase pipeline
+├── index.ts          # Orchestrator - runs the 5-phase pipeline (local dev)
 ├── types.ts          # All TypeScript interfaces
+├── api-types.ts      # Request/Response types for multi-endpoint architecture (NEW)
 ├── constants.ts      # All tunable parameters
 ├── configFactory.ts  # Adaptive Compute - generates ExecutionConfig from complexity
 ├── prompts.ts        # LLM prompts with helpers (NLI, Decomposition, Synthesis)
@@ -899,10 +1174,20 @@ app/lib/maxwell/
 └── env.ts            # Environment variable access
 
 app/api/maxwell/
-└── route.ts          # SSE streaming endpoint
+├── route.ts              # Legacy monolithic SSE endpoint (local dev fallback)
+├── decompose/
+│   └── route.ts          # Phase 1: Query decomposition endpoint (30s)
+├── search/
+│   └── route.ts          # Phase 2: Search + pre-embedding endpoint (60s)
+├── synthesize/
+│   └── route.ts          # Phase 3: SSE streaming synthesis (30s)
+├── verify/
+│   └── route.ts          # Phase 4: SSE streaming verification (60s)
+└── adjudicate/
+    └── route.ts          # Phase 5: SSE streaming adjudication (30s)
 
 app/hooks/
-└── use-maxwell.ts    # React hook for UI state
+└── use-maxwell.ts    # React hook - orchestrates multi-endpoint calls
 
 app/components/maxwell/
 ├── MaxwellCanvas.tsx     # Right panel container

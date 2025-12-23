@@ -2,7 +2,21 @@
 
 > HTTP endpoints and their usage.
 
-## Endpoints
+## Endpoints Overview
+
+| Endpoint | Purpose | Method | Response Type |
+|----------|---------|--------|---------------|
+| `/api/chat` | Standard search chat | POST | Text stream |
+| `/api/maxwell/decompose` | Query decomposition | POST | JSON |
+| `/api/maxwell/search` | Search + pre-embed | POST | JSON |
+| `/api/maxwell/synthesize` | Answer synthesis | POST | SSE stream |
+| `/api/maxwell/verify` | Claim verification | POST | SSE stream |
+| `/api/maxwell/adjudicate` | Final verdict | POST | SSE stream |
+| `/api/maxwell` | Legacy monolithic (local dev) | POST | SSE stream |
+
+---
+
+## Standard Chat
 
 ### POST `/api/chat`
 
@@ -208,3 +222,264 @@ curl -s -X POST http://localhost:3000/api/chat \
 ```
 
 Expected: Should find the delimiter in output.
+
+---
+
+## Maxwell Multi-Endpoint API
+
+The Maxwell pipeline is split into 5 independent endpoints for Vercel serverless compatibility. Each has its own timeout budget.
+
+### POST `/api/maxwell/decompose`
+
+**Purpose:** Break query into sub-queries and assess complexity.
+
+**Timeout:** 30 seconds
+
+**Request:**
+```json
+{
+  "query": "What's the current state of nuclear fusion?"
+}
+```
+
+**Response:**
+```json
+{
+  "subQueries": [
+    {
+      "id": "q1",
+      "query": "latest nuclear fusion breakthroughs 2024",
+      "topic": "news",
+      "depth": "advanced",
+      "days": 7,
+      "purpose": "Find recent developments"
+    }
+  ],
+  "config": {
+    "synthesisModel": "google/gemini-3-flash-preview",
+    "resultsPerQuery": 5,
+    "maxClaimsToVerify": 30,
+    "verificationConcurrency": 6
+  },
+  "complexity": "standard",
+  "complexityReasoning": "Multi-faceted scientific question requiring recent data",
+  "durationMs": 2100
+}
+```
+
+---
+
+### POST `/api/maxwell/search`
+
+**Purpose:** Execute parallel searches and pre-embed passages.
+
+**Timeout:** 60 seconds
+
+**Request:**
+```json
+{
+  "subQueries": [...],
+  "config": {
+    "resultsPerQuery": 5
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "sources": [
+    {
+      "id": "s1",
+      "title": "LLNL Achieves Fusion Ignition",
+      "url": "https://...",
+      "snippet": "...",
+      "queryId": "q1",
+      "score": 0.92
+    }
+  ],
+  "searchMetadata": [
+    {
+      "queryId": "q1",
+      "query": "latest nuclear fusion breakthroughs 2024",
+      "resultsCount": 5,
+      "durationMs": 850,
+      "status": "success"
+    }
+  ],
+  "preparedEvidence": {
+    "passages": [
+      {
+        "text": "...",
+        "sourceIndex": 0,
+        "sourceId": "s1",
+        "startIndex": 0,
+        "endIndex": 150
+      }
+    ],
+    "embeddings": ["base64-encoded-float32-array", ...]
+  },
+  "durationMs": 2500
+}
+```
+
+**Note:** `preparedEvidence.embeddings` contains base64-encoded Float32Arrays. Pass this directly to `/verify`.
+
+---
+
+### POST `/api/maxwell/synthesize`
+
+**Purpose:** Generate answer with citations (streaming).
+
+**Timeout:** 30 seconds
+
+**Request:**
+```json
+{
+  "query": "What's the current state of nuclear fusion?",
+  "sources": [...],
+  "config": {
+    "synthesisModel": "google/gemini-3-flash-preview"
+  }
+}
+```
+
+**Response:** Server-Sent Events (SSE)
+
+```
+data: {"type":"synthesis-chunk","content":"The "}
+data: {"type":"synthesis-chunk","content":"National "}
+data: {"type":"synthesis-chunk","content":"Ignition "}
+...
+data: {"type":"synthesis-complete","answer":"The National Ignition Facility...","sourcesUsed":["s1","s2","s3"],"durationMs":4800}
+data: [DONE]
+```
+
+---
+
+### POST `/api/maxwell/verify`
+
+**Purpose:** Multi-signal claim verification (streaming).
+
+**Timeout:** 60 seconds
+
+**Request:**
+```json
+{
+  "answer": "The National Ignition Facility achieved...",
+  "sources": [...],
+  "preparedEvidence": {
+    "passages": [...],
+    "embeddings": [...]
+  },
+  "config": {
+    "maxClaimsToVerify": 30,
+    "verificationConcurrency": 6
+  }
+}
+```
+
+**Response:** Server-Sent Events (SSE)
+
+```
+data: {"type":"verification-start","claimsCount":5}
+data: {"type":"claim-verified","claim":{"id":"c1","text":"...","confidence":0.95,"entailment":"SUPPORTED",...},"current":1,"total":5}
+data: {"type":"claim-verified","claim":{"id":"c2",...},"current":2,"total":5}
+...
+data: {"type":"verification-complete","verification":{"claims":[...],"summary":{"totalClaims":5,"supported":4,...}},"durationMs":7800}
+data: [DONE]
+```
+
+---
+
+### POST `/api/maxwell/adjudicate`
+
+**Purpose:** Generate final verdict based on verification (streaming).
+
+**Timeout:** 30 seconds
+
+**Request:**
+```json
+{
+  "query": "What's the current state of nuclear fusion?",
+  "answer": "The National Ignition Facility achieved...",
+  "verification": {
+    "claims": [...],
+    "summary": {...}
+  }
+}
+```
+
+**Response:** Server-Sent Events (SSE)
+
+```
+data: {"type":"adjudication-chunk","content":"Based "}
+data: {"type":"adjudication-chunk","content":"on "}
+data: {"type":"adjudication-chunk","content":"verified "}
+...
+data: {"type":"adjudication-complete","durationMs":4400}
+data: [DONE]
+```
+
+---
+
+### POST `/api/maxwell` (Legacy)
+
+**Purpose:** Monolithic endpoint for local development (no timeout constraints).
+
+**Timeout:** 60 seconds
+
+**Request:**
+```json
+{
+  "query": "What's the current state of nuclear fusion?"
+}
+```
+
+**Response:** Server-Sent Events (SSE)
+
+```
+data: {"type":"phase-start","phase":"decomposition"}
+data: {"type":"phase-complete","phase":"decomposition","data":{...}}
+data: {"type":"phase-start","phase":"search"}
+data: {"type":"phase-complete","phase":"search","data":{...}}
+data: {"type":"synthesis-chunk","content":"The "}
+...
+data: {"type":"verification-progress","data":{"current":1,"total":5,...}}
+...
+data: {"type":"complete","data":{...}}
+data: [DONE]
+```
+
+---
+
+## Testing Maxwell Endpoints
+
+### Quick Decompose Test
+
+```bash
+curl -X POST http://localhost:3000/api/maxwell/decompose \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What is the capital of France?"}'
+```
+
+### Full Pipeline Test (with jq)
+
+```bash
+# 1. Decompose
+DECOMPOSE=$(curl -s -X POST http://localhost:3000/api/maxwell/decompose \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What is the capital of France?"}')
+
+echo "Decomposition complete: $(echo $DECOMPOSE | jq -r '.complexity')"
+
+# 2. Search (requires subQueries and config from step 1)
+# ...continue with subsequent endpoints
+```
+
+### Health Check
+
+```bash
+curl http://localhost:3000/api/maxwell
+# Returns: {"status":"ok","timestamp":"..."}
+```

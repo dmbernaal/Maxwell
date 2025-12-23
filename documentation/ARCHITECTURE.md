@@ -1,15 +1,24 @@
 # Maxwell Architecture
 
-> **Last Updated:** December 19, 2024  
-> **Status:** Production-ready with search + citations
+> **Last Updated:** December 23, 2024  
+> **Status:** Production-ready with search + citations + verified search (Maxwell mode)
 
 ## Overview
 
-Maxwell is a **search-augmented AI assistant** (similar to Perplexity) that:
+Maxwell is a **search-augmented AI assistant** (similar to Perplexity) with two modes:
+
+### Standard Mode
 1. Takes user questions
 2. Searches the web for real-time information via Tavily
 3. Returns answers with clickable citations `[1]`, `[2]`
 4. Shows sources panel below responses
+
+### Maxwell Mode (Verified Search)
+1. Decomposes query into focused sub-queries
+2. Executes parallel searches with context-aware parameters
+3. Synthesizes answer with citations
+4. **Verifies every claim** using multi-signal analysis
+5. Reconstructs final answer from verified facts only
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -249,6 +258,69 @@ AI SDK v5 changed the property name for tool execution results. The `tool-result
 
 ---
 
+---
+
+## Maxwell Mode: Multi-Endpoint Architecture
+
+For Vercel deployment, Maxwell's 5-phase pipeline is split into independent serverless functions:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    MAXWELL MULTI-ENDPOINT FLOW                       │
+│                                                                       │
+│  useMaxwell hook (Client Orchestrator)                               │
+│         │                                                             │
+│         ├──▶ POST /api/maxwell/decompose                             │
+│         │         └── Returns: subQueries, config, complexity         │
+│         │                                                             │
+│         ├──▶ POST /api/maxwell/search                                │
+│         │         └── Returns: sources, preparedEvidence (embeddings!)│
+│         │                                                             │
+│         ├──▶ POST /api/maxwell/synthesize  [SSE]                     │
+│         │         └── Streams: synthesis chunks → complete            │
+│         │                                                             │
+│         ├──▶ POST /api/maxwell/verify  [SSE]                         │
+│         │         └── Streams: claim verification events              │
+│         │                                                             │
+│         └──▶ POST /api/maxwell/adjudicate  [SSE]                     │
+│                   └── Streams: final verdict                          │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Why Multi-Endpoint?
+
+| Problem | Single Function | Multi-Endpoint |
+|---------|----------------|----------------|
+| Vercel timeout | 60s total for everything | 60s per endpoint |
+| Embedding 3000+ texts | Times out (~45s) | Done in search phase |
+| Verification | Never starts | Gets pre-computed embeddings |
+
+### Key Optimization: Pre-Embedding
+
+The `/search` endpoint pre-embeds all passages before returning:
+
+```typescript
+// Search does the heavy lifting
+const sources = await parallelSearch(subQueries);
+const preparedEvidence = await prepareEvidence(sources); // ⬅ Embed here!
+
+return { sources, preparedEvidence }; // Embeddings included
+```
+
+The `/verify` endpoint receives ready-to-use embeddings, only needing to embed claims (~5-30 texts).
+
+### State Handoff
+
+| Phase | Receives | Returns |
+|-------|----------|---------|
+| Decompose | `query` | `subQueries`, `config` |
+| Search | `subQueries`, `config` | `sources`, `preparedEvidence` |
+| Synthesize | `query`, `sources`, `config` | `answer` (streamed) |
+| Verify | `answer`, `sources`, `preparedEvidence`, `config` | `verification` (streamed) |
+| Adjudicate | `query`, `answer`, `verification` | Final verdict (streamed) |
+
+---
+
 ## Extension Points
 
 ### Adding a New Tool
@@ -260,3 +332,9 @@ AI SDK v5 changed the property name for tool execution results. The `tool-result
 1. Add to `AVAILABLE_MODELS` in `models.ts`
 2. Test tool calling works
 3. Add to `getToolsForModel()` if schema differs
+
+### Adding a Maxwell Phase Endpoint
+1. Create route file in `app/api/maxwell/[phase]/route.ts`
+2. Define request/response types in `app/lib/maxwell/api-types.ts`
+3. Set appropriate `maxDuration` (30s or 60s)
+4. Update `useMaxwell` hook to call the new endpoint

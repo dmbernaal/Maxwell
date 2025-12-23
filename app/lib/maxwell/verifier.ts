@@ -970,6 +970,77 @@ async function mapAsyncWithConcurrency<T, U>(
 }
 
 // ============================================
+// MULTI-ENDPOINT STREAMING VERIFICATION
+// ============================================
+
+/**
+ * Streaming verification with pre-computed evidence for multi-endpoint architecture.
+ * This variant is optimized for the split API approach where embeddings are pre-computed
+ * in the /search endpoint to avoid the 45s bottleneck.
+ *
+ * @param answer - The synthesized answer to verify
+ * @param sources - The sources used in synthesis
+ * @param precomputedEvidence - Pre-computed passages and embeddings from /search
+ * @param maxClaimsToVerify - Maximum claims to verify
+ * @param verificationConcurrency - Concurrency limit for verification
+ */
+export async function* verifyClaimsWithPrecomputedEvidence(
+    answer: string,
+    sources: MaxwellSource[],
+    precomputedEvidence: PreparedEvidence,
+    maxClaimsToVerify: number = MAX_CLAIMS_TO_VERIFY,
+    verificationConcurrency: number = DEFAULT_VERIFICATION_CONCURRENCY
+): AsyncGenerator<{ type: 'progress'; data: VerificationProgress } | { type: 'result'; data: VerificationOutput }> {
+    const progressQueue: VerificationProgress[] = [];
+    let resolveProgress: (() => void) | null = null;
+    let isDone = false;
+    let error: unknown = null;
+
+    const onProgress = (p: VerificationProgress) => {
+        progressQueue.push(p);
+        if (resolveProgress) {
+            resolveProgress();
+            resolveProgress = null;
+        }
+    };
+
+    const verificationPromise = verifyClaims(
+        answer,
+        sources,
+        onProgress,
+        precomputedEvidence,
+        maxClaimsToVerify,
+        verificationConcurrency
+    )
+        .then((result) => {
+            isDone = true;
+            if (resolveProgress) resolveProgress();
+            return result;
+        })
+        .catch((err) => {
+            isDone = true;
+            error = err;
+            if (resolveProgress) resolveProgress();
+            throw err;
+        });
+
+    while (!isDone || progressQueue.length > 0) {
+        if (progressQueue.length > 0) {
+            yield { type: 'progress', data: progressQueue.shift()! };
+        } else {
+            if (isDone) break;
+            await new Promise<void>((resolve) => {
+                resolveProgress = resolve;
+            });
+        }
+    }
+
+    if (error) throw error;
+    const result = await verificationPromise;
+    yield { type: 'result', data: result };
+}
+
+// ============================================
 // EXPORTS
 // ============================================
 
