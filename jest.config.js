@@ -6,16 +6,22 @@ module.exports = {
   },
   testMatch: ['**/__tests__/**/*.test.ts'],
   transform: {
-    '^.+\\.tsx?$': ['ts-jest', {
+    '^.+\\.(ts|tsx)$': ['ts-jest', {
       tsconfig: {
         module: 'commonjs',
         esModuleInterop: true,
         allowSyntheticDefaultImports: true,
       },
     }],
+    // Transform ESM modules
+    '^.+\\.js$': ['ts-jest', {
+      useESM: true,
+    }],
   },
   // Handle ESM modules like p-limit
   transformIgnorePatterns: [
-    'node_modules/(?!(p-limit|yocto-queue)/)',
+    '/node_modules/(?!(p-limit|yocto-queue)/)',
   ],
+  // Properly handle ESM
+  extensionsToTreatAsEsm: ['.ts'],
 };

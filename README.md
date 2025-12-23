@@ -117,15 +117,53 @@ npm run dev
 
 ## 🧪 Testing
 
-Maxwell includes unit tests for core verification logic.
+Maxwell includes comprehensive tests organized by type:
+
+### Quick Start
 
 ```bash
-npm test
+# Run all unit tests (no API keys required)
+npm run test:unit
+
+# Run with coverage report
+npm run test:coverage
 ```
 
-Tests cover:
-- **Numeric Consistency**: Range overlaps, containment, exact matches
-- **Adaptive Compute**: Resource allocation by complexity level
+### Test Structure
+
+```
+__tests__/
+├── unit/                          # No external dependencies
+│   ├── blob-storage.test.ts       # Embedding encoding/decoding
+│   ├── embeddings-math.test.ts    # Cosine similarity, top matches
+│   └── verifier-signals.test.ts   # Numeric extraction, normalization, aggregation
+└── integration/                   # Requires API keys
+    └── api-endpoints.test.ts      # Full pipeline E2E
+```
+
+### Test Commands
+
+| Command | Description | API Keys? |
+|---------|-------------|-----------|
+| `npm run test:unit` | Unit tests only | ❌ No |
+| `npm run test:integration` | Integration tests | ✅ Yes |
+| `npm test` | All tests | ✅ Yes |
+| `npm run test:coverage` | Unit tests with coverage | ❌ No |
+
+### What's Tested
+
+**Unit Tests (48 tests):**
+- **Blob Storage**: Base64 encoding/decoding of embeddings, round-trip precision
+- **Embeddings Math**: Cosine similarity, orthogonal/opposite vectors, top-N matching
+- **Verifier Signals**: Number extraction, normalization (billions/millions/%), consistency checks, confidence aggregation
+
+**Integration Tests** (requires `OPENROUTER_API_KEY` + `TAVILY_API_KEY`):
+- Full 5-phase pipeline: Decompose → Search → Synthesize → Verify → Adjudicate
+- Real API calls to Tavily and OpenRouter
+
+### Legacy Tests
+
+Original phase-by-phase tests from initial development are preserved in `tests/legacy/` for reference.
 
 ---
 
