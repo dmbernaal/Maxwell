@@ -33,7 +33,7 @@ export function SubQueryList({ subQueries, searchMetadata, sources, reasoning }:
 
             {/* Strategy / Reasoning */}
             {reasoning && (
-                <div className="mb-6 pl-3 border-l border-white/10 ml-[3px]">
+                <div className="mb-6 pl-4 border-l border-white/10 ml-[7px]">
                     <div className="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-1.5">
                         Strategy
                     </div>
@@ -43,9 +43,9 @@ export function SubQueryList({ subQueries, searchMetadata, sources, reasoning }:
                 </div>
             )}
             {/* Git Graph List */}
-            <div className="relative pl-3">
-                {/* Main Trunk Line - Glowing Circuit */}
-                <div className="absolute top-0 bottom-4 left-[3px] w-[1px] bg-white/20 shadow-[0_0_8px_rgba(255,255,255,0.2)]" />
+            <div className="relative pl-4">
+                {/* Main Trunk Line - Linear Style (Subtle, No Glow) */}
+                <div className="absolute top-0 bottom-4 left-[7px] w-[1px] bg-white/10" />
 
                 <div className="space-y-6">
                     {subQueries.map((sq, idx) => {
@@ -63,16 +63,23 @@ export function SubQueryList({ subQueries, searchMetadata, sources, reasoning }:
                                 transition={{ delay: idx * 0.1 }}
                                 className="relative flex items-start gap-3 group"
                             >
-                                {/* Node Dot */}
-                                <div className={`absolute -left-[16px] top-1.5 w-[7px] h-[7px] rounded-full border ${isDeadEnd ? 'bg-white/5 border-white/20' :
-                                    isComplete ? 'bg-emerald-500 border-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
-                                        'bg-white border-white shadow-[0_0_8px_rgba(255,255,255,0.5)]'
-                                    } z-10 transition-all duration-500`} />
+                                {/* Node Dot - Perfectly Aligned (Center at 7.5px) */}
+                                {/* Container pl-4 (16px). Dot needs to be at left 3px (3 + 4.5 = 7.5 center). */}
+                                {/* Relative left: 3 - 16 = -13px */}
+                                <div className={`absolute -left-[13px] top-1.5 w-[9px] h-[9px] rounded-full border ${isDeadEnd ? 'bg-[#18151d] border-white/20' :
+                                    isComplete ? 'bg-emerald-500 border-emerald-500' :
+                                        'bg-[#18151d] border-white/20'
+                                    } z-10 transition-all duration-500 flex items-center justify-center`}>
+                                    {/* Inner Dot for In-Progress/Pending */}
+                                    {!isComplete && !isDeadEnd && (
+                                        <div className="w-1 h-1 rounded-full bg-white/40" />
+                                    )}
+                                </div>
 
                                 <div className="flex-1 min-w-0 pt-0.5">
                                     <div className="flex items-center gap-2">
                                         <p className={`text-[13px] font-mono leading-relaxed transition-colors ${isDeadEnd ? 'text-white/30 line-through decoration-white/10' :
-                                            isComplete ? 'text-white/80' : 'text-white/40'
+                                            isComplete ? 'text-white/90' : 'text-white/50'
                                             }`}>
                                             "{sq.query}"
                                         </p>
