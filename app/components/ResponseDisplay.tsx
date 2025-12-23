@@ -4,9 +4,10 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Check, Sparkles, ArrowRight } from 'lucide-react';
+import { Check, Sparkles, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { Message, Source, AgentState, DebugStep } from '../types';
-import { AdjudicationPanel } from './maxwell/AdjudicationPanel'; // Added AdjudicationPanel import
+import { AdjudicationPanel } from './maxwell/AdjudicationPanel';
+import ClaimHeatmap from './maxwell/ClaimHeatmap';
 
 // ... (rest of imports)
 
@@ -173,6 +174,13 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
   // State for collapsing sources
   const [isSourcesExpanded, setIsSourcesExpanded] = useState(false);
 
+  // State for claim heatmap (Maxwell mode only)
+  const [showHeatmap, setShowHeatmap] = useState(false);
+
+  // Check if we have Maxwell verification data
+  const hasVerification = message?.maxwellState?.verification?.claims?.length > 0;
+  const verificationClaims = message?.maxwellState?.verification?.claims || null;
+
   // Process content for citations if we have sources
   const processedContent = hasRealSources && message
     ? processCitations(message.content, sources)
@@ -216,111 +224,154 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
         </div>
       )}
 
-      {/* Main Content - Markdown Rendered */}
-      <motion.div
-        variants={container}
-        initial={isHistory ? "show" : "hidden"}
-        animate="show"
-        className="prose prose-invert prose-lg leading-relaxed text-white/70 mb-8 min-h-[20px]"
-      >
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          components={{
-            // Headers - styled for dark mode
-            h1: ({ children }) => (
-              <h1 className="text-xl font-bold text-white mt-6 mb-3">{children}</h1>
-            ),
-            h2: ({ children }) => (
-              <h2 className="text-lg font-bold text-white/95 mt-5 mb-2 border-b border-white/10 pb-1">{children}</h2>
-            ),
-            h3: ({ children }) => (
-              <h3 className="text-base font-bold text-white/90 mt-4 mb-2">{children}</h3>
-            ),
-            // Horizontal rule
-            hr: () => <hr className="my-6 border-white/10" />,
-            p: ({ children }) => (
-              <p className="mb-3 last:mb-0 leading-relaxed text-[17px]">{children}</p>
-            ),
-            a: ({ href, children }) => {
-              const content = String(children);
-              const isCitation = /^\^\d+\^$/.test(content);
-
-              if (isCitation) {
-                const number = content.replace(/\^/g, '');
-                const source = sources.find(s => s.url === href);
-                return (
-                  <CitationBadge
-                    href={href}
-                    number={number}
-                    source={source}
-                  />
-                );
+      {/* Heatmap Toggle Button - Only show for Maxwell with verification */}
+      {hasVerification && !isActive && (
+        <div className="flex justify-end mb-2">
+          <button
+            onClick={() => setShowHeatmap(!showHeatmap)}
+            className={`
+              flex items-center gap-1.5 px-2.5 py-1.5
+              text-[10px] font-medium uppercase tracking-wider
+              rounded-full border transition-all duration-200
+              ${showHeatmap
+                ? 'bg-brand-accent/20 text-brand-accent border-brand-accent/30 hover:bg-brand-accent/30'
+                : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10 hover:text-white/60'
               }
+            `}
+          >
+            {showHeatmap ? (
+              <>
+                <Eye size={10} />
+                <span>Confidence Heatmap</span>
+              </>
+            ) : (
+              <>
+                <EyeOff size={10} />
+                <span>Show Heatmap</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
-              return (
-                <a
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-white/90 font-medium underline decoration-white/20 underline-offset-2 hover:text-white hover:decoration-brand-accent transition-all"
-                >
-                  {children}
-                </a>
-              );
-            },
-            strong: ({ children }) => (
-              <strong className="font-semibold text-white">{children}</strong>
-            ),
-            ul: ({ children }) => (
-              <ul className="list-disc list-inside mb-3 space-y-1 ml-2">{children}</ul>
-            ),
-            ol: ({ children }) => (
-              <ol className="list-decimal list-inside mb-3 space-y-1 ml-2">{children}</ol>
-            ),
-            li: ({ children }) => (
-              <li className="leading-relaxed">{children}</li>
-            ),
-            code: ({ className, children }) => {
-              const isInline = !className;
-              return isInline ? (
-                <code className="bg-zinc-700/50 px-1.5 py-0.5 rounded text-sm font-mono">
-                  {children}
-                </code>
-              ) : (
-                <pre className="bg-zinc-900 p-3 rounded-lg overflow-x-auto text-sm font-mono">
-                  <code>{children}</code>
-                </pre>
-              );
-            },
-            sup: ({ children }) => (
-              <sup className="text-brand-accent text-xs font-medium">{children}</sup>
-            ),
-            // Table components for GFM tables
-            table: ({ children }) => (
-              <div className="overflow-x-auto my-4">
-                <table className="min-w-full border-collapse text-sm">{children}</table>
-              </div>
-            ),
-            thead: ({ children }) => (
-              <thead className="border-b border-white/20">{children}</thead>
-            ),
-            tbody: ({ children }) => (
-              <tbody className="divide-y divide-white/10">{children}</tbody>
-            ),
-            tr: ({ children }) => (
-              <tr className="hover:bg-white/5">{children}</tr>
-            ),
-            th: ({ children }) => (
-              <th className="px-3 py-2 text-left font-semibold text-white/90">{children}</th>
-            ),
-            td: ({ children }) => (
-              <td className="px-3 py-2 text-white/70">{children}</td>
-            ),
-          }}
+      {/* Main Content - Either Heatmap or Regular Markdown */}
+      {showHeatmap && hasVerification && verificationClaims ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="prose prose-invert prose-lg leading-relaxed text-white/70 mb-8 min-h-[20px]"
         >
-          {processedContent}
-        </ReactMarkdown>
-      </motion.div>
+          <ClaimHeatmap
+            content={message?.content || ''}
+            claims={verificationClaims}
+          />
+        </motion.div>
+      ) : (
+        <motion.div
+          variants={container}
+          initial={isHistory ? "show" : "hidden"}
+          animate="show"
+          className="prose prose-invert prose-lg leading-relaxed text-white/70 mb-8 min-h-[20px]"
+        >
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              // Headers - styled for dark mode
+              h1: ({ children }) => (
+                <h1 className="text-xl font-bold text-white mt-6 mb-3">{children}</h1>
+              ),
+              h2: ({ children }) => (
+                <h2 className="text-lg font-bold text-white/95 mt-5 mb-2 border-b border-white/10 pb-1">{children}</h2>
+              ),
+              h3: ({ children }) => (
+                <h3 className="text-base font-bold text-white/90 mt-4 mb-2">{children}</h3>
+              ),
+              // Horizontal rule
+              hr: () => <hr className="my-6 border-white/10" />,
+              p: ({ children }) => (
+                <p className="mb-3 last:mb-0 leading-relaxed text-[17px]">{children}</p>
+              ),
+              a: ({ href, children }) => {
+                const content = String(children);
+                const isCitation = /^\^\d+\^$/.test(content);
+
+                if (isCitation) {
+                  const number = content.replace(/\^/g, '');
+                  const source = sources.find(s => s.url === href);
+                  return (
+                    <CitationBadge
+                      href={href}
+                      number={number}
+                      source={source}
+                    />
+                  );
+                }
+
+                return (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-white/90 font-medium underline decoration-white/20 underline-offset-2 hover:text-white hover:decoration-brand-accent transition-all"
+                  >
+                    {children}
+                  </a>
+                );
+              },
+              strong: ({ children }) => (
+                <strong className="font-semibold text-white">{children}</strong>
+              ),
+              ul: ({ children }) => (
+                <ul className="list-disc list-inside mb-3 space-y-1 ml-2">{children}</ul>
+              ),
+              ol: ({ children }) => (
+                <ol className="list-decimal list-inside mb-3 space-y-1 ml-2">{children}</ol>
+              ),
+              li: ({ children }) => (
+                <li className="leading-relaxed">{children}</li>
+              ),
+              code: ({ className, children }) => {
+                const isInline = !className;
+                return isInline ? (
+                  <code className="bg-zinc-700/50 px-1.5 py-0.5 rounded text-sm font-mono">
+                    {children}
+                  </code>
+                ) : (
+                  <pre className="bg-zinc-900 p-3 rounded-lg overflow-x-auto text-sm font-mono">
+                    <code>{children}</code>
+                  </pre>
+                );
+              },
+              sup: ({ children }) => (
+                <sup className="text-brand-accent text-xs font-medium">{children}</sup>
+              ),
+              // Table components for GFM tables
+              table: ({ children }) => (
+                <div className="overflow-x-auto my-4">
+                  <table className="min-w-full border-collapse text-sm">{children}</table>
+                </div>
+              ),
+              thead: ({ children }) => (
+                <thead className="border-b border-white/20">{children}</thead>
+              ),
+              tbody: ({ children }) => (
+                <tbody className="divide-y divide-white/10">{children}</tbody>
+              ),
+              tr: ({ children }) => (
+                <tr className="hover:bg-white/5">{children}</tr>
+              ),
+              th: ({ children }) => (
+                <th className="px-3 py-2 text-left font-semibold text-white/90">{children}</th>
+              ),
+              td: ({ children }) => (
+                <td className="px-3 py-2 text-white/70">{children}</td>
+              ),
+            }}
+          >
+            {processedContent}
+          </ReactMarkdown>
+        </motion.div>
+      )}
 
       {/* Sources Panel - Show if we have sources AND (agent is done typing OR history OR verifying/adjudicating) */}
       {hasRealSources && (!isActive || isHistory || message?.maxwellState?.phase === 'verification' || message?.maxwellState?.phase === 'adjudication') && (

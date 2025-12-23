@@ -99,6 +99,7 @@ maxwell-v2/
 | `synthesizer.ts` | Answer synthesis | `synthesize()`, `synthesizeComplete()`, `countCitations()` |
 | `embeddings.ts` | Embedding utilities | `embedText()`, `embedTexts()`, `cosineSimilarity()`, `findTopMatches()` |
 | `verifier.ts` | Multi-signal verification | `verifyClaims()`, `extractClaims()`, `chunkSourcesIntoPassages()`, `checkEntailment()`, `aggregateSignals()` |
+| `claimMatcher.ts` | Claim-to-text mapping for heatmap | `mapClaimsToText()`, `getConfidenceColorClass()`, `getEntailmentLabel()` |
 | `index.ts` | Main orchestrator | `runMaxwell()`, `runMaxwellComplete()`, re-exports |
 
 ### Hooks (`app/hooks/`)
@@ -128,6 +129,7 @@ maxwell-v2/
 | `SubQueryList.tsx` | Sub-query list with search status |
 | `SourcesPanel.tsx` | Collapsible sources list |
 | `VerificationPanel.tsx` | Claims with verdicts and evidence |
+| `ClaimHeatmap.tsx` | Confidence heatmap overlay on synthesized text |
 | `index.ts` | Barrel exports |
 
 ### State
