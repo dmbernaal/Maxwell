@@ -99,71 +99,64 @@ export default function Home() {
     }
   }, [activeSessionId, messages, maxwell]);
 
-  // Smart auto-scroll with throttling to prevent jitter
-  const userScrolledAway = useRef(false);
-  const lastScrollTop = useRef(0);
-  const scrollThrottleRef = useRef<number | null>(null);
+  // ============================================
+  // POSITION-BASED AUTOSCROLL (Robust Solution)
+  // ============================================
 
-  // Throttled scroll to bottom - prevents jitter during rapid streaming
-  const scrollToBottom = useCallback(() => {
-    if (scrollThrottleRef.current) return; // Already scheduled
+  // We use a ref so the MutationObserver can read the latest value without re-binding
+  const isAutoScrollEnabled = useRef(true);
 
-    scrollThrottleRef.current = requestAnimationFrame(() => {
-      const el = scrollRef.current;
-      if (el && !userScrolledAway.current) {
-        el.scrollTop = el.scrollHeight;
-      }
-      scrollThrottleRef.current = null;
-    });
-  }, []);
-
-  // Detect if user manually scrolled UP (indicating they want to read something)
+  // The Scroll Handler - purely checks: "Is the user currently at the bottom?"
   const handleChatScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
 
-    const currentScrollTop = el.scrollTop;
-    const isNearBottom = el.scrollHeight - currentScrollTop - el.clientHeight < 200;
+    const { scrollTop, scrollHeight, clientHeight } = el;
 
-    // User scrolled UP - they want to stay where they are
-    if (currentScrollTop < lastScrollTop.current - 20) {
-      userScrolledAway.current = true;
-    }
+    // Tolerance of 50px allows for minor calculation differences or padding
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    const isAtBottom = distanceFromBottom <= 50;
 
-    // User scrolled back to bottom - re-enable auto-scroll
-    if (isNearBottom) {
-      userScrolledAway.current = false;
-    }
-
-    lastScrollTop.current = currentScrollTop;
+    // If we are at the bottom, enable lock. If we aren't, disable it.
+    isAutoScrollEnabled.current = isAtBottom;
   }, []);
 
-  // GENERAL SOLUTION: Use MutationObserver to watch for ANY content changes
-  // This handles sources, analysis complete, verification, or any future additions
+  // Instant Scroll Function - no RAF delay to prevent jitter during streaming
+  const forceScrollToBottom = useCallback(() => {
+    const el = scrollRef.current;
+    if (el) {
+      // Use 'instant' behavior to prevent "fighting" the stream
+      el.scrollTo({ top: el.scrollHeight, behavior: 'instant' as ScrollBehavior });
+    }
+  }, []);
+
+  // MutationObserver for Content Changes - fires whenever text streams in or elements are added
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
 
     const observer = new MutationObserver(() => {
-      // Content changed - scroll to bottom if user hasn't scrolled away
-      scrollToBottom();
+      if (isAutoScrollEnabled.current) {
+        forceScrollToBottom();
+      }
     });
 
     observer.observe(el, {
-      childList: true,      // Watch for added/removed children
-      subtree: true,        // Watch all descendants
-      characterData: true,  // Watch for text content changes
+      childList: true,
+      subtree: true,
+      characterData: true,
     });
 
     return () => observer.disconnect();
-  }, [scrollToBottom]);
+  }, [forceScrollToBottom]);
 
-  // Reset scroll tracking when agent starts a new response
+  // Reset on New Session / Agent Start - always snap back to bottom
   useEffect(() => {
     if (agentState === 'thinking' || agentState === 'orchestrating') {
-      userScrolledAway.current = false;
+      isAutoScrollEnabled.current = true;
+      forceScrollToBottom();
     }
-  }, [agentState]);
+  }, [agentState, forceScrollToBottom]);
 
   // Update layout based on state
   useEffect(() => {

@@ -1,14 +1,6 @@
-/**
- * Event Log Component
- * 
- * The "Matrix View" - shows a live stream of raw system events.
- * 
- * @module components/maxwell/EventLog
- */
-
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { Terminal } from 'lucide-react';
 import type { MaxwellEvent } from '../../lib/maxwell/types';
 
@@ -18,25 +10,26 @@ interface EventLogProps {
 
 export function EventLog({ events }: EventLogProps) {
     const containerRef = useRef<HTMLDivElement>(null);
+    // Default to true so it follows logs initially
     const isAutoScrollEnabled = useRef(true);
 
-    // Track if user has scrolled up manually
-    const handleScroll = () => {
+    // Robust position checking
+    const handleScroll = useCallback(() => {
         const el = containerRef.current;
         if (!el) return;
 
-        // If user is near bottom (within 30px), enable auto-scroll
-        const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
-        isAutoScrollEnabled.current = isNearBottom;
-    };
+        // 30px threshold for stickiness
+        const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+        isAutoScrollEnabled.current = distanceFromBottom <= 30;
+    }, []);
 
-    // Auto-scroll to bottom only if auto-scroll is enabled
+    // Scroll effect when events change
     useEffect(() => {
         const el = containerRef.current;
         if (el && isAutoScrollEnabled.current) {
-            el.scrollTop = el.scrollHeight;
+            el.scrollTo({ top: el.scrollHeight, behavior: 'instant' as ScrollBehavior });
         }
-    }, [events]);
+    }, [events]); // Trigger on new events
 
     if (events.length === 0) return null;
 
