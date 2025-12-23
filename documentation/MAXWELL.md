@@ -633,9 +633,9 @@ The Adjudicator enforces a dense, authoritative tone:
 
 > **Architecture:** Multi-endpoint (Vercel production)
 
-**The Problem:** In a serverless environment, embedding 3000+ passages during verification causes timeouts.
+**The Problem:** In a serverless environment, embedding 3000+ passages during verification causes timeouts. Additionally, passing embeddings directly in API responses hits Vercel's 4.5MB payload limit.
 
-**The Solution:** Move embedding to the `/search` endpoint:
+**The Solution:** Move embedding to the `/search` endpoint and use **Vercel Blob Storage** to transfer large payloads:
 
 ```typescript
 // In /api/maxwell/search/route.ts
@@ -648,28 +648,43 @@ export async function POST(request: NextRequest) {
   // 2. PRE-EMBED all passages HERE (the key optimization!)
   const preparedEvidence = await prepareEvidence(searchOutput.sources);
   
-  // 3. Return both sources AND embeddings
+  // 3. Store in Vercel Blob (avoids 4.5MB payload limit)
+  const blobResult = await storeEvidenceInBlob(preparedEvidence);
+  
+  // 4. Return sources + Blob URL (tiny payload!)
   return Response.json({
     sources: searchOutput.sources,
-    preparedEvidence, // { passages: [...], embeddings: [...] }
+    evidenceBlobUrl: blobResult.blobUrl, // URL, not the data itself
   });
 }
 ```
 
 **Why This Works:**
 - Search phase has plenty of time budget (~2s for search, ~3s for embedding = ~5s total)
-- Verify phase receives pre-computed embeddings and only embeds claims (~5-30 texts)
+- Embeddings stored in Blob, not response body (bypasses 4.5MB limit)
+- Verify phase fetches from Blob and only embeds claims (~5-30 texts)
 - Each phase stays well under the 60-second timeout
 
-**Embedding Encoding:** Float32Array embeddings are base64-encoded for JSON transport:
-```typescript
-// Encode (in search endpoint)
-const base64 = Buffer.from(new Float32Array(embedding).buffer).toString('base64');
+### Vercel Blob Storage (Production)
 
-// Decode (in verify endpoint)  
-const buffer = Buffer.from(base64, 'base64');
-const embedding = new Float32Array(buffer.buffer);
+**Problem:** 988 passages × 3072 dimensions × 4 bytes = ~12MB — far exceeds Vercel's 4.5MB limit.
+
+**Solution:** Store embeddings in Vercel Blob, pass URL between endpoints:
+
 ```
+┌─────────────────────────────────────────────────────────────┐
+│  /search  →  [12MB embeddings]  →  Vercel Blob  →  URL     │
+│  Client receives URL, passes to /verify                     │
+│  /verify  →  Fetches from Blob (server-to-server, fast)    │
+│  /verify  →  Deletes Blob after completion (cleanup)        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Hybrid Mode:** For local development (no Vercel Blob token), embeddings are stored as data URLs:
+- **Production:** Vercel Blob Storage (requires `BLOB_READ_WRITE_TOKEN`)
+- **Local:** Base64 data URLs (no size limits locally)
+
+**File:** `app/lib/maxwell/blob-storage.ts`
 
 ---
 
@@ -859,13 +874,13 @@ The **`/verify` endpoint** receives pre-computed embeddings and only needs to:
 {
   "sources": [...],
   "searchMetadata": [...],
-  "preparedEvidence": {
-    "passages": [...],
-    "embeddings": [...] // Base64-encoded Float32Arrays
-  },
+  "evidenceBlobUrl": "https://xyz.blob.vercel-storage.com/maxwell-evidence-123.json",
+  "evidenceStats": { "passageCount": 988, "embeddingCount": 988 },
   "durationMs": 2500
 }
 ```
+
+> **Note:** Embeddings are stored in Vercel Blob Storage to bypass the 4.5MB payload limit. The URL is passed to `/verify` which fetches directly from Blob.
 
 ---
 
@@ -905,10 +920,12 @@ data: [DONE]
 {
   "answer": "...",
   "sources": [...],
-  "preparedEvidence": { "passages": [...], "embeddings": [...] },
+  "evidenceBlobUrl": "https://xyz.blob.vercel-storage.com/maxwell-evidence-123.json",
   "config": { "maxClaimsToVerify": 30, "verificationConcurrency": 6 }
 }
 ```
+
+> **Note:** The endpoint fetches embeddings from the Blob URL (server-to-server), then deletes the Blob after verification completes.
 
 **Response:** Server-Sent Events
 ```
@@ -1160,7 +1177,7 @@ The heatmap shows coverage statistics:
 app/lib/maxwell/
 ├── index.ts          # Orchestrator - runs the 5-phase pipeline (local dev)
 ├── types.ts          # All TypeScript interfaces
-├── api-types.ts      # Request/Response types for multi-endpoint architecture (NEW)
+├── api-types.ts      # Request/Response types for multi-endpoint architecture
 ├── constants.ts      # All tunable parameters
 ├── configFactory.ts  # Adaptive Compute - generates ExecutionConfig from complexity
 ├── prompts.ts        # LLM prompts with helpers (NLI, Decomposition, Synthesis)
@@ -1170,6 +1187,7 @@ app/lib/maxwell/
 ├── verifier.ts       # Phase 4: Answer → Verified claims (Temporal + Range-Aware)
 ├── adjudicator.ts    # Phase 5: Verified claims → Reconstructed answer
 ├── embeddings.ts     # Vector embedding utilities
+├── blob-storage.ts   # Vercel Blob utilities for large payload transfer
 ├── claimMatcher.ts   # Maps verified claims to text sentences for heatmap
 └── env.ts            # Environment variable access
 

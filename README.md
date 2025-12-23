@@ -26,13 +26,13 @@ graph LR
 
 | Feature | Description |
 |---------|-------------|
-| **Multi-Endpoint Architecture** | Pipeline split into 5 independent serverless functions for Vercel compatibility. Each phase stays under 60s timeout. |
-| **Pre-Embedding Optimization** | Embeddings computed during search phase, not verification. Reduces verify time from ~45s to ~8s. |
-| **Adaptive Compute** | Analyzes query complexity before acting. Simple queries get Gemini Flash + 6x concurrency (low latency). Deep research gets Claude Sonnet + 3x concurrency + raw content fetching (high precision). |
-| **Temporal Verification** | NLI enforces "Recency Superiority" — old evidence cannot contradict current status (e.g., software versions, CEOs). |
-| **Reasoning Bridge** | Instead of deleting unverified data, the Adjudicator uses hedging language ("Reports suggest...") to preserve utility while maintaining honesty. |
-| **Saturated Pipeline** | p-limit controls 20 parallel embedding requests with deduplication, achieving 5x fewer HTTP calls than naive batching. |
-| **Glass Box UI** | Visualizes the "thinking" process, exposing confidence scores for every claim. |
+| **Multi-Endpoint Architecture** | Pipeline split into 5 serverless functions for Vercel. Each phase under 60s timeout. |
+| **Vercel Blob for Large Payloads** | Embeddings (~12MB) stored in Blob Storage, passed as URL. Bypasses 4.5MB payload limit. |
+| **Pre-Embedding Optimization** | Embeddings computed during search, not verification. Reduces verify from ~45s to ~8s. |
+| **Adaptive Compute** | Analyzes query complexity. Simple → Gemini Flash (fast). Complex → Claude Sonnet (precise). |
+| **Temporal Verification** | NLI enforces "Recency Superiority" — old evidence cannot contradict current status. |
+| **Reasoning Bridge** | Uses hedging language for unverified data instead of deleting it. |
+| **Glass Box UI** | Visualizes the "thinking" process with per-claim confidence scores. |
 
 ---
 
@@ -65,6 +65,7 @@ app/
         ├── verifier.ts            # Phase 4: Multi-signal verification
         ├── adjudicator.ts         # Phase 5: Reconstruction
         ├── embeddings.ts          # Saturated pipeline embeddings
+        ├── blob-storage.ts        # Vercel Blob utilities
         └── prompts.ts             # All LLM prompts
 ```
 
@@ -80,9 +81,9 @@ app/
 | **Search** | Tavily API (Context-Aware w/ Raw Content) |
 | **Models** | Google Gemini 3 Flash (Speed) / Claude Sonnet 4.5 (Reasoning) |
 | **Embeddings** | Google Gemini Embedding 001 (Primary) / Qwen 3 (Fallback) |
+| **Large Payloads** | Vercel Blob Storage (bypasses 4.5MB limit) |
 | **Streaming** | Server-Sent Events (SSE) for real-time UI |
 | **State** | Zustand + IndexedDB (idb-keyval) |
-| **Performance** | p-limit for network throttling & parallel batching |
 
 ---
 
@@ -137,7 +138,10 @@ Optimized for Vercel with multi-endpoint architecture:
 3. Add environment variables in Vercel Dashboard:
    - `OPENROUTER_API_KEY`
    - `TAVILY_API_KEY`
+   - `BLOB_READ_WRITE_TOKEN` (from Vercel Blob Storage)
 4. Deploy
+
+> **Blob Storage Setup:** In Vercel Dashboard → Storage → Create Blob Store → Copy token to env vars.
 
 ### Why Multi-Endpoint?
 

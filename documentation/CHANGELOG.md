@@ -498,3 +498,64 @@ Each phase completes well under the 60-second limit.
 - `FILE-MAP.md` - New files listed
 - `ARCHITECTURE.md` - Maxwell mode architecture
 - `README.md` - Project structure updated
+
+---
+
+## Phase 13: Vercel Blob Storage (Large Payload Handling)
+**Status**: ✅ Complete  
+**Completed**: December 23, 2024
+
+### Problem Solved
+Vercel has a **4.5MB request/response body limit**. Embeddings for large queries (~988 passages × 3072 dimensions × 4 bytes = ~12MB) caused 413 Payload Too Large errors when passed between `/search` and `/verify` endpoints.
+
+### Solution: Vercel Blob Storage
+Instead of passing embeddings in the response body, store them in Vercel Blob Storage and pass a URL:
+
+```
+/search  →  Embeds passages  →  Stores in Blob  →  Returns URL
+/verify  →  Fetches from Blob (server-to-server)  →  Deletes after use
+```
+
+### Files Created
+- `app/lib/maxwell/blob-storage.ts` - Vercel Blob utilities
+  - `storeEvidenceInBlob()` - Stores passages + embeddings
+  - `fetchEvidenceFromBlob()` - Retrieves from Blob URL
+  - `deleteEvidenceFromBlob()` - Cleanup after verification
+
+### Files Modified
+- `app/api/maxwell/search/route.ts` - Store embeddings in Blob, return URL
+- `app/api/maxwell/verify/route.ts` - Fetch from Blob, delete after use
+- `app/hooks/use-maxwell.ts` - Pass Blob URL between phases
+- `app/lib/maxwell/api-types.ts` - Updated response types
+
+### Hybrid Mode (Local Development)
+Local development doesn't have access to Vercel Blob. Implemented hybrid approach:
+- **Production (Vercel):** Uses Vercel Blob Storage (requires `BLOB_READ_WRITE_TOKEN`)
+- **Local:** Uses base64 data URLs (no size limits locally, no external deps)
+
+Environment detection:
+```typescript
+function isVercelEnvironment(): boolean {
+    return process.env.VERCEL === '1' || !!process.env.BLOB_READ_WRITE_TOKEN;
+}
+```
+
+### Log Cleanup
+Data URLs are massive in logs. Added sanitization:
+```typescript
+blobUrl.startsWith('data:') ? '[data URL - local]' : blobUrl
+```
+
+### Environment Variables
+New required env var for Vercel deployment:
+- `BLOB_READ_WRITE_TOKEN` - From Vercel Dashboard → Storage → Blob
+
+### Tests Verified
+- [x] Local development works with data URLs
+- [x] Logs show `[data URL - local]` instead of massive base64
+- [x] Blob cleanup happens after verification (production)
+
+### Documentation Updated
+- `MAXWELL.md` - Blob storage section, updated API responses
+- `MAXWELL_ARCHITECTURE.md` - Blob in tech stack, updated flow
+- `README.md` - Blob storage in key innovations, env vars
