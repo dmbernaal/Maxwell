@@ -133,12 +133,17 @@ npm run test:coverage
 
 ```
 __tests__/
-├── unit/                          # No external dependencies
-│   ├── blob-storage.test.ts       # Embedding encoding/decoding
-│   ├── embeddings-math.test.ts    # Cosine similarity, top matches
-│   └── verifier-signals.test.ts   # Numeric extraction, normalization, aggregation
-└── integration/                   # Requires API keys
-    └── api-endpoints.test.ts      # Full pipeline E2E
+├── unit/                              # No external dependencies (137 tests)
+│   ├── blob-storage.test.ts           # Embedding encoding/decoding
+│   ├── embeddings-math.test.ts        # Cosine similarity, top matches
+│   ├── verifier-signals.test.ts       # Numeric extraction, normalization
+│   ├── config-factory.test.ts         # Adaptive compute configuration
+│   ├── constants.test.ts              # Threshold & model validation
+│   ├── decomposer-validation.test.ts  # Query decomposition validation
+│   ├── passage-chunking.test.ts       # Sentence segmentation
+│   └── evidence-retrieval.test.ts     # Best-match finding logic
+└── integration/                       # Requires API keys
+    └── api-endpoints.test.ts          # Full pipeline E2E
 ```
 
 ### Test Commands
@@ -152,10 +157,15 @@ __tests__/
 
 ### What's Tested
 
-**Unit Tests (48 tests):**
-- **Blob Storage**: Base64 encoding/decoding of embeddings, round-trip precision
+**Unit Tests (137 tests across 8 files):**
+- **Blob Storage**: Base64 encoding/decoding, round-trip precision for embeddings
 - **Embeddings Math**: Cosine similarity, orthogonal/opposite vectors, top-N matching
-- **Verifier Signals**: Number extraction, normalization (billions/millions/%), consistency checks, confidence aggregation
+- **Verifier Signals**: Number extraction, normalization (billions/millions/%), confidence aggregation
+- **Config Factory**: Adaptive compute for all complexity levels (simple/standard/deep_research)
+- **Constants**: Model IDs, thresholds, multipliers, entailment scores validation
+- **Decomposer Validation**: Sub-query validation, duplicate ID detection, bounds checking
+- **Passage Chunking**: Sentence segmentation, window sizes, edge cases
+- **Evidence Retrieval**: Best-match finding, citation mismatch detection
 
 **Integration Tests** (requires `OPENROUTER_API_KEY` + `TAVILY_API_KEY`):
 - Full 5-phase pipeline: Decompose → Search → Synthesize → Verify → Adjudicate
