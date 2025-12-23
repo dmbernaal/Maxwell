@@ -129,7 +129,9 @@ updateMessage(agentMessageId, content, sources, sessionId);
 
 ### 5. Store (`/app/store.ts`)
 
-**Purpose:** Zustand state with persistence
+**Purpose:** Zustand state with IndexedDB persistence
+
+**Persistence:** Uses `idb-keyval` for IndexedDB storage (~500MB capacity) instead of localStorage (~5MB limit). Required for Maxwell's heavy verification data.
 
 **Key Actions:**
 | Action | Purpose |
@@ -145,6 +147,7 @@ interface Message {
     role: 'user' | 'agent';
     content: string;
     sources?: Source[];  // From search results
+    maxwellState?: any;  // Full Maxwell state for hydration
     timestamp: number;
 }
 ```

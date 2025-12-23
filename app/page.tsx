@@ -70,7 +70,14 @@ export default function Home() {
   const historyIds = useRef(new Set<string>());
   const renderedSessionId = useRef(activeSessionId);
 
-  // Initialize session if needed
+  // Manually trigger hydration for async IndexedDB storage
+  // This is required because skipHydration: true prevents auto-hydration
+  // MUST be called before any useEffects that depend on store data
+  useEffect(() => {
+    useChatStore.persist.rehydrate();
+  }, []);
+
+  // Initialize session if needed (after hydration completes)
   useEffect(() => {
     if (hasHydrated && !activeSessionId) {
       createSession();

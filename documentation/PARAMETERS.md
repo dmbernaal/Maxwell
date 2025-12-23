@@ -183,17 +183,32 @@ if (updateCount % 3 === 0) {
 
 ### File: `app/store.ts`
 
-### Persistence Key
+### Persistence (IndexedDB)
+
+Uses `idb-keyval` for IndexedDB storage with ~500MB capacity (replaces localStorage's ~5MB limit).
 
 ```typescript
+import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval';
+
+// Custom async storage adapter
+const idbStorage = {
+  getItem: async (name) => { /* ... */ },
+  setItem: async (name, value) => { /* ... */ },
+  removeItem: async (name) => { /* ... */ },
+};
+
 persist(
     // ...
     {
-        name: 'maxwell-chat-storage',  // localStorage key
-        storage: createJSONStorage(() => localStorage),
+        name: 'tenex-chat-storage',  // IndexedDB key
+        storage: createJSONStorage(() => idbStorage),
+        skipHydration: true,  // Required for async storage
+        version: 1,
     }
 )
 ```
+
+**Important:** With `skipHydration: true`, you must manually call `useChatStore.persist.rehydrate()` on app mount (see `page.tsx`).
 
 ---
 

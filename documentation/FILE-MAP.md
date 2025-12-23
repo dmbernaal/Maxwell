@@ -44,7 +44,7 @@ maxwell-v2/
 │   ├── globals.css               # Global styles
 │   ├── layout.tsx                # Root layout
 │   ├── page.tsx                  # Home page (main UI)
-│   └── store.ts                  # Zustand state store
+│   └── store.ts                  # Zustand state store (IndexedDB persistence via idb-keyval)
 ├── tests/                        # Test files
 │   └── test-foundation.ts        # Phase 0 foundation test
 ├── documentation/                # LLM-friendly docs (you are here)

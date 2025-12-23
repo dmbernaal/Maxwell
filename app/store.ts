@@ -1,7 +1,41 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
+import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval';
 import { AgentState, Message, ChatSession, Source, DebugStep, SearchMode, MessageAttachment } from './types';
+
+// ============================================
+// INDEXEDDB STORAGE ADAPTER
+// ============================================
+
+/**
+ * Custom IndexedDB storage adapter for Zustand persist.
+ * 
+ * Uses idb-keyval for simple key-value storage with ~500MB capacity.
+ * This replaces localStorage which has a ~5MB limit that was causing
+ * QuotaExceededError with Maxwell's heavy verification data.
+ * 
+ * @see https://github.com/jakearchibald/idb-keyval
+ */
+const idbStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    const value = await idbGet(name);
+    // Zustand's createJSONStorage expects a string, so we stringify
+    return value ? JSON.stringify(value) : null;
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    // Parse back to object for better IndexedDB devtools inspection
+    const parsed = JSON.parse(value);
+    await idbSet(name, parsed);
+  },
+  removeItem: async (name: string): Promise<void> => {
+    await idbDel(name);
+  },
+};
+
+// ============================================
+// STORE INTERFACE
+// ============================================
 
 interface ChatStore {
   // State
@@ -185,8 +219,10 @@ export const useChatStore = create<ChatStore>()(
       }
     }),
     {
-      name: 'maxwell-storage',
-      storage: createJSONStorage(() => localStorage),
+      name: 'tenex-chat-storage', // Renamed for clean break from localStorage
+      storage: createJSONStorage(() => idbStorage),
+      skipHydration: true, // Required for async storage - we manually call rehydrate()
+      version: 1, // Version for future migrations
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       }

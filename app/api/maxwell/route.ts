@@ -67,21 +67,44 @@ export async function POST(request: NextRequest) {
 
         const stream = new ReadableStream({
             async start(controller) {
+                let isClosed = false;
+
+                const safeEnqueue = (data: string) => {
+                    if (!isClosed) {
+                        try {
+                            controller.enqueue(encoder.encode(data));
+                        } catch {
+                            // Controller was closed externally (client disconnect, etc.)
+                            isClosed = true;
+                        }
+                    }
+                };
+
+                const safeClose = () => {
+                    if (!isClosed) {
+                        isClosed = true;
+                        controller.close();
+                    }
+                };
+
                 try {
                     for await (const event of runMaxwell(trimmedQuery)) {
                         // SSE Format: "data: <json>\n\n"
                         const data = `data: ${JSON.stringify(event)}\n\n`;
-                        controller.enqueue(encoder.encode(data));
+                        safeEnqueue(data);
+
+                        // Stop if stream was closed
+                        if (isClosed) break;
                     }
 
                     // Close stream with sentinel
-                    controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-                    controller.close();
+                    safeEnqueue('data: [DONE]\n\n');
+                    safeClose();
                 } catch (error) {
                     console.error('[Maxwell API] Stream error:', error);
                     const errorEvent = { type: 'error', message: 'Stream interrupted' };
-                    controller.enqueue(encoder.encode(`data: ${JSON.stringify(errorEvent)}\n\n`));
-                    controller.close();
+                    safeEnqueue(`data: ${JSON.stringify(errorEvent)}\n\n`);
+                    safeClose();
                 }
             },
         });
