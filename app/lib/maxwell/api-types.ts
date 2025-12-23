@@ -53,10 +53,20 @@ export interface PreparedEvidence {
     };
 }
 
+/**
+ * Search response with Blob URL for evidence.
+ * Embeddings are stored in Vercel Blob to avoid 4.5MB payload limit.
+ */
 export interface SearchResponse {
     sources: MaxwellSource[];
     searchMetadata: SearchMetadata[];
-    preparedEvidence: PreparedEvidence;
+    /** URL to fetch prepared evidence from Vercel Blob */
+    evidenceBlobUrl: string;
+    /** Metadata about the stored evidence */
+    evidenceStats: {
+        passageCount: number;
+        embeddingCount: number;
+    };
     durationMs: number;
 }
 
@@ -80,7 +90,8 @@ export interface SynthesizeRequest {
 export interface VerifyRequest {
     answer: string;
     sources: MaxwellSource[];
-    preparedEvidence: PreparedEvidence;
+    /** URL to fetch prepared evidence from Vercel Blob */
+    evidenceBlobUrl: string;
     maxClaimsToVerify?: number;
     verificationConcurrency?: number;
 }

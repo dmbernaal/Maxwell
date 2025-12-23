@@ -38,7 +38,6 @@ import type { ExecutionConfig } from '../lib/maxwell/configFactory';
 import type {
     DecomposeResponse,
     SearchResponse,
-    PreparedEvidence,
 } from '../lib/maxwell/api-types';
 
 // ============================================
@@ -352,8 +351,15 @@ export function useMaxwell(): UseMaxwellReturn {
 
                 const searchOutput: SearchResponse = await searchRes.json();
 
-                // Store prepared evidence for verification phase
-                const preparedEvidence: PreparedEvidence = searchOutput.preparedEvidence;
+                // Store blob URL for verification phase
+                // Embeddings are stored in Vercel Blob to avoid 4.5MB payload limit
+                const evidenceBlobUrl = searchOutput.evidenceBlobUrl;
+
+                console.log('[useMaxwell] Evidence stored in Blob:', {
+                    url: evidenceBlobUrl,
+                    passageCount: searchOutput.evidenceStats.passageCount,
+                    embeddingCount: searchOutput.evidenceStats.embeddingCount,
+                });
 
                 setState((prev) => ({
                     ...prev,
@@ -453,7 +459,7 @@ export function useMaxwell(): UseMaxwellReturn {
                     body: JSON.stringify({
                         answer,
                         sources: searchOutput.sources,
-                        preparedEvidence,
+                        evidenceBlobUrl, // URL to fetch embeddings from Vercel Blob
                         maxClaimsToVerify: decomposition.config.maxClaimsToVerify,
                         verificationConcurrency: decomposition.config.verificationConcurrency,
                     }),

@@ -4,14 +4,18 @@
  * Phase 2: Parallel search with passage pre-embedding.
  * The key optimization: embed passages here to avoid the 45s bottleneck in verification.
  *
+ * ARCHITECTURE:
+ * - Pre-embeds ALL passages (no truncation for quality)
+ * - Stores embeddings in Vercel Blob Storage (avoids 4.5MB payload limit)
+ * - Returns blob URL for /verify to fetch
+ *
  * POST /api/maxwell/search
  */
 
 import { NextRequest } from 'next/server';
 import { parallelSearch } from '../../../lib/maxwell/searcher';
 import { prepareEvidence } from '../../../lib/maxwell/verifier';
-import { encodeEmbeddings } from '../../../lib/maxwell/api-types';
-import { MAX_PASSAGES_FOR_TRANSFER } from '../../../lib/maxwell/constants';
+import { storeEvidenceInBlob } from '../../../lib/maxwell/blob-storage';
 import type { SearchRequest, SearchResponse } from '../../../lib/maxwell/api-types';
 
 // Extended timeout for search + embedding (the heavy operation)
@@ -60,37 +64,31 @@ export async function POST(request: NextRequest) {
 
         console.log('[Maxwell Search] Found', searchOutput.sources.length, 'sources');
 
-        // 4. PRE-EMBED PASSAGES (THE KEY OPTIMIZATION)
+        // 4. PRE-EMBED ALL PASSAGES (THE KEY OPTIMIZATION)
         // This moves the expensive embedding operation from /verify to /search
-        // Saving ~45 seconds in the verification phase
+        // We embed ALL passages - no truncation for maximum verification quality
         console.log('[Maxwell Search] Pre-embedding passages...');
-        const fullEvidence = await prepareEvidence(searchOutput.sources);
-
-        // 5. LIMIT PASSAGES FOR PAYLOAD SIZE
-        // Vercel has a ~4.5MB request body limit
-        // Each embedding is ~16KB, so we limit to MAX_PASSAGES_FOR_TRANSFER
-        let evidence = fullEvidence;
-        if (fullEvidence.passages.length > MAX_PASSAGES_FOR_TRANSFER) {
-            console.log(`[Maxwell Search] Limiting passages from ${fullEvidence.passages.length} to ${MAX_PASSAGES_FOR_TRANSFER} for payload size`);
-            evidence = {
-                passages: fullEvidence.passages.slice(0, MAX_PASSAGES_FOR_TRANSFER),
-                embeddings: fullEvidence.embeddings.slice(0, MAX_PASSAGES_FOR_TRANSFER),
-            };
-        }
-
-        // 6. Encode embeddings for transmission
-        const { base64, rows, cols } = encodeEmbeddings(evidence.embeddings);
+        const evidence = await prepareEvidence(searchOutput.sources);
 
         console.log('[Maxwell Search] Embedded', evidence.passages.length, 'passages');
 
-        // 7. Build response
+        // 5. STORE IN VERCEL BLOB (SOLVES 4.5MB PAYLOAD LIMIT)
+        // Instead of sending embeddings in response body, store in Blob
+        // This allows us to keep ALL passages without hitting payload limits
+        console.log('[Maxwell Search] Storing evidence in Blob...');
+        const blobResult = await storeEvidenceInBlob(
+            evidence.passages,
+            evidence.embeddings
+        );
+
+        // 6. Build response (small payload - just URL reference)
         const response: SearchResponse = {
             sources: searchOutput.sources,
             searchMetadata: searchOutput.searchMetadata,
-            preparedEvidence: {
-                passages: evidence.passages,
-                embeddingsBase64: base64,
-                embeddingsDimensions: { rows, cols },
+            evidenceBlobUrl: blobResult.blobUrl,
+            evidenceStats: {
+                passageCount: blobResult.passageCount,
+                embeddingCount: blobResult.embeddingCount,
             },
             durationMs: Date.now() - startTime,
         };
@@ -98,6 +96,7 @@ export async function POST(request: NextRequest) {
         console.log('[Maxwell Search] Complete:', {
             sources: searchOutput.sources.length,
             passages: evidence.passages.length,
+            blobUrl: blobResult.blobUrl,
             durationMs: response.durationMs,
         });
 
@@ -113,4 +112,3 @@ export async function POST(request: NextRequest) {
         );
     }
 }
-

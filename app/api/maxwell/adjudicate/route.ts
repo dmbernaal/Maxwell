@@ -4,6 +4,8 @@
  * Phase 5: Final verdict with SSE streaming.
  * Reconstructs the answer based on verified claims.
  *
+ * IMPORTANT: Uses TransformStream pattern for reliable serverless termination.
+ *
  * POST /api/maxwell/adjudicate
  */
 
@@ -11,11 +13,13 @@ import { NextRequest } from 'next/server';
 import { adjudicateAnswer } from '../../../lib/maxwell/adjudicator';
 import type { AdjudicateRequest } from '../../../lib/maxwell/api-types';
 
-// Extended timeout for adjudication (streaming responses need full duration budget)
+// Extended timeout for adjudication
 export const maxDuration = 60;
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
+    const startTime = Date.now();
+
     try {
         // 1. Parse request body
         let body: AdjudicateRequest;
@@ -54,72 +58,59 @@ export async function POST(request: NextRequest) {
 
         console.log('[Maxwell Adjudicate] Starting adjudication');
 
-        // 3. Setup SSE stream
+        // 3. Create response stream using TransformStream
+        // This pattern ensures clean termination on Vercel
         const encoder = new TextEncoder();
-        const startTime = Date.now();
+        const { readable, writable } = new TransformStream();
+        const writer = writable.getWriter();
 
-        const stream = new ReadableStream({
-            async start(controller) {
-                let isClosed = false;
+        // Process stream in background
+        (async () => {
+            try {
+                let adjudicationText = '';
 
-                const safeEnqueue = (data: string) => {
-                    if (!isClosed) {
-                        try {
-                            controller.enqueue(encoder.encode(data));
-                        } catch {
-                            isClosed = true;
-                        }
+                // Get adjudication stream
+                const adjudicationResult = await adjudicateAnswer(query, answer, verification);
+
+                if (adjudicationResult) {
+                    // Stream each chunk
+                    for await (const chunk of adjudicationResult.textStream) {
+                        adjudicationText += chunk;
+                        const event = { type: 'adjudication-chunk', content: chunk };
+                        await writer.write(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
                     }
-                };
-
-                const safeClose = () => {
-                    if (!isClosed) {
-                        isClosed = true;
-                        controller.close();
-                    }
-                };
-
-                try {
-                    let adjudicationText = '';
-
-                    // Get adjudication stream
-                    const adjudicationResult = await adjudicateAnswer(query, answer, verification);
-
-                    if (adjudicationResult) {
-                        // Stream each chunk
-                        for await (const chunk of adjudicationResult.textStream) {
-                            if (isClosed) break;
-
-                            adjudicationText += chunk;
-                            const sseEvent = { type: 'adjudication-chunk', content: chunk };
-                            safeEnqueue(`data: ${JSON.stringify(sseEvent)}\n\n`);
-                        }
-                    }
-
-                    // Send complete event
-                    const completeEvent = {
-                        type: 'adjudication-complete',
-                        text: adjudicationText,
-                        durationMs: Date.now() - startTime,
-                    };
-                    safeEnqueue(`data: ${JSON.stringify(completeEvent)}\n\n`);
-                    safeEnqueue('data: [DONE]\n\n');
-                    safeClose();
-
-                    console.log('[Maxwell Adjudicate] Complete:', {
-                        textLength: adjudicationText.length,
-                        durationMs: Date.now() - startTime,
-                    });
-                } catch (error) {
-                    console.error('[Maxwell Adjudicate] Stream error:', error);
-                    const errorEvent = { type: 'error', message: 'Adjudication failed' };
-                    safeEnqueue(`data: ${JSON.stringify(errorEvent)}\n\n`);
-                    safeClose();
                 }
-            },
-        });
 
-        return new Response(stream, {
+                // Send complete event
+                const durationMs = Date.now() - startTime;
+                const completeEvent = {
+                    type: 'adjudication-complete',
+                    text: adjudicationText,
+                    durationMs,
+                };
+                await writer.write(encoder.encode(`data: ${JSON.stringify(completeEvent)}\n\n`));
+                await writer.write(encoder.encode('data: [DONE]\n\n'));
+
+                console.log('[Maxwell Adjudicate] Complete:', {
+                    textLength: adjudicationText.length,
+                    durationMs,
+                });
+            } catch (error) {
+                console.error('[Maxwell Adjudicate] Stream error:', error);
+                const errorEvent = { type: 'error', message: 'Adjudication failed' };
+                await writer.write(encoder.encode(`data: ${JSON.stringify(errorEvent)}\n\n`));
+            } finally {
+                // Ensure clean termination
+                try {
+                    await writer.close();
+                } catch {
+                    // Already closed
+                }
+            }
+        })();
+
+        // 4. Return stream response immediately
+        return new Response(readable, {
             headers: {
                 'Content-Type': 'text/event-stream',
                 'Cache-Control': 'no-cache, no-transform',
@@ -136,4 +127,3 @@ export async function POST(request: NextRequest) {
         );
     }
 }
-

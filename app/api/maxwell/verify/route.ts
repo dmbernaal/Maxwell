@@ -2,14 +2,18 @@
  * Maxwell Verify API Route
  *
  * Phase 4: Claim verification with SSE streaming.
- * Receives pre-computed passage embeddings from /search to avoid the 45s bottleneck.
+ * 
+ * ARCHITECTURE:
+ * - Fetches pre-computed embeddings from Vercel Blob (stored by /search)
+ * - No 4.5MB payload limit issue - data is fetched server-side
+ * - Full verification with ALL passages for maximum quality
  *
  * POST /api/maxwell/verify
  */
 
 import { NextRequest } from 'next/server';
 import { verifyClaimsWithPrecomputedEvidence } from '../../../lib/maxwell/verifier';
-import { decodeEmbeddings } from '../../../lib/maxwell/api-types';
+import { fetchEvidenceFromBlob, deleteEvidenceFromBlob } from '../../../lib/maxwell/blob-storage';
 import type { VerifyRequest } from '../../../lib/maxwell/api-types';
 import type { PreparedEvidence } from '../../../lib/maxwell/verifier';
 import { MAX_CLAIMS_TO_VERIFY, DEFAULT_VERIFICATION_CONCURRENCY } from '../../../lib/maxwell/constants';
@@ -19,6 +23,8 @@ export const maxDuration = 60;
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
+    let blobUrl: string | null = null;
+
     try {
         // 1. Parse request body
         let body: VerifyRequest;
@@ -34,10 +40,12 @@ export async function POST(request: NextRequest) {
         const {
             answer,
             sources,
-            preparedEvidence,
+            evidenceBlobUrl,
             maxClaimsToVerify = MAX_CLAIMS_TO_VERIFY,
             verificationConcurrency = DEFAULT_VERIFICATION_CONCURRENCY,
         } = body;
+
+        blobUrl = evidenceBlobUrl;
 
         // 2. Validation
         if (!answer || typeof answer !== 'string') {
@@ -54,24 +62,21 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        if (!preparedEvidence) {
+        if (!evidenceBlobUrl) {
             return new Response(
-                JSON.stringify({ error: 'preparedEvidence required' }),
+                JSON.stringify({ error: 'evidenceBlobUrl required' }),
                 { status: 400, headers: { 'Content-Type': 'application/json' } }
             );
         }
 
         console.log('[Maxwell Verify] Starting verification');
+        console.log('[Maxwell Verify] Fetching evidence from Blob:', evidenceBlobUrl);
 
-        // 3. Decode pre-computed embeddings
-        const embeddings = decodeEmbeddings(
-            preparedEvidence.embeddingsBase64,
-            preparedEvidence.embeddingsDimensions.rows,
-            preparedEvidence.embeddingsDimensions.cols
-        );
+        // 3. Fetch pre-computed evidence from Vercel Blob
+        const { passages, embeddings } = await fetchEvidenceFromBlob(evidenceBlobUrl);
 
         const decodedEvidence: PreparedEvidence = {
-            passages: preparedEvidence.passages,
+            passages,
             embeddings,
         };
 
@@ -132,6 +137,14 @@ export async function POST(request: NextRequest) {
 
                     safeEnqueue('data: [DONE]\n\n');
                     safeClose();
+
+                    // 5. Clean up blob after successful verification
+                    // Do this after stream closes to not block the response
+                    if (blobUrl) {
+                        deleteEvidenceFromBlob(blobUrl).catch(() => {
+                            // Ignore cleanup errors
+                        });
+                    }
                 } catch (error) {
                     console.error('[Maxwell Verify] Stream error:', error);
                     const errorEvent = { type: 'error', message: 'Verification failed' };
@@ -158,4 +171,3 @@ export async function POST(request: NextRequest) {
         );
     }
 }
-
