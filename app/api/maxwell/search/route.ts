@@ -11,6 +11,7 @@ import { NextRequest } from 'next/server';
 import { parallelSearch } from '../../../lib/maxwell/searcher';
 import { prepareEvidence } from '../../../lib/maxwell/verifier';
 import { encodeEmbeddings } from '../../../lib/maxwell/api-types';
+import { MAX_PASSAGES_FOR_TRANSFER } from '../../../lib/maxwell/constants';
 import type { SearchRequest, SearchResponse } from '../../../lib/maxwell/api-types';
 
 // Extended timeout for search + embedding (the heavy operation)
@@ -63,14 +64,26 @@ export async function POST(request: NextRequest) {
         // This moves the expensive embedding operation from /verify to /search
         // Saving ~45 seconds in the verification phase
         console.log('[Maxwell Search] Pre-embedding passages...');
-        const evidence = await prepareEvidence(searchOutput.sources);
+        const fullEvidence = await prepareEvidence(searchOutput.sources);
 
-        // 5. Encode embeddings for transmission
+        // 5. LIMIT PASSAGES FOR PAYLOAD SIZE
+        // Vercel has a ~4.5MB request body limit
+        // Each embedding is ~16KB, so we limit to MAX_PASSAGES_FOR_TRANSFER
+        let evidence = fullEvidence;
+        if (fullEvidence.passages.length > MAX_PASSAGES_FOR_TRANSFER) {
+            console.log(`[Maxwell Search] Limiting passages from ${fullEvidence.passages.length} to ${MAX_PASSAGES_FOR_TRANSFER} for payload size`);
+            evidence = {
+                passages: fullEvidence.passages.slice(0, MAX_PASSAGES_FOR_TRANSFER),
+                embeddings: fullEvidence.embeddings.slice(0, MAX_PASSAGES_FOR_TRANSFER),
+            };
+        }
+
+        // 6. Encode embeddings for transmission
         const { base64, rows, cols } = encodeEmbeddings(evidence.embeddings);
 
         console.log('[Maxwell Search] Embedded', evidence.passages.length, 'passages');
 
-        // 6. Build response
+        // 7. Build response
         const response: SearchResponse = {
             sources: searchOutput.sources,
             searchMetadata: searchOutput.searchMetadata,

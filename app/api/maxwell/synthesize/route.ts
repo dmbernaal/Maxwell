@@ -11,8 +11,8 @@ import { NextRequest } from 'next/server';
 import { synthesize } from '../../../lib/maxwell/synthesizer';
 import type { SynthesizeRequest } from '../../../lib/maxwell/api-types';
 
-// Timeout for synthesis
-export const maxDuration = 30;
+// Extended timeout for synthesis (streaming responses need full duration budget)
+export const maxDuration = 60;
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {

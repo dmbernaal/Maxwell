@@ -11,8 +11,8 @@ import { NextRequest } from 'next/server';
 import { adjudicateAnswer } from '../../../lib/maxwell/adjudicator';
 import type { AdjudicateRequest } from '../../../lib/maxwell/api-types';
 
-// Timeout for adjudication
-export const maxDuration = 30;
+// Extended timeout for adjudication (streaming responses need full duration budget)
+export const maxDuration = 60;
 export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {

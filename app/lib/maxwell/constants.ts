@@ -151,6 +151,17 @@ export const NUMERIC_MISMATCH_MULTIPLIER = 0.4;
 /** Minimum passage length to include (characters) */
 export const MIN_PASSAGE_LENGTH = 20;
 
+/**
+ * Maximum passages to embed and transfer between endpoints.
+ *
+ * Vercel has a ~4.5MB request body limit.
+ * Each embedding: 4096 floats × 4 bytes = 16KB
+ * With ~3MB budget for embeddings: 3MB / 16KB ≈ 187
+ *
+ * Set to 200 for safety margin. Passages are prioritized by relevance.
+ */
+export const MAX_PASSAGES_FOR_TRANSFER = 200;
+
 // ============================================
 // API CONFIGURATION
 // ============================================
