@@ -70,7 +70,8 @@ export async function POST(request: NextRequest) {
         }
 
         console.log('[Maxwell Verify] Starting verification');
-        console.log('[Maxwell Verify] Fetching evidence from Blob:', evidenceBlobUrl);
+        const blobUrlForLog = evidenceBlobUrl.startsWith('data:') ? '[data URL - local]' : evidenceBlobUrl;
+        console.log('[Maxwell Verify] Fetching evidence from Blob:', blobUrlForLog);
 
         // 3. Fetch pre-computed evidence from Vercel Blob
         const { passages, embeddings } = await fetchEvidenceFromBlob(evidenceBlobUrl);

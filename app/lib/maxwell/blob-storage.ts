@@ -4,10 +4,14 @@
  * Stores prepared evidence (passages + embeddings) in Vercel Blob Storage
  * to avoid the 4.5MB request body limit between serverless functions.
  *
+ * HYBRID MODE:
+ * - Production (Vercel): Uses Blob Storage
+ * - Development (local): Uses base64-encoded data URLs (no size limit locally)
+ *
  * Flow:
- * 1. Search endpoint: prepares evidence, stores in Blob, returns blobUrl
- * 2. Client: passes blobUrl to Verify endpoint
- * 3. Verify endpoint: fetches from Blob, performs verification
+ * 1. Search endpoint: prepares evidence, stores in Blob (or data URL), returns URL
+ * 2. Client: passes URL to Verify endpoint
+ * 3. Verify endpoint: fetches from Blob (or decodes data URL)
  *
  * @module maxwell/blob-storage
  */
@@ -105,11 +109,24 @@ export function decodeEmbeddingsFromBase64(
 }
 
 // ============================================
+// ENVIRONMENT DETECTION
+// ============================================
+
+/**
+ * Check if we're running on Vercel (production) or locally.
+ * Vercel sets VERCEL=1 in the environment.
+ */
+function isVercelEnvironment(): boolean {
+    return process.env.VERCEL === '1' || !!process.env.BLOB_READ_WRITE_TOKEN;
+}
+
+// ============================================
 // BLOB OPERATIONS
 // ============================================
 
 /**
- * Stores prepared evidence in Vercel Blob Storage.
+ * Stores prepared evidence in Vercel Blob Storage (production)
+ * or as a data URL (local development).
  *
  * @param passages - Array of text passages
  * @param embeddings - Corresponding embedding vectors
@@ -130,15 +147,34 @@ export async function storeEvidenceInBlob(
         createdAt: Date.now(),
     };
 
-    // Store in Blob with a unique name
+    const jsonString = JSON.stringify(evidence);
+
+    // LOCAL DEVELOPMENT: Use data URL (no size limits locally)
+    if (!isVercelEnvironment()) {
+        const dataUrl = `data:application/json;base64,${Buffer.from(jsonString).toString('base64')}`;
+
+        console.log('[Maxwell Blob] Stored evidence locally (data URL):', {
+            passages: passages.length,
+            embeddings: embeddings.length,
+            sizeEstimate: `~${Math.round(jsonString.length / 1024)}KB`,
+        });
+
+        return {
+            blobUrl: dataUrl,
+            passageCount: passages.length,
+            embeddingCount: embeddings.length,
+        };
+    }
+
+    // PRODUCTION: Store in Vercel Blob
     const blobName = `maxwell-evidence-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.json`;
 
-    const blob = await put(blobName, JSON.stringify(evidence), {
+    const blob = await put(blobName, jsonString, {
         access: 'public', // Needed for cross-function access
         addRandomSuffix: false, // We already have unique name
     });
 
-    console.log('[Maxwell Blob] Stored evidence:', {
+    console.log('[Maxwell Blob] Stored evidence in Vercel Blob:', {
         url: blob.url,
         passages: passages.length,
         embeddings: embeddings.length,
@@ -153,22 +189,43 @@ export async function storeEvidenceInBlob(
 }
 
 /**
- * Retrieves prepared evidence from Vercel Blob Storage.
+ * Retrieves prepared evidence from Vercel Blob Storage or data URL.
  *
- * @param blobUrl - URL returned from storeEvidenceInBlob
+ * @param blobUrl - URL returned from storeEvidenceInBlob (can be Blob URL or data URL)
  * @returns Deserialized passages and embeddings
  */
 export async function fetchEvidenceFromBlob(blobUrl: string): Promise<{
     passages: Passage[];
     embeddings: number[][];
 }> {
-    const response = await fetch(blobUrl);
+    let evidence: SerializedEvidence;
 
-    if (!response.ok) {
-        throw new Error(`Failed to fetch evidence from Blob: ${response.status}`);
+    // LOCAL DEVELOPMENT: Handle data URLs
+    if (blobUrl.startsWith('data:')) {
+        const base64Data = blobUrl.split(',')[1];
+        const jsonString = Buffer.from(base64Data, 'base64').toString('utf-8');
+        evidence = JSON.parse(jsonString);
+
+        console.log('[Maxwell Blob] Fetched evidence from data URL:', {
+            passages: evidence.passages.length,
+            embeddings: evidence.embeddingsDimensions.rows,
+        });
+    } else {
+        // PRODUCTION: Fetch from Vercel Blob
+        const response = await fetch(blobUrl);
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch evidence from Blob: ${response.status}`);
+        }
+
+        evidence = await response.json();
+
+        console.log('[Maxwell Blob] Fetched evidence from Vercel Blob:', {
+            passages: evidence.passages.length,
+            embeddings: evidence.embeddingsDimensions.rows,
+            age: `${Math.round((Date.now() - evidence.createdAt) / 1000)}s old`,
+        });
     }
-
-    const evidence: SerializedEvidence = await response.json();
 
     // Decode embeddings
     const embeddings = decodeEmbeddingsFromBase64(
@@ -176,12 +233,6 @@ export async function fetchEvidenceFromBlob(blobUrl: string): Promise<{
         evidence.embeddingsDimensions.rows,
         evidence.embeddingsDimensions.cols
     );
-
-    console.log('[Maxwell Blob] Fetched evidence:', {
-        passages: evidence.passages.length,
-        embeddings: embeddings.length,
-        age: `${Math.round((Date.now() - evidence.createdAt) / 1000)}s old`,
-    });
 
     return {
         passages: evidence.passages,
@@ -192,10 +243,16 @@ export async function fetchEvidenceFromBlob(blobUrl: string): Promise<{
 /**
  * Deletes evidence from Vercel Blob Storage.
  * Call this after verification is complete to clean up.
+ * No-op for data URLs (local development).
  *
  * @param blobUrl - URL of the blob to delete
  */
 export async function deleteEvidenceFromBlob(blobUrl: string): Promise<void> {
+    // Skip deletion for data URLs (local development)
+    if (blobUrl.startsWith('data:')) {
+        return;
+    }
+
     try {
         await del(blobUrl);
         console.log('[Maxwell Blob] Deleted evidence:', blobUrl);

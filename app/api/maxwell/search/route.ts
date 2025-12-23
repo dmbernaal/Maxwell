@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
         console.log('[Maxwell Search] Complete:', {
             sources: searchOutput.sources.length,
             passages: evidence.passages.length,
-            blobUrl: blobResult.blobUrl,
+            blobUrl: blobResult.blobUrl.startsWith('data:') ? '[data URL - local]' : blobResult.blobUrl,
             durationMs: response.durationMs,
         });
 

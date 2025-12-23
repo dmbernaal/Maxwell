@@ -356,7 +356,7 @@ export function useMaxwell(): UseMaxwellReturn {
                 const evidenceBlobUrl = searchOutput.evidenceBlobUrl;
 
                 console.log('[useMaxwell] Evidence stored in Blob:', {
-                    url: evidenceBlobUrl,
+                    url: evidenceBlobUrl.startsWith('data:') ? '[data URL - local]' : evidenceBlobUrl,
                     passageCount: searchOutput.evidenceStats.passageCount,
                     embeddingCount: searchOutput.evidenceStats.embeddingCount,
                 });
