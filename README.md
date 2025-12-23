@@ -133,7 +133,7 @@ npm run test:coverage
 
 ```
 __tests__/
-├── unit/                              # No external dependencies (137 tests)
+├── unit/                              # No external dependencies (176 tests)
 │   ├── blob-storage.test.ts           # Embedding encoding/decoding
 │   ├── embeddings-math.test.ts        # Cosine similarity, top matches
 │   ├── verifier-signals.test.ts       # Numeric extraction, normalization
@@ -141,7 +141,9 @@ __tests__/
 │   ├── constants.test.ts              # Threshold & model validation
 │   ├── decomposer-validation.test.ts  # Query decomposition validation
 │   ├── passage-chunking.test.ts       # Sentence segmentation
-│   └── evidence-retrieval.test.ts     # Best-match finding logic
+│   ├── evidence-retrieval.test.ts     # Best-match finding logic
+│   ├── api-types.test.ts              # API contract validation
+│   └── error-handling.test.ts         # Edge cases & defensive coding
 └── integration/                       # Requires API keys
     └── api-endpoints.test.ts          # Full pipeline E2E
 ```
@@ -157,7 +159,7 @@ __tests__/
 
 ### What's Tested
 
-**Unit Tests (137 tests across 8 files):**
+**Unit Tests (176 tests across 10 files):**
 - **Blob Storage**: Base64 encoding/decoding, round-trip precision for embeddings
 - **Embeddings Math**: Cosine similarity, orthogonal/opposite vectors, top-N matching
 - **Verifier Signals**: Number extraction, normalization (billions/millions/%), confidence aggregation
@@ -166,6 +168,8 @@ __tests__/
 - **Decomposer Validation**: Sub-query validation, duplicate ID detection, bounds checking
 - **Passage Chunking**: Sentence segmentation, window sizes, edge cases
 - **Evidence Retrieval**: Best-match finding, citation mismatch detection
+- **API Types**: Request/response contract validation, Blob URL formats
+- **Error Handling**: Malformed inputs, edge cases, defensive coding patterns
 
 **Integration Tests** (requires `OPENROUTER_API_KEY` + `TAVILY_API_KEY`):
 - Full 5-phase pipeline: Decompose → Search → Synthesize → Verify → Adjudicate
