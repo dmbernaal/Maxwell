@@ -60,6 +60,7 @@ export interface MaxwellUIState {
     searchMetadata: SearchMetadata[];
     verification: VerificationOutput | null;
     verificationProgress: VerificationProgress | null;
+    answer: string;
     adjudication: string | null;
     phaseDurations: PhaseDurations;
     phaseStartTimes: Record<string, number>;
@@ -76,6 +77,7 @@ const initialState: MaxwellUIState = {
     searchMetadata: [],
     verification: null,
     verificationProgress: null,
+    answer: '',
     adjudication: null,
     phaseDurations: {},
     phaseStartTimes: {},
@@ -424,6 +426,12 @@ export function useMaxwell(): UseMaxwellReturn {
                             const currentContent = message?.content || '';
                             updateMessage(agentMessageIdRef.current, currentContent + event.content, undefined, sessionId);
                         }
+                        
+                        setState((prev) => ({
+                            ...prev,
+                            answer: prev.answer + event.content
+                        }));
+
                         logEvent({ type: 'synthesis-chunk', content: event.content });
                     } else if (event.type === 'synthesis-complete') {
                         answer = event.answer;
@@ -615,6 +623,7 @@ export function useMaxwell(): UseMaxwellReturn {
                     searchMetadata: searchOutput.searchMetadata,
                     verification,
                     verificationProgress: null,
+                    answer,
                     adjudication: adjudicationText || null,
                     phaseDurations: {
                         decomposition: decomposition.durationMs,

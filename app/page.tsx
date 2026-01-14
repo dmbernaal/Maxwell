@@ -2,12 +2,17 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { SmallGhostLogo } from './components/SmallGhostLogo';
 import InputInterface from './components/InputInterface';
 import ResponseDisplay from './components/ResponseDisplay';
 import UserMessage from './components/UserMessage';
 import ChatHistory from './components/ChatHistory';
 import { MaxwellCanvas } from './components/maxwell';
+import MarketGrid from './components/MarketGrid';
+import MarketExplorer from './components/MarketExplorer';
+import { UnifiedMarket } from './lib/markets/types';
+// import { MOCK_MARKETS } from './lib/market-data';
 import { useChatStore } from './store';
 import { useChatApi } from './hooks/use-chat-api';
 import { useMaxwell } from './hooks/use-maxwell';
@@ -23,7 +28,12 @@ const spacerVariants = {
   active: { height: '150px' }
 };
 
+// Module-level variable to track intro state across SPA navigations
+// This persists while the app is running but resets on full page refresh
+let hasIntroRunThisSession = false;
+
 export default function Home() {
+  const router = useRouter();
   const {
     getActiveSession,
     createSession,
@@ -63,12 +73,36 @@ export default function Home() {
   // Track input focus for Ghost reaction
   const [isInputFocused, setIsInputFocused] = useState(false);
 
-  const [currentLayout, setCurrentLayout] = useState<'relaxed' | 'active'>('relaxed');
+  const [viewMode, setViewMode] = useState<'landing' | 'explore'>('landing');
+  const [currentLayout, setCurrentLayout] = useState<'relaxed' | 'active' | 'explore'>('relaxed');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Track which messages are "history" (already rendered) vs "new" (just added)
   const historyIds = useRef(new Set<string>());
   const renderedSessionId = useRef(activeSessionId);
+
+  // Market Data State
+  const [marketResults, setMarketResults] = useState<UnifiedMarket[]>([]);
+  
+  // Fetch real markets
+  useEffect(() => {
+    const fetchMarkets = async () => {
+      try {
+        const res = await fetch('/api/markets?limit=12');
+        if (res.ok) {
+          const data = await res.json();
+          setMarketResults(data.markets || []);
+        }
+      } catch (e) {
+        console.error("Failed to fetch markets", e);
+      }
+    };
+    fetchMarkets();
+  }, []);
+
+  // Intro State
+  const [introState, setIntroState] = useState<'start' | 'ghost' | 'done'>('start');
+  const [forceGhostGlow, setForceGhostGlow] = useState(false);
 
   // Manually trigger hydration for async IndexedDB storage
   // This is required because skipHydration: true prevents auto-hydration
@@ -86,6 +120,27 @@ export default function Home() {
 
   const messages = activeSession?.messages || [];
   const agentState = activeSession?.agentState || 'relaxed';
+
+  // Determine if we should show the intro (only if no messages and no active session context)
+  // Logic:
+  // 1. Should run if global "hasIntroRunThisSession" is false
+  // 2. AND we are in an empty chat (messages.length === 0)
+  // This means refreshing the page (clears variable) will replay it.
+  // But switching sessions (preserves variable) will NOT replay it.
+  const shouldRunIntro = !hasIntroRunThisSession && messages.length === 0;
+
+  // Skip intro if we have messages or have seen it already
+  useEffect(() => {
+    if ((messages.length > 0 || hasIntroRunThisSession) && introState === 'start') {
+      setIntroState('done');
+    }
+  }, [messages.length, introState]);
+
+  // Handle intro completion
+  const handleIntroComplete = () => {
+    setIntroState('done');
+    hasIntroRunThisSession = true; // Mark as run for this browser session
+  };
 
   // Update history tracking when session changes
   // CRITICAL: Also reset Maxwell state for clean slate
@@ -167,12 +222,15 @@ export default function Home() {
 
   // Update layout based on state
   useEffect(() => {
-    if (agentState !== 'relaxed' || messages.length > 0) {
+    if (viewMode === 'explore') {
+      setCurrentLayout('explore');
+    } else if (agentState !== 'relaxed' || messages.length > 0) {
       setCurrentLayout('active');
+      setViewMode('landing'); // Reset explore mode if chat activates
     } else {
       setCurrentLayout('relaxed');
     }
-  }, [agentState, messages.length]);
+  }, [agentState, messages.length, viewMode]);
 
   // Handle query submission - routes to correct API based on mode
   const handleQuery = (q: string, attachments?: import('./types').Attachment[]) => {
@@ -238,6 +296,7 @@ export default function Home() {
 
   return (
     <main className="relative min-h-screen w-full bg-[var(--bg-primary)] overflow-hidden selection:bg-brand-accent/30 font-sans">
+      
       <ChatHistory />
 
       {/* GLOBAL EFFECTS - Pure Obsidian Void */}
@@ -254,22 +313,23 @@ export default function Home() {
           >
             <div className="pointer-events-auto flex flex-col items-center w-full max-w-3xl px-4">
               {/* Ghost Centered */}
+              {/* Initially hidden, fades in after text intro */}
               <motion.div
                 initial={{ opacity: 0, scale: 0.9, filter: 'blur(10px)' }}
-                animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+                animate={introState === 'start' ? { opacity: 0 } : { opacity: 1, scale: 1, filter: 'blur(0px)' }}
                 exit={{ opacity: 0, scale: 0.9, filter: 'blur(10px)' }}
-                transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }} // Cubic bezier for "premium" feel
-                className="w-[160px] h-[200px] mb-8"
+                transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }} // Faster duration for snappy feel
+                className="w-[136px] h-[170px] mb-8"
               >
-                <SmallGhostLogo isActive={isInputFocused} />
+                <SmallGhostLogo isActive={isInputFocused || forceGhostGlow} />
               </motion.div>
 
               {/* Input Centered */}
               <motion.div
-                initial={{ opacity: 0, y: 20, filter: 'blur(5px)' }}
-                animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                initial={{ opacity: 1 }} // Always present structurally
+                animate={{ opacity: 1 }}
                 exit={{ opacity: 0, y: 20, filter: 'blur(5px)' }}
-                transition={{ duration: 0.4, delay: 0.1, ease: 'easeOut' }}
+                transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }} // Faster fade in
                 className="w-full"
               >
                 <InputInterface
@@ -282,9 +342,79 @@ export default function Home() {
                   hasMaxwellResults={hasMaxwellResults && !isCanvasVisible}
                   onViewResults={handleViewResults}
                   onFocusChange={setIsInputFocused}
+                  // Market Search Mode (Landing Only)
+                  isMarketSearch={true}
+                  onMarketSelect={(market) => router.push(`/markets/${market.id}`)}
+                  // Intro Props
+                  shouldRunIntro={shouldRunIntro}
+                  onGhostAppear={() => {
+                    setIntroState('ghost');
+                    setForceGhostGlow(true);
+                    setTimeout(() => setForceGhostGlow(false), 1500);
+                  }}
+                  onIntroComplete={handleIntroComplete}
                 />
               </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
+                className="w-full mt-16 flex flex-col items-center gap-8"
+              >
+                <MarketGrid 
+                  markets={marketResults.length > 0 ? marketResults : []} 
+                  onSelectMarket={(market) => router.push(`/markets/${market.id}`)}
+                />
+                
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setViewMode('explore')}
+                  className="px-6 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 text-sm text-zinc-400 hover:text-white transition-colors backdrop-blur-sm"
+                >
+                  Explore All Markets
+                </motion.button>
+              </motion.div>
             </div>
+          </motion.div>
+        ) : currentLayout === 'explore' ? (
+          <motion.div
+            key="explore-layout"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-30 bg-[var(--bg-primary)] flex flex-col"
+          >
+             <div className="shrink-0 w-full bg-[var(--bg-primary)]/80 backdrop-blur-xl border-b border-white/5 z-40">
+                <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex flex-col items-center gap-4">
+                  <div className="w-[32px] h-[40px]">
+                    <SmallGhostLogo isActive={isInputFocused} />
+                  </div>
+                  <div className="w-full max-w-2xl">
+                     <InputInterface
+                        state={agentState}
+                        hasMessages={false}
+                        onQuery={handleQuery}
+                        mode={searchMode}
+                        onModeChange={handleModeChange}
+                        disabled={false}
+                        hasMaxwellResults={false}
+                        onViewResults={() => {}}
+                        onFocusChange={setIsInputFocused}
+                        isMarketSearch={true}
+                      />
+                  </div>
+                </div>
+             </div>
+
+             <div className="flex-1 overflow-y-auto">
+                <MarketExplorer 
+                  onBack={() => setViewMode('landing')}
+                  onSelectMarket={(market) => router.push(`/markets/${market.id}`)}
+                />
+             </div>
           </motion.div>
         ) : (
           <motion.div
@@ -340,6 +470,7 @@ export default function Home() {
                   hasMaxwellResults={hasMaxwellResults && !isCanvasVisible}
                   onViewResults={handleViewResults}
                   onFocusChange={setIsInputFocused}
+                  isMarketSearch={false}
                 />
               </motion.div>
             </motion.div>

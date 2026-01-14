@@ -1,11 +1,14 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 import { Mic, ArrowRight, Search, Zap, Globe, FileText, Plus, Paperclip, X } from 'lucide-react';
 import { AgentState, SearchMode, Attachment, ATTACHMENT_LIMITS } from '../types';
 import { convertToBase64, validateAttachment, generateAttachmentId } from '../lib/file-utils';
 import ModeDropdown from './ModeDropdown';
+import type { UnifiedMarket } from '@/app/lib/markets/types';
+import { TRENDING_SEARCHES } from '../lib/market-data';
+import MarketAutocomplete from './MarketAutocomplete';
 
 interface InputInterfaceProps {
   state: AgentState;
@@ -17,6 +20,13 @@ interface InputInterfaceProps {
   hasMaxwellResults?: boolean;
   onViewResults?: () => void;
   onFocusChange?: (isFocused: boolean) => void;
+  // Market Search Props
+  isMarketSearch?: boolean;
+  onMarketSelect?: (market: UnifiedMarket) => void;
+  // Intro props
+  shouldRunIntro?: boolean;
+  onIntroComplete?: () => void;
+  onGhostAppear?: () => void;
 }
 
 function SpotlightPill({ icon: Icon, label, onClick }: { icon: any, label: string, onClick: () => void }) {
@@ -27,10 +37,10 @@ function SpotlightPill({ icon: Icon, label, onClick }: { icon: any, label: strin
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
-      className="relative group rounded-full p-[1px] bg-white/5 overflow-hidden"
+      className="relative group rounded-full p-[1px] bg-white/[0.03] overflow-hidden"
     >
 
-      <div className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#18151d] backdrop-blur-md border border-transparent">
+      <div className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#18151d]/40 backdrop-blur-md border border-transparent group-hover:shadow-[0_0_15px_-3px_rgba(255,255,255,0.1)] transition-all">
         <Icon size={12} className="opacity-50 group-hover:opacity-100 transition-opacity text-white" />
         <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/50 group-hover:text-white/90 transition-colors">{label}</span>
       </div>
@@ -48,12 +58,93 @@ export default function InputInterface({
   hasMaxwellResults = false,
   onViewResults,
   onFocusChange,
+  shouldRunIntro = false,
+  onIntroComplete,
+  onGhostAppear,
+  isMarketSearch = false,
+  onMarketSelect
 }: InputInterfaceProps) {
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  
+  // Market Search State
+  const [marketResults, setMarketResults] = useState<UnifiedMarket[]>([]);
+  const [showMarketDropdown, setShowMarketDropdown] = useState(false);
+
+  useEffect(() => {
+    if (!isMarketSearch) return;
+    
+    if (!query) {
+      setMarketResults([]);
+      return;
+    }
+
+    const fetchSuggestions = async () => {
+      try {
+        const res = await fetch(`/api/markets?q=${encodeURIComponent(query)}&limit=5`);
+        if (res.ok) {
+          const data = await res.json();
+          setMarketResults(data.markets || []);
+        }
+      } catch (e) {
+        console.error("Failed to fetch market suggestions", e);
+      }
+    };
+
+    const timeoutId = setTimeout(fetchSuggestions, 300);
+    return () => clearTimeout(timeoutId);
+
+  }, [query, isMarketSearch]);
+
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Intro State
+  const [introText, setIntroText] = useState(shouldRunIntro ? 'Hi' : 'Hi, I am Maxwell.');
+  const [introStep, setIntroStep] = useState<'idle' | 'hi' | 'typing' | 'done'>('idle');
+
+  // Trigger Intro Sequence
+  useEffect(() => {
+    if (shouldRunIntro && introStep === 'idle') {
+      const runSequence = async () => {
+        setIntroStep('hi');
+        
+        // 1. Show "Hi" -> Pause
+        await new Promise(r => setTimeout(r, 1000));
+
+        // 2. Type "Hi, I am Maxwell"
+        setIntroStep('typing');
+        const suffix = ", I am Maxwell.";
+        
+        for (let i = 0; i <= suffix.length; i++) {
+          setIntroText("Hi" + suffix.slice(0, i));
+          // Random typing speed for realism
+          await new Promise(r => setTimeout(r, 50 + Math.random() * 30));
+        }
+
+        // Wait a tiny beat
+        await new Promise(r => setTimeout(r, 100));
+
+        // 3. Signal Ghost Appearance
+        onGhostAppear?.();
+        
+        // Wait for ghost animation to settle before showing controls
+        await new Promise(r => setTimeout(r, 800));
+
+        // 4. Complete -> Fade in interface
+        setIntroStep('done');
+        onIntroComplete?.();
+      };
+      
+      runSequence();
+    } else if (!shouldRunIntro && introStep === 'idle') {
+        // If no intro needed, jump to done (e.g. returning user or mid-chat)
+        setIntroStep('done');
+        setIntroText("Hi, I am Maxwell."); // Standard greeting
+    }
+  }, [shouldRunIntro, introStep, onGhostAppear, onIntroComplete]);
+
 
   // Is Maxwell mode (attachments disabled)
   const isMaxwellMode = mode === 'maxwell';
@@ -65,18 +156,17 @@ export default function InputInterface({
     }
   }, [query]);
 
-  // Spotlight effect logic
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-
-  function handleMouseMove({ currentTarget, clientX, clientY }: React.MouseEvent) {
-    const { left, top } = currentTarget.getBoundingClientRect();
-    mouseX.set(clientX - left);
-    mouseY.set(clientY - top);
-  }
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // If market search, select top result or do nothing (dropdown handles selection)
+    if (isMarketSearch) {
+      if (marketResults.length > 0 && onMarketSelect) {
+        onMarketSelect(marketResults[0]);
+      }
+      return;
+    }
+
     if (query.trim()) {
       onQuery(query, attachments.length > 0 ? attachments : undefined);
       setQuery('');
@@ -139,30 +229,36 @@ export default function InputInterface({
 
   return (
     <div className="w-full max-w-3xl mx-auto z-10 flex flex-col gap-6">
-      {/* Greeting - Only visible in Relaxed state AND no messages */}
+      {/* Greeting Container - Maintains layout stability */}
+      {/* Visible only in Relaxed state AND no messages */}
       <AnimatePresence>
         {state === 'relaxed' && !hasMessages && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="text-center space-y-2 mb-4"
+            className="text-center space-y-2 mb-4 h-[32px] flex items-center justify-center w-full" // Fixed height to prevent shifts
           >
-            <h1 className="text-xl md:text-2xl text-white/80 font-medium tracking-normal">
-              I am Maxwell's AI.
-            </h1>
+            <div className="w-[300px] text-center"> {/* Fixed width container to prevent jitter */}
+              <h1 className="text-xl md:text-2xl text-white/95 font-medium tracking-tight inline-block">
+                {introText}
+              </h1>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Central Command Input - Kaiyros Spotlight Aesthetic */}
-      <div className="relative w-full">
+      {/* Hidden during intro sequence until 'done' */}
+      <motion.div 
+        className="relative w-full"
+        initial={shouldRunIntro ? { opacity: 0 } : { opacity: 1 }}
+        animate={introStep === 'done' ? { opacity: 1 } : { opacity: 0 }}
+        transition={{ duration: 0.5 }}
+      >
         <motion.form
           onSubmit={handleSubmit}
           className="relative group w-full p-[1px] rounded-[24px] bg-gradient-to-b from-white/15 to-white/5"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
         >
           {/* Inner Container: Obsidian Surface */}
           <div
@@ -227,6 +323,7 @@ export default function InputInterface({
                   // Auto-resize
                   e.target.style.height = 'auto';
                   e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
+                  if (isMarketSearch) setShowMarketDropdown(true);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -235,16 +332,22 @@ export default function InputInterface({
                       handleSubmit(e);
                     }
                   }
+                  if (e.key === 'Escape') {
+                    setShowMarketDropdown(false);
+                  }
                 }}
                 onFocus={() => {
                   setIsFocused(true);
                   onFocusChange?.(true);
+                  if (isMarketSearch) setShowMarketDropdown(true);
                 }}
                 onBlur={() => {
                   setIsFocused(false);
                   onFocusChange?.(false);
+                  // Delayed hide to allow clicks
+                  setTimeout(() => setShowMarketDropdown(false), 200);
                 }}
-                placeholder="Ask anything..."
+                placeholder={isMarketSearch ? "Search markets (e.g. Fed Rates, Election)..." : "Ask anything..."}
                 rows={1}
                 className="w-full bg-transparent text-lg text-white placeholder-white/30 focus:outline-none font-light py-2 resize-none max-h-[200px] overflow-y-auto"
               />
@@ -265,8 +368,10 @@ export default function InputInterface({
                   className="hidden"
                 />
 
-                {/* Attach button with Maxwell mode guard */}
-                <div className="relative group/attach">
+                {!isMarketSearch && (
+                  <>
+                    {/* Attach button with Maxwell mode guard */}
+                    <div className="relative group/attach">
                   <button
                     type="button"
                     onClick={() => !isMaxwellMode && fileInputRef.current?.click()}
@@ -292,14 +397,16 @@ export default function InputInterface({
                   )}
                 </div>
 
-                {onModeChange && (
-                  <ModeDropdown
-                    mode={mode}
-                    onModeChange={onModeChange}
-                    disabled={disabled}
-                    hasMaxwellResults={hasMaxwellResults}
-                    onViewResults={onViewResults}
-                  />
+                    {onModeChange && (
+                      <ModeDropdown
+                        mode={mode}
+                        onModeChange={onModeChange}
+                        disabled={disabled}
+                        hasMaxwellResults={hasMaxwellResults}
+                        onViewResults={onViewResults}
+                      />
+                    )}
+                  </>
                 )}
               </div>
 
@@ -339,11 +446,24 @@ export default function InputInterface({
           </div>
         </motion.form>
 
-        {/* Quick Actions - Pills (Absolute positioned to prevent layout shift) */}
-        <div className="absolute top-full left-0 w-full pt-6">
-          <AnimatePresence>
-            {state === 'relaxed' && !query && (
-              <motion.div
+          {/* Quick Actions - Pills (Absolute positioned to prevent layout shift) */}
+          <div className="absolute top-full left-0 w-full pt-6">
+            {isMarketSearch ? (
+               <MarketAutocomplete 
+                 query={query}
+                 results={marketResults}
+                 trendingQueries={TRENDING_SEARCHES}
+                 onSelectMarket={(m) => onMarketSelect?.(m)}
+                 onSelectQuery={(q) => {
+                   setQuery(q);
+                   if (textareaRef.current) textareaRef.current.focus();
+                 }}
+                 isVisible={showMarketDropdown}
+               />
+            ) : (
+              <AnimatePresence>
+                {state === 'relaxed' && !query && (
+                  <motion.div
                 className="flex flex-nowrap justify-center gap-2 px-4 overflow-x-auto no-scrollbar w-full"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -362,13 +482,14 @@ export default function InputInterface({
                     label={item.label}
                     onClick={() => handlePillClick(item.label)}
                   />
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          )}
         </div>
-      </div>
+      </motion.div>
     </div>
+
   );
 }
-

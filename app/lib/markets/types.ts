@@ -1,0 +1,271 @@
+/**
+ * Maxwell Prediction Markets - Core Types
+ * 
+ * This file defines the normalized types for the prediction market feature.
+ * These types form the CONTRACT between API adapters, API routes, and frontend components.
+ * 
+ * @see prd/types.prd.md for full specification
+ */
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PLATFORM
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Supported prediction market platforms
+ */
+export type Platform = 'polymarket' | 'kalshi';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UNIFIED MARKET
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Normalized market data from any platform.
+ * This is the SINGLE SOURCE OF TRUTH for the frontend.
+ */
+export interface UnifiedMarket {
+  // ─────────────────────────────────────────────
+  // IDENTITY
+  // ─────────────────────────────────────────────
+  
+  /** Prefixed ID: "poly:abc123" or "kalshi:KXBTC" */
+  id: string;
+  
+  /** Original platform ID (no prefix) */
+  externalId: string;
+  
+  /** Source platform */
+  platform: Platform;
+  
+  /** URL-friendly slug */
+  slug: string;
+  
+  /** Direct link to market on platform */
+  url: string;
+  
+  // ─────────────────────────────────────────────
+  // DISPLAY
+  // ─────────────────────────────────────────────
+  
+  /** Market question/title */
+  title: string;
+  
+  /** Full description (may be long) */
+  description?: string;
+  
+  /** Category: "Politics", "Economics", "Science", etc. */
+  category: string;
+  
+  /** Market image URL if available */
+  imageUrl?: string;
+  
+  // ─────────────────────────────────────────────
+  // PRICING (NORMALIZED TO 0-1)
+  // ─────────────────────────────────────────────
+  
+  /** YES probability (0.0 - 1.0) */
+  yesPrice: number;
+  
+  /** NO probability (0.0 - 1.0) */
+  noPrice: number;
+  
+  /** Last trade price */
+  lastPrice?: number;
+  
+  // ─────────────────────────────────────────────
+  // VOLUME (NORMALIZED TO USD)
+  // ─────────────────────────────────────────────
+  
+  /** Total volume in USD */
+  volume: number;
+  
+  /** 24-hour volume in USD */
+  volume24h: number;
+  
+  /** Current liquidity */
+  liquidity?: number;
+  
+  /** Open interest (Kalshi only) */
+  openInterest?: number;
+  
+  // ─────────────────────────────────────────────
+  // TIMING
+  // ─────────────────────────────────────────────
+  
+  /** Resolution deadline */
+  endDate: Date;
+  
+  /** Market creation date */
+  createdAt: Date;
+  
+  /** Market status */
+  status: 'open' | 'closed' | 'resolved';
+  
+  // ─────────────────────────────────────────────
+  // RESOLUTION
+  // ─────────────────────────────────────────────
+  
+  /** Resolution rules text */
+  rules?: string;
+  
+  /** Resolution source description */
+  resolutionSource?: string;
+  
+  /** Final result (if resolved) */
+  result?: 'yes' | 'no' | null;
+  
+  // ─────────────────────────────────────────────
+  // UI HELPERS
+  // ─────────────────────────────────────────────
+  
+  /** Is this market trending? */
+  trending?: boolean;
+  
+  /** Featured/promoted market? */
+  featured?: boolean;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EXTENDED TYPES
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Price history data point
+ */
+export interface PricePoint {
+  /** Unix timestamp in milliseconds */
+  timestamp: number;
+  
+  /** Price (0.0 - 1.0) */
+  price: number;
+}
+
+/**
+ * Order book data
+ */
+export interface OrderBook {
+  /** Bid orders: [price, size][] */
+  bids: [number, number][];
+  
+  /** Ask orders: [price, size][] */
+  asks: [number, number][];
+  
+  /** Timestamp when fetched */
+  asOf: number;
+}
+
+/**
+ * Market with full detail (for detail page)
+ */
+export interface UnifiedMarketDetail extends UnifiedMarket {
+  /** Historical price data */
+  priceHistory: PricePoint[];
+  
+  /** Current order book */
+  orderBook?: OrderBook;
+  
+  /** Full description (never truncated) */
+  fullDescription: string;
+  
+  /** Related markets (same event/series) */
+  relatedMarkets?: UnifiedMarket[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// API RESPONSE TYPES
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/markets request query params
+ */
+export interface MarketsRequest {
+  query?: string;
+  platform?: Platform | 'all';
+  sort?: 'volume' | 'trending' | 'endDate' | 'newest';
+  limit?: number;
+  cursor?: string;
+}
+
+/**
+ * GET /api/markets response
+ */
+export interface MarketsResponse {
+  markets: UnifiedMarket[];
+  nextCursor?: string;
+  totalCount?: number;
+  asOf: number;
+}
+
+/**
+ * GET /api/markets/:id response
+ */
+export interface MarketDetailResponse {
+  market: UnifiedMarketDetail;
+  asOf: number;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ERROR TYPES
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type ApiErrorCode = 
+  | 'RATE_LIMITED'
+  | 'UPSTREAM_ERROR'
+  | 'INVALID_REQUEST'
+  | 'NOT_FOUND'
+  | 'AUTH_ERROR'
+  | 'NORMALIZATION_ERROR';
+
+export interface ApiError {
+  error: {
+    code: ApiErrorCode;
+    message: string;
+    retryAfterMs?: number;
+    source?: Platform;
+    details?: unknown;
+  };
+  asOf: number;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPONENT PROP TYPES
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface MarketCardProps {
+  market: UnifiedMarket;
+  onClick?: () => void;
+  variant?: 'default' | 'compact';
+}
+
+export interface MarketGridProps {
+  markets: UnifiedMarket[];
+  isLoading?: boolean;
+  onMarketClick: (market: UnifiedMarket) => void;
+}
+
+export interface MarketAutocompleteProps {
+  query: string;
+  results: UnifiedMarket[];
+  trendingQueries: string[];
+  onSelectMarket: (market: UnifiedMarket) => void;
+  onSelectQuery: (query: string) => void;
+  isVisible: boolean;
+}
+
+export interface MarketDataPanelProps {
+  market: UnifiedMarketDetail;
+  isLoading?: boolean;
+}
+
+export interface PriceChartProps {
+  data: PricePoint[];
+  platform: Platform;
+  interval: '1h' | '1d' | '1w' | '1m' | 'all';
+  onIntervalChange: (interval: string) => void;
+}
+
+export interface OrderBookProps {
+  orderBook: OrderBook;
+  platform: Platform;
+}

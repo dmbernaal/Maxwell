@@ -32,8 +32,35 @@ Maxwell is a **verified search agent** that differentiates from standard Perplex
 **What makes Maxwell different?**
 
 | Standard RAG | Maxwell |
-|--------------|---------|
-| Retrieves → Synthesizes → Done | Retrieves → Synthesizes → **Verifies** → **Reconstructs** |
+|--------------|---------|   
+
+
+
+
+
+asdas
+d'a
+s'd
+as'd
+'
+
+
+
+
+
+
+ 
+ 
+ 
+ 
+ \
+ 
+ 
+ 
+ 
+ 
+ 
+ es** → **Reconstructs** |
 | "Trust me, this is accurate" | "Here is the verified answer, stripped of hallucinations" |
 | Citations ≈ decoration | Citations validated against evidence |
 | No numeric checking | Detects `"grew 18%"` vs source saying `"grew 15%"` |
