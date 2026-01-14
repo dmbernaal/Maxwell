@@ -50,7 +50,7 @@ export default function MarketCard({ market, onClick }: MarketCardProps) {
           </h3>
           
           <div 
-            className="shrink-0 flex items-center justify-center w-6 h-6 rounded bg-white/5 border border-white/5"
+            className="shrink-0 flex items-center justify-center w-6 h-6 rounded-md bg-[#1a1a1a]"
             style={{ color: brandColor }}
           >
             {isPoly ? (

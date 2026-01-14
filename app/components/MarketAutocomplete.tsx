@@ -33,13 +33,13 @@ export default function MarketAutocomplete({
   if (!isVisible) return null;
 
   return (
-    <div className="absolute top-full left-0 w-full mt-2 px-2 z-50">
+    <div className="absolute top-full left-0 w-[480px] mt-2 z-50">
       <motion.div
         initial={{ opacity: 0, y: -10, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -10, scale: 0.98 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="w-full bg-[#18151d]/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5)] overflow-hidden"
+        className="w-full bg-[#141414]/95 backdrop-blur-xl rounded-xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.6)]"
       >
         {!query && (
           <div className="p-2">
@@ -52,7 +52,7 @@ export default function MarketAutocomplete({
                 <button
                   key={idx}
                   onClick={() => onSelectQuery(q)}
-                  className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-white/5 group transition-colors text-left"
+                  className="flex items-center gap-3 w-full px-3 py-2 rounded-md hover:bg-[#1a1a1a] group transition-colors text-left"
                 >
                   <div className="w-5 h-5 rounded-md flex items-center justify-center text-white/20 group-hover:text-white/60 transition-all">
                     <TrendingUp size={12} />
@@ -78,17 +78,17 @@ export default function MarketAutocomplete({
                 <button
                   key={market.id}
                   onClick={() => onSelectMarket(market)}
-                  className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-white/5 border border-transparent hover:border-white/5 group transition-all text-left"
+                  className="flex items-center gap-3 w-full px-3 py-3 rounded-md hover:bg-[#1a1a1a] group transition-all text-left"
                 >
                   <div className="shrink-0">
 
                     {market.platform === 'polymarket' ? (
-                       <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20 group-hover:border-blue-500/40 transition-colors">
-                         <PolymarketLogo className="w-4 h-4 text-blue-400" />
+                       <div className="w-8 h-8 rounded-md bg-[#1a1a1a] flex items-center justify-center">
+                         <PolymarketLogo className="w-4 h-4 text-[#2E5CFF]" />
                        </div>
                     ) : (
-                       <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 group-hover:border-emerald-500/40 transition-colors">
-                         <KalshiLogo className="w-4 h-4 text-emerald-400" />
+                       <div className="w-8 h-8 rounded-md bg-[#1a1a1a] flex items-center justify-center">
+                         <KalshiLogo className="w-4 h-4 text-[#09C285]" />
                        </div>
                     )}
                   </div>
@@ -111,7 +111,7 @@ export default function MarketAutocomplete({
                   </div>
 
                   <div className="shrink-0 flex flex-col items-end gap-1">
-                    <div className={`text-sm font-bold ${market.platform === 'polymarket' ? 'text-blue-400' : 'text-emerald-400'}`}>
+                    <div className={`text-sm font-bold ${market.platform === 'polymarket' ? 'text-[#2E5CFF]' : 'text-[#09C285]'}`}>
                       {Math.round(market.yesPrice * 100)}%
 
                     </div>
@@ -125,7 +125,7 @@ export default function MarketAutocomplete({
 
         {query && results.length === 0 && (
           <div className="p-8 text-center">
-            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 rounded-md bg-[#1a1a1a] flex items-center justify-center mx-auto mb-3">
 
               <Search size={20} className="text-white/20" />
             </div>

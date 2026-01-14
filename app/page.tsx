@@ -11,7 +11,7 @@ import { MaxwellCanvas } from './components/maxwell';
 import MarketGrid from './components/MarketGrid';
 import MarketGridSkeleton from './components/MarketGridSkeleton';
 import MarketExplorer from './components/MarketExplorer';
-import { UnifiedMarket } from './lib/markets/types';
+import type { UnifiedMarket } from './lib/markets/types';
 import { useChatStore } from './store';
 import { useChatApi } from './hooks/use-chat-api';
 import { useMaxwell } from './hooks/use-maxwell';
@@ -51,7 +51,6 @@ export default function Home() {
   const { sendMessage, isStreaming } = useChatApi();
   const maxwell = useMaxwell();
   const [isCanvasVisible, setIsCanvasVisible] = useState(false);
-  const [isInputFocused, setIsInputFocused] = useState(false);
   const [viewMode, setViewMode] = useState<'landing' | 'explore'>('landing');
   const [currentLayout, setCurrentLayout] = useState<'relaxed' | 'active' | 'explore'>('relaxed');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -208,39 +207,16 @@ export default function Home() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.2 } }}
-            className="fixed inset-0 flex flex-col items-center pt-[15vh] z-30 pointer-events-none"
+            className="pt-24 px-6 lg:px-10"
           >
-            <div className="pointer-events-auto flex flex-col items-center w-full max-w-4xl px-4">
-              
+            <div className="max-w-[1200px] mx-auto">
               <motion.div
-                initial={{ opacity: 1 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0, y: 20, filter: 'blur(5px)' }}
-                transition={{ duration: 0.4, ease: 'easeOut' }}
-                className="w-full mb-10"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="flex flex-col gap-6"
               >
-                <InputInterface
-                  state={agentState}
-                  hasMessages={messages.length > 0}
-                  onQuery={handleQuery}
-                  mode={searchMode}
-                  onModeChange={handleModeChange}
-                  disabled={isStreaming || maxwell.isLoading}
-                  hasMaxwellResults={hasMaxwellResults && !isCanvasVisible}
-                  onViewResults={handleViewResults}
-                  onFocusChange={setIsInputFocused}
-                  isMarketSearch={true}
-                  onMarketSelect={(market) => router.push(`/markets/${market.id}`)}
-                />
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                className="w-full flex flex-col gap-6"
-              >
-                <div className="flex items-center justify-between px-1">
+                <div className="flex items-center justify-between">
                   <h2 className="text-xs font-mono uppercase tracking-widest text-white/40">Trending Markets</h2>
                   <button 
                     onClick={() => setViewMode('explore')}
@@ -267,33 +243,14 @@ export default function Home() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-30 bg-[var(--bg-primary)] flex flex-col"
+            className="pt-24 px-6 lg:px-10 min-h-screen"
           >
-             <div className="shrink-0 w-full z-40 mt-20">
-                <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex flex-col items-center gap-4">
-                  <div className="w-full max-w-2xl">
-                     <InputInterface
-                        state={agentState}
-                        hasMessages={false}
-                        onQuery={handleQuery}
-                        mode={searchMode}
-                        onModeChange={handleModeChange}
-                        disabled={false}
-                        hasMaxwellResults={false}
-                        onViewResults={() => {}}
-                        onFocusChange={setIsInputFocused}
-                        isMarketSearch={true}
-                      />
-                  </div>
-                </div>
-             </div>
-
-             <div className="flex-1 overflow-y-auto">
-                <MarketExplorer 
-                  onBack={() => setViewMode('landing')}
-                  onSelectMarket={(market) => router.push(`/markets/${market.id}`)}
-                />
-             </div>
+            <div className="max-w-[1200px] mx-auto">
+              <MarketExplorer 
+                onBack={() => setViewMode('landing')}
+                onSelectMarket={(market) => router.push(`/markets/${market.id}`)}
+              />
+            </div>
           </motion.div>
         ) : (
           <motion.div
@@ -325,7 +282,6 @@ export default function Home() {
                   disabled={isStreaming || maxwell.isLoading}
                   hasMaxwellResults={hasMaxwellResults && !isCanvasVisible}
                   onViewResults={handleViewResults}
-                  onFocusChange={setIsInputFocused}
                   isMarketSearch={false}
                 />
               </motion.div>

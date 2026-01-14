@@ -153,7 +153,7 @@ export default function ModeDropdown({
                     exit={{ opacity: 0, y: 8, scale: 0.95 }}
                     transition={{ duration: 0.15, ease: 'easeOut' }}
                     style={menuStyle}
-                    className="w-full max-w-[240px] rounded-2xl bg-[#18151d] border border-white/5 shadow-2xl overflow-hidden z-[9999]"
+                    className="w-full max-w-[240px] rounded-xl bg-[#141414] overflow-hidden z-[9999]"
                 >
                     <div className="p-1.5 flex flex-col gap-0.5">
                         {modes.map((option) => {
@@ -165,20 +165,20 @@ export default function ModeDropdown({
                                     key={option.id}
                                     onClick={() => handleSelect(option.id)}
                                     className={`
-                                        w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-all duration-200
+                                        w-full flex items-center justify-between px-3 py-2.5 rounded-md text-left transition-all duration-200
                                         ${isActive
-                                            ? 'bg-white/5 text-white'
-                                            : 'text-white/40 hover:bg-white/[0.02] hover:text-white/80'
+                                            ? 'bg-[#1a1a1a] text-white'
+                                            : 'text-white/40 hover:bg-[#1a1a1a] hover:text-white/80'
                                         }
                                     `}
                                 >
                                     <div className="flex items-center gap-3">
                                         {/* Icon */}
                                         <div className={`
-                                            w-8 h-8 rounded-full flex items-center justify-center border transition-colors
+                                            w-8 h-8 rounded-md flex items-center justify-center transition-colors
                                             ${isActive
-                                                ? 'bg-white/10 border-white/10'
-                                                : 'bg-white/5 border-white/5'
+                                                ? 'bg-[#222222]'
+                                                : 'bg-[#1a1a1a]'
                                             }
                                         `}>
                                             <Icon
@@ -223,8 +223,8 @@ export default function ModeDropdown({
                 onClick={handleToggle}
                 disabled={disabled}
                 className={`
-                    hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full 
-                    bg-[#18151d] hover:bg-[#231f29] border border-white/5 
+                    hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-md 
+                    bg-[#141414] hover:bg-[#1a1a1a]
                     transition-all text-xs font-medium text-white/60
                     ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                 `}
