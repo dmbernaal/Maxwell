@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { BarChart2, TrendingUp, Clock } from 'lucide-react';
 import Header from './components/Header';
 import InputInterface from './components/InputInterface';
 import ResponseDisplay from './components/ResponseDisplay';
@@ -10,12 +11,14 @@ import UserMessage from './components/UserMessage';
 import { MaxwellCanvas } from './components/maxwell';
 import MarketGrid from './components/MarketGrid';
 import MarketGridSkeleton from './components/MarketGridSkeleton';
-import MarketExplorer from './components/MarketExplorer';
 import type { UnifiedMarket } from './lib/markets/types';
 import { useChatStore } from './store';
 import { useChatApi } from './hooks/use-chat-api';
 import { useMaxwell } from './hooks/use-maxwell';
 import type { SearchMode } from './types';
+
+type Platform = 'all' | 'polymarket' | 'kalshi';
+type Sort = 'volume' | 'trending' | 'newest';
 
 const spacerVariants = {
   relaxed: { height: '30vh' },
@@ -51,19 +54,25 @@ export default function Home() {
   const { sendMessage, isStreaming } = useChatApi();
   const maxwell = useMaxwell();
   const [isCanvasVisible, setIsCanvasVisible] = useState(false);
-  const [viewMode, setViewMode] = useState<'landing' | 'explore'>('landing');
-  const [currentLayout, setCurrentLayout] = useState<'relaxed' | 'active' | 'explore'>('relaxed');
+  const [currentLayout, setCurrentLayout] = useState<'relaxed' | 'active'>('relaxed');
   const scrollRef = useRef<HTMLDivElement>(null);
   const historyIds = useRef(new Set<string>());
   const renderedSessionId = useRef(activeSessionId);
   const [marketResults, setMarketResults] = useState<UnifiedMarket[]>([]);
   const [isMarketsLoading, setIsMarketsLoading] = useState(true);
+  const [platform, setPlatform] = useState<Platform>('all');
+  const [sort, setSort] = useState<Sort>('volume');
 
   useEffect(() => {
     const fetchMarkets = async () => {
       try {
         setIsMarketsLoading(true);
-        const res = await fetch('/api/markets?limit=12');
+        const queryParams = new URLSearchParams({
+          limit: '20',
+          sort,
+          ...(platform !== 'all' && { platform })
+        });
+        const res = await fetch(`/api/markets?${queryParams.toString()}`);
         if (res.ok) {
           const data = await res.json();
           setMarketResults(data.markets || []);
@@ -77,7 +86,7 @@ export default function Home() {
       }
     };
     fetchMarkets();
-  }, []);
+  }, [platform, sort]);
 
   useEffect(() => {
     useChatStore.persist.rehydrate();
@@ -142,15 +151,12 @@ export default function Home() {
   }, [agentState, forceScrollToBottom]);
 
   useEffect(() => {
-    if (viewMode === 'explore') {
-      setCurrentLayout('explore');
-    } else if (agentState !== 'relaxed' || messages.length > 0) {
+    if (agentState !== 'relaxed' || messages.length > 0) {
       setCurrentLayout('active');
-      setViewMode('landing');
     } else {
       setCurrentLayout('relaxed');
     }
-  }, [agentState, messages.length, viewMode]);
+  }, [agentState, messages.length]);
 
   const handleQuery = (q: string, attachments?: import('./types').Attachment[]) => {
     if (!activeSessionId) return;
@@ -216,14 +222,50 @@ export default function Home() {
                 transition={{ duration: 0.5, delay: 0.1 }}
                 className="flex flex-col gap-6"
               >
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <h2 className="text-xs font-mono uppercase tracking-widest text-white/40">Trending Markets</h2>
-                  <button 
-                    onClick={() => setViewMode('explore')}
-                    className="text-xs font-mono uppercase tracking-widest text-white/40 hover:text-white transition-colors"
-                  >
-                    View All &rarr;
-                  </button>
+                  
+                  <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1 md:pb-0">
+                    <div className="flex p-0.5 bg-white/5 rounded-lg border border-white/5 backdrop-blur-sm shrink-0">
+                      {(['all', 'polymarket', 'kalshi'] as Platform[]).map((p) => (
+                        <button
+                          key={p}
+                          onClick={() => setPlatform(p)}
+                          className={`px-3 py-1 rounded-md text-[10px] uppercase font-mono tracking-wider transition-all ${
+                            platform === p 
+                              ? 'bg-white/10 text-white shadow-sm' 
+                              : 'text-zinc-500 hover:text-zinc-300'
+                          }`}
+                        >
+                          {p === 'all' ? 'All' : p}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex p-0.5 bg-white/5 rounded-lg border border-white/5 backdrop-blur-sm shrink-0">
+                      {[
+                        { id: 'volume', icon: BarChart2, label: 'Vol' },
+                        { id: 'trending', icon: TrendingUp, label: 'Trend' },
+                        { id: 'newest', icon: Clock, label: 'New' }
+                      ].map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => setSort(item.id as Sort)}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] uppercase font-mono tracking-wider transition-all ${
+                              sort === item.id 
+                                ? 'bg-white/10 text-white shadow-sm' 
+                                : 'text-zinc-500 hover:text-zinc-300'
+                            }`}
+                          >
+                            <Icon className="w-3 h-3" />
+                            <span>{item.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
 
                 {isMarketsLoading ? (
@@ -235,21 +277,6 @@ export default function Home() {
                   />
                 )}
               </motion.div>
-            </div>
-          </motion.div>
-        ) : currentLayout === 'explore' ? (
-          <motion.div
-            key="explore-layout"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="pt-24 px-6 lg:px-10 min-h-screen"
-          >
-            <div className="max-w-[1200px] mx-auto">
-              <MarketExplorer 
-                onBack={() => setViewMode('landing')}
-                onSelectMarket={(market) => router.push(`/markets/${market.id}`)}
-              />
             </div>
           </motion.div>
         ) : (

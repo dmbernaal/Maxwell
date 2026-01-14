@@ -41,9 +41,18 @@ export async function fetchUnifiedMarkets(options: MarketsRequest = {}): Promise
   const shouldFetchPoly = platform === 'all' || platform === 'polymarket';
   const shouldFetchKalshi = platform === 'all' || platform === 'kalshi';
 
+  const polyOrder = sort === 'trending' ? 'volume24hr' : sort === 'newest' ? 'startDate' : 'volume24hr';
+  const polyAscending = sort === 'newest';
+
   const results = await Promise.allSettled([
     shouldFetchPoly 
-      ? fetchPolymarketMarkets({ query, limit, active: true })
+      ? fetchPolymarketMarkets({ 
+          query, 
+          limit, 
+          active: true,
+          order: polyOrder,
+          ascending: polyAscending
+        })
       : Promise.resolve({ markets: [], nextCursor: undefined }),
     shouldFetchKalshi 
       ? fetchKalshiMarkets({ query, limit, status: 'open' })

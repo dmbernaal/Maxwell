@@ -60,8 +60,10 @@ export function normalizePolymarketPriceHistory(raw: PolymarketPriceHistory): Pr
 interface FetchOptions {
   query?: string;
   limit?: number;
-  cursor?: string;
+  offset?: number;
   active?: boolean;
+  order?: 'volume24hr' | 'liquidity' | 'startDate' | 'volume';
+  ascending?: boolean;
 }
 
 export async function fetchPolymarketMarkets(options: FetchOptions = {}): Promise<{
@@ -70,13 +72,13 @@ export async function fetchPolymarketMarkets(options: FetchOptions = {}): Promis
 }> {
   const params = new URLSearchParams();
   
-  if (options.query) params.set('_q', options.query);
-  if (options.limit) params.set('_limit', String(options.limit));
-  if (options.cursor) params.set('_cursor', options.cursor);
-  if (options.active !== undefined) params.set('active', String(options.active));
+  if (options.limit) params.set('limit', String(options.limit));
+  if (options.offset) params.set('offset', String(options.offset));
+  if (options.active !== undefined) params.set('closed', String(!options.active));
   
-  params.set('_order', 'volume');
-  params.set('_order_direction', 'desc');
+  const orderField = options.order === 'volume' ? 'volume24hr' : (options.order || 'volume24hr');
+  params.set('order', orderField);
+  params.set('ascending', String(options.ascending ?? false));
 
   const url = `${GAMMA_API_BASE}/markets?${params.toString()}`;
   
@@ -89,15 +91,21 @@ export async function fetchPolymarketMarkets(options: FetchOptions = {}): Promis
     throw new Error(`Polymarket API error: ${response.status} ${response.statusText}`);
   }
 
-  const rawMarkets: PolymarketMarketRaw[] = await response.json();
+  let rawMarkets: PolymarketMarketRaw[] = await response.json();
+  
+  if (options.query) {
+    const q = options.query.toLowerCase();
+    rawMarkets = rawMarkets.filter(m => 
+      m.question?.toLowerCase().includes(q) || 
+      m.description?.toLowerCase().includes(q)
+    );
+  }
   
   const markets = rawMarkets
     .filter(m => m.question && m.outcomePrices)
     .map(normalizePolymarketMarket);
 
-  const nextCursor = response.headers.get('x-next-cursor') || undefined;
-
-  return { markets, nextCursor };
+  return { markets, nextCursor: undefined };
 }
 
 export async function fetchPolymarketMarketById(id: string): Promise<UnifiedMarket | null> {
