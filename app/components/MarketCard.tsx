@@ -31,10 +31,7 @@ export default function MarketCard({ market, onClick }: MarketCardProps) {
       onClick={() => onClick?.(market)}
       className="group relative flex flex-col h-[180px] p-5 rounded-md cursor-pointer overflow-hidden transition-all duration-300"
       style={{
-        backgroundColor: '#0a0a0a',
-        borderColor: 'rgba(255, 255, 255, 0.08)',
-        borderWidth: '1px',
-        borderStyle: 'solid',
+        backgroundColor: '#141414',
       }}
     >
       <div 

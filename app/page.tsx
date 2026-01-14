@@ -213,25 +213,11 @@ export default function Home() {
             <div className="pointer-events-auto flex flex-col items-center w-full max-w-4xl px-4">
               
               <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, ease: 'easeOut' }}
-                className="mb-8 text-center"
-              >
-                <h1 className="text-4xl md:text-5xl font-medium tracking-tighter text-white mb-3">
-                  Maxwell
-                </h1>
-                <p className="text-white/50 text-lg font-normal tracking-tight">
-                  Real-time verified prediction data
-                </p>
-              </motion.div>
-
-              <motion.div
                 initial={{ opacity: 1 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0, y: 20, filter: 'blur(5px)' }}
-                transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }}
-                className="w-full mb-12"
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+                className="w-full mb-10"
               >
                 <InputInterface
                   state={agentState}

@@ -6,22 +6,19 @@
   --color-black: #000000;
   --color-white: #ffffff;
 
-  /* Backgrounds - "Terminal Data" Palette */
-  --bg-primary: #050505;
-  /* App background - Deepest Neutral Black */
-  --bg-secondary: #0a0a0a;
-  /* Component surface - Solid Data Block */
-  --bg-elevated: #171717;
-  /* Hover/Active surface */
+  /* Backgrounds - Premium Dark */
+  --bg-primary: #0a0a0a;
+  --bg-surface: #141414;
+  --bg-elevated: #1a1a1a;
 
-  /* Text */
-  --text-primary: #FFFFFF;
-  --text-secondary: #a3a3a3;
+  /* Text - Off-white for reduced eye strain */
+  --text-primary: #e8e8e8;
+  --text-secondary: #8f8f8f;
   --text-tertiary: #525252;
 
-  /* Borders - Sharp & Technical */
-  --border-subtle: #262626;
-  --border-default: #404040;
+  /* Borders - Minimal */
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --border-default: rgba(255, 255, 255, 0.08);
 
   /* Status */
   --verified: #4ade80;
@@ -35,7 +32,7 @@
 @theme inline {
   --color-brand-accent: var(--brand-accent);
   --color-bg-primary: var(--bg-primary);
-  --color-bg-secondary: var(--bg-secondary);
+  --color-bg-surface: var(--bg-surface);
   --color-bg-elevated: var(--bg-elevated);
 
   --color-text-primary: var(--text-primary);

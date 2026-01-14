@@ -84,11 +84,11 @@ export function SmallGhostLogo({ isActive = false }: SmallGhostLogoProps) {
 
           {/* THE FALLBACK (Safari) */}
           <linearGradient id="fallbackGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="25%" stopColor="#e5e5e5" />
-            <stop offset="50%" stopColor="#a3a3a3" />
-            <stop offset="75%" stopColor="#525252" />
-            <stop offset="100%" stopColor="#171717" />
+            <stop offset="0%" stopColor="#60a5fa" />
+            <stop offset="25%" stopColor="#3b82f6" />
+            <stop offset="50%" stopColor="#2563eb" />
+            <stop offset="75%" stopColor="#1d4ed8" />
+            <stop offset="100%" stopColor="#1e40af" />
           </linearGradient>
         </defs>
 

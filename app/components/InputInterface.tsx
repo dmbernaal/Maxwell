@@ -30,9 +30,9 @@ function SpotlightPill({ icon: Icon, label, onClick }: { icon: any, label: strin
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
-      className="relative group rounded-sm p-[1px] bg-white/[0.03] overflow-hidden"
+      className="relative group rounded-sm overflow-hidden"
     >
-      <div className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-[#0a0a0a] border border-transparent group-hover:border-white/10 transition-all">
+      <div className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-[#141414] group-hover:bg-[#1a1a1a] transition-all">
         <Icon size={12} className="opacity-50 group-hover:opacity-100 transition-opacity text-white" />
         <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/50 group-hover:text-white/90 transition-colors">{label}</span>
       </div>
@@ -177,17 +177,12 @@ export default function InputInterface({
             <div
               className={`
                 relative flex flex-col w-full rounded-md
-                bg-[#0a0a0a]
+                bg-[#141414]
                 transition-all duration-300 ease-out
                 overflow-hidden
-                border
-                ${isFocused
-                  ? 'border-white/20'
-                  : 'border-white/10'
-                }
               `}
             >
-            <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-50" />
+            
 
             {attachments.length > 0 && (
               <div className="px-3 pt-3 pb-2 flex items-center gap-2 border-b border-white/5 bg-white/[0.02]">
