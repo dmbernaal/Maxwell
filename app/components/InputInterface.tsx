@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, ArrowRight, Search, Zap, Globe, FileText, Plus, Paperclip, X } from 'lucide-react';
 import { AgentState, SearchMode, Attachment, ATTACHMENT_LIMITS } from '../types';
 import { convertToBase64, validateAttachment, generateAttachmentId } from '../lib/file-utils';
@@ -20,27 +20,19 @@ interface InputInterfaceProps {
   hasMaxwellResults?: boolean;
   onViewResults?: () => void;
   onFocusChange?: (isFocused: boolean) => void;
-  // Market Search Props
   isMarketSearch?: boolean;
   onMarketSelect?: (market: UnifiedMarket) => void;
-  // Intro props
-  shouldRunIntro?: boolean;
-  onIntroComplete?: () => void;
-  onGhostAppear?: () => void;
 }
 
 function SpotlightPill({ icon: Icon, label, onClick }: { icon: any, label: string, onClick: () => void }) {
-
-
   return (
     <motion.button
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
-      className="relative group rounded-full p-[1px] bg-white/[0.03] overflow-hidden"
+      className="relative group rounded-sm p-[1px] bg-white/[0.03] overflow-hidden"
     >
-
-      <div className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#18151d]/40 backdrop-blur-md border border-transparent group-hover:shadow-[0_0_15px_-3px_rgba(255,255,255,0.1)] transition-all">
+      <div className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-[#0a0a0a] border border-transparent group-hover:border-white/10 transition-all">
         <Icon size={12} className="opacity-50 group-hover:opacity-100 transition-opacity text-white" />
         <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/50 group-hover:text-white/90 transition-colors">{label}</span>
       </div>
@@ -58,22 +50,18 @@ export default function InputInterface({
   hasMaxwellResults = false,
   onViewResults,
   onFocusChange,
-  shouldRunIntro = false,
-  onIntroComplete,
-  onGhostAppear,
   isMarketSearch = false,
   onMarketSelect
 }: InputInterfaceProps) {
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
-  
-  // Market Search State
+
   const [marketResults, setMarketResults] = useState<UnifiedMarket[]>([]);
   const [showMarketDropdown, setShowMarketDropdown] = useState(false);
 
   useEffect(() => {
     if (!isMarketSearch) return;
-    
+
     if (!query) {
       setMarketResults([]);
       return;
@@ -100,56 +88,8 @@ export default function InputInterface({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Intro State
-  const [introText, setIntroText] = useState(shouldRunIntro ? 'Hi' : 'Hi, I am Maxwell.');
-  const [introStep, setIntroStep] = useState<'idle' | 'hi' | 'typing' | 'done'>('idle');
-
-  // Trigger Intro Sequence
-  useEffect(() => {
-    if (shouldRunIntro && introStep === 'idle') {
-      const runSequence = async () => {
-        setIntroStep('hi');
-        
-        // 1. Show "Hi" -> Pause
-        await new Promise(r => setTimeout(r, 1000));
-
-        // 2. Type "Hi, I am Maxwell"
-        setIntroStep('typing');
-        const suffix = ", I am Maxwell.";
-        
-        for (let i = 0; i <= suffix.length; i++) {
-          setIntroText("Hi" + suffix.slice(0, i));
-          // Random typing speed for realism
-          await new Promise(r => setTimeout(r, 50 + Math.random() * 30));
-        }
-
-        // Wait a tiny beat
-        await new Promise(r => setTimeout(r, 100));
-
-        // 3. Signal Ghost Appearance
-        onGhostAppear?.();
-        
-        // Wait for ghost animation to settle before showing controls
-        await new Promise(r => setTimeout(r, 800));
-
-        // 4. Complete -> Fade in interface
-        setIntroStep('done');
-        onIntroComplete?.();
-      };
-      
-      runSequence();
-    } else if (!shouldRunIntro && introStep === 'idle') {
-        // If no intro needed, jump to done (e.g. returning user or mid-chat)
-        setIntroStep('done');
-        setIntroText("Hi, I am Maxwell."); // Standard greeting
-    }
-  }, [shouldRunIntro, introStep, onGhostAppear, onIntroComplete]);
-
-
-  // Is Maxwell mode (attachments disabled)
   const isMaxwellMode = mode === 'maxwell';
 
-  // Reset height when query is cleared
   React.useEffect(() => {
     if (!query && textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -158,8 +98,7 @@ export default function InputInterface({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // If market search, select top result or do nothing (dropdown handles selection)
+
     if (isMarketSearch) {
       if (marketResults.length > 0 && onMarketSelect) {
         onMarketSelect(marketResults[0]);
@@ -170,17 +109,14 @@ export default function InputInterface({
     if (query.trim()) {
       onQuery(query, attachments.length > 0 ? attachments : undefined);
       setQuery('');
-      // Clear attachments from input (URLs are kept for display in chat)
       setAttachments([]);
     }
   };
 
-  // Handle file selection
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    // Check if adding these would exceed limit
     const remainingSlots = ATTACHMENT_LIMITS.MAX_FILES - attachments.length;
     const filesToProcess = files.slice(0, remainingSlots);
 
@@ -206,13 +142,11 @@ export default function InputInterface({
       }
     }
 
-    // Reset input so same file can be selected again
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  // Remove an attachment
   const removeAttachment = (id: string) => {
     setAttachments(prev => {
       const toRemove = prev.find(a => a.id === id);
@@ -228,76 +162,51 @@ export default function InputInterface({
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto z-10 flex flex-col gap-6">
-      {/* Greeting Container - Maintains layout stability */}
-      {/* Visible only in Relaxed state AND no messages */}
-      <AnimatePresence>
-        {state === 'relaxed' && !hasMessages && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="text-center space-y-2 mb-4 h-[32px] flex items-center justify-center w-full" // Fixed height to prevent shifts
-          >
-            <div className="w-[300px] text-center"> {/* Fixed width container to prevent jitter */}
-              <h1 className="text-xl md:text-2xl text-white/95 font-medium tracking-tight inline-block">
-                {introText}
-              </h1>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Central Command Input - Kaiyros Spotlight Aesthetic */}
-      {/* Hidden during intro sequence until 'done' */}
-      <motion.div 
+    <div className="w-full max-w-2xl mx-auto z-10 flex flex-col gap-4">
+      
+      <motion.div
         className="relative w-full"
-        initial={shouldRunIntro ? { opacity: 0 } : { opacity: 1 }}
-        animate={introStep === 'done' ? { opacity: 1 } : { opacity: 0 }}
+        initial={{ opacity: 1 }}
+        animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
       >
         <motion.form
           onSubmit={handleSubmit}
-          className="relative group w-full p-[1px] rounded-[24px] bg-gradient-to-b from-white/15 to-white/5"
+          className="relative group w-full"
         >
-          {/* Inner Container: Obsidian Surface */}
-          <div
-            className={`
-              relative flex flex-col w-full rounded-[23px]
-              bg-[#18151d] backdrop-blur-xl
-              transition-all duration-500 ease-out
-              overflow-hidden
-              border
-              hover:border-white/10 hover:shadow-[0_0_30px_-10px_rgba(255,255,255,0.05)]
-              ${isFocused
-                ? 'border-white/10 shadow-[0_0_30px_-5px_rgba(255,255,255,0.07)]'
-                : 'border-transparent shadow-2xl'
-              }
-            `}
-          >
-            {/* Subtle top highlight gradient */}
-            <div className="absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent pointer-events-none" />
+            <div
+              className={`
+                relative flex flex-col w-full rounded-md
+                bg-[#0a0a0a]
+                transition-all duration-300 ease-out
+                overflow-hidden
+                border
+                ${isFocused
+                  ? 'border-white/20'
+                  : 'border-white/10'
+                }
+              `}
+            >
+            <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-50" />
 
-            {/* Attachment Preview Row */}
             {attachments.length > 0 && (
-              <div className="px-4 pt-4 pb-2 flex items-center gap-2 border-b border-white/5">
+              <div className="px-3 pt-3 pb-2 flex items-center gap-2 border-b border-white/5 bg-white/[0.02]">
                 {attachments.map((attachment) => (
                   <div
                     key={attachment.id}
-                    className="relative group w-12 h-12 rounded-lg overflow-hidden border border-white/10 bg-white/5"
+                    className="relative group w-10 h-10 rounded-md overflow-hidden border border-white/10 bg-white/5"
                   >
                     <img
                       src={attachment.previewUrl}
                       alt="Attachment preview"
                       className="w-full h-full object-cover"
                     />
-                    {/* Remove button */}
                     <button
                       type="button"
                       onClick={() => removeAttachment(attachment.id)}
                       className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                     >
-                      <X size={16} className="text-white" />
+                      <X size={14} className="text-white" />
                     </button>
                   </div>
                 ))}
@@ -305,22 +214,24 @@ export default function InputInterface({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-12 h-12 rounded-lg border border-dashed border-white/20 flex items-center justify-center text-white/30 hover:text-white/60 hover:border-white/40 transition-colors"
+                    className="w-10 h-10 rounded-md border border-dashed border-white/20 flex items-center justify-center text-white/30 hover:text-white/60 hover:border-white/40 transition-colors"
                   >
-                    <Plus size={20} />
+                    <Plus size={16} />
                   </button>
                 )}
               </div>
             )}
 
-            {/* Top Section: Text Area */}
-            <div className="p-4 pb-2">
+            <div className="p-3 flex items-start gap-3">
+              <div className="mt-2.5 pl-1">
+                 <Search size={16} className={`transition-colors ${isFocused ? 'text-white/80' : 'text-white/30'}`} />
+              </div>
+              
               <textarea
                 ref={textareaRef}
                 value={query}
                 onChange={(e) => {
                   setQuery(e.target.value);
-                  // Auto-resize
                   e.target.style.height = 'auto';
                   e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
                   if (isMarketSearch) setShowMarketDropdown(true);
@@ -344,21 +255,14 @@ export default function InputInterface({
                 onBlur={() => {
                   setIsFocused(false);
                   onFocusChange?.(false);
-                  // Delayed hide to allow clicks
                   setTimeout(() => setShowMarketDropdown(false), 200);
                 }}
                 placeholder={isMarketSearch ? "Search markets (e.g. Fed Rates, Election)..." : "Ask anything..."}
                 rows={1}
-                className="w-full bg-transparent text-lg text-white placeholder-white/30 focus:outline-none font-light py-2 resize-none max-h-[200px] overflow-y-auto"
+                className="flex-1 bg-transparent text-[15px] font-mono text-white placeholder-white/20 focus:outline-none py-2 resize-none max-h-[200px] overflow-y-auto leading-relaxed"
               />
-            </div>
 
-            {/* Bottom Section: Controls */}
-            <div className="px-4 pb-4 flex items-center justify-between">
-
-              {/* Left: Tools & Attachments */}
-              <div className="flex items-center gap-2">
-                {/* Hidden file input */}
+              <div className="flex items-center gap-2 pt-1">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -368,120 +272,82 @@ export default function InputInterface({
                   className="hidden"
                 />
 
-                {!isMarketSearch && (
-                  <>
-                    {/* Attach button with Maxwell mode guard */}
-                    <div className="relative group/attach">
-                  <button
+                {!isMarketSearch && !isMaxwellMode && (
+                   <button
                     type="button"
-                    onClick={() => !isMaxwellMode && fileInputRef.current?.click()}
-                    disabled={isMaxwellMode || attachments.length >= ATTACHMENT_LIMITS.MAX_FILES}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-white/5 transition-all text-xs font-medium ${isMaxwellMode || attachments.length >= ATTACHMENT_LIMITS.MAX_FILES
-                      ? 'bg-[#18151d] text-white/30 cursor-not-allowed'
-                      : 'bg-[#18151d] hover:bg-[#231f29] text-white/60'
-                      }`}
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={attachments.length >= ATTACHMENT_LIMITS.MAX_FILES}
+                    className="p-1.5 text-white/30 hover:text-white/60 transition-colors"
                   >
-                    <Paperclip size={14} />
-                    <span>Attach</span>
-                    {attachments.length > 0 && (
-                      <span className="ml-1 px-1.5 py-0.5 bg-white/10 rounded-full text-[10px]">
-                        {attachments.length}
-                      </span>
-                    )}
-                  </button>
-                  {/* Tooltip for Maxwell mode */}
-                  {isMaxwellMode && (
-                    <div className="absolute left-0 bottom-full mb-2 px-3 py-1.5 bg-[#18151d] border border-white/10 rounded-lg text-[11px] text-white/70 whitespace-nowrap opacity-0 group-hover/attach:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
-                      Image analysis not available in Verified Research mode
-                    </div>
-                  )}
-                </div>
+                    <Paperclip size={16} />
+                   </button>
+                )}
 
-                    {onModeChange && (
-                      <ModeDropdown
+                {onModeChange && !isMarketSearch && (
+                  <div className="scale-90 origin-right">
+                    <ModeDropdown
                         mode={mode}
                         onModeChange={onModeChange}
                         disabled={disabled}
                         hasMaxwellResults={hasMaxwellResults}
                         onViewResults={onViewResults}
                       />
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* Right: Actions */}
-              <div className="flex items-center gap-3">
-
-                {/* Mic - Disabled with tooltip */}
-                <div className="relative group/mic">
-                  <button
-                    type="button"
-                    disabled
-                    className="text-white/20 cursor-not-allowed p-2"
-                  >
-                    <Mic size={18} />
-                  </button>
-                  {/* Tooltip - positioned to the left to avoid clipping */}
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 mr-10 px-3 py-1.5 bg-[#18151d] border border-white/10 rounded-lg text-[11px] text-white/70 whitespace-nowrap opacity-0 group-hover/mic:opacity-100 transition-opacity pointer-events-none z-50 shadow-xl">
-                    Companion mode coming soon
                   </div>
-                </div>
-
+                )}
+                
                 <button
                   type="submit"
                   disabled={!query}
                   className={`
-                    p-2 rounded-full transition-all duration-500
+                    p-1.5 rounded-md transition-all duration-300
                     ${query
-                      ? 'bg-white text-black shadow-[0_0_20px_-5px_rgba(255,255,255,0.3)] hover:scale-105'
-                      : 'bg-white/5 text-white/20 cursor-not-allowed'
+                      ? 'bg-white text-black shadow-[0_0_15px_-3px_rgba(255,255,255,0.3)] hover:scale-105'
+                      : 'bg-white/5 text-white/10 cursor-not-allowed'
                     }
                   `}
                 >
-                  <ArrowRight size={18} />
+                  <ArrowRight size={16} />
                 </button>
               </div>
             </div>
           </div>
         </motion.form>
 
-          {/* Quick Actions - Pills (Absolute positioned to prevent layout shift) */}
-          <div className="absolute top-full left-0 w-full pt-6">
-            {isMarketSearch ? (
-               <MarketAutocomplete 
-                 query={query}
-                 results={marketResults}
-                 trendingQueries={TRENDING_SEARCHES}
-                 onSelectMarket={(m) => onMarketSelect?.(m)}
-                 onSelectQuery={(q) => {
-                   setQuery(q);
-                   if (textareaRef.current) textareaRef.current.focus();
-                 }}
-                 isVisible={showMarketDropdown}
-               />
-            ) : (
-              <AnimatePresence>
-                {state === 'relaxed' && !query && (
-                  <motion.div
-                className="flex flex-nowrap justify-center gap-2 px-4 overflow-x-auto no-scrollbar w-full"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-              >
-                {[
-                  { icon: Search, label: 'Deep Research' },
-                  { icon: Zap, label: 'Brainstorm' },
-                  { icon: Globe, label: 'Market Analysis' },
-                  { icon: FileText, label: 'Summarize' },
-                ].map((item, idx) => (
-                  <SpotlightPill
-                    key={idx}
-                    icon={item.icon}
-                    label={item.label}
-                    onClick={() => handlePillClick(item.label)}
-                  />
+        <div className="absolute top-full left-0 w-full pt-4">
+          {isMarketSearch ? (
+            <MarketAutocomplete
+              query={query}
+              results={marketResults}
+              trendingQueries={TRENDING_SEARCHES}
+              onSelectMarket={(m) => onMarketSelect?.(m)}
+              onSelectQuery={(q) => {
+                setQuery(q);
+                if (textareaRef.current) textareaRef.current.focus();
+              }}
+              isVisible={showMarketDropdown}
+            />
+          ) : (
+            <AnimatePresence>
+              {state === 'relaxed' && !query && (
+                <motion.div
+                  className="flex flex-nowrap justify-center gap-2 px-4 overflow-x-auto no-scrollbar w-full"
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -5 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {[
+                    { icon: Search, label: 'Deep Research' },
+                    { icon: Zap, label: 'Brainstorm' },
+                    { icon: Globe, label: 'Market Analysis' },
+                    { icon: FileText, label: 'Summarize' },
+                  ].map((item, idx) => (
+                    <SpotlightPill
+                      key={idx}
+                      icon={item.icon}
+                      label={item.label}
+                      onClick={() => handlePillClick(item.label)}
+                    />
                   ))}
                 </motion.div>
               )}

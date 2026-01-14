@@ -22,12 +22,20 @@ const container = {
 
 const item = {
   hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0 }
+  show: { 
+    opacity: 1, 
+    y: 0,
+    transition: {
+      type: 'spring' as const,
+      stiffness: 300,
+      damping: 24
+    }
+  }
 };
 
 export default function MarketGrid({ markets, onSelectMarket }: MarketGridProps) {
   return (
-    <motion.div
+    <motion.div 
       variants={container}
       initial="hidden"
       animate="show"
@@ -35,8 +43,8 @@ export default function MarketGrid({ markets, onSelectMarket }: MarketGridProps)
     >
       {markets.map((market) => (
         <motion.div key={market.id} variants={item}>
-          <MarketCard 
-            market={market} 
+          <MarketCard
+            market={market}
             onClick={onSelectMarket}
           />
         </motion.div>

@@ -72,8 +72,8 @@ export function SmallGhostLogo({ isActive = false }: SmallGhostLogoProps) {
         height="100%"
         viewBox="0 0 48 60"
         className={`w-full h-full overflow-visible transition-all duration-500 ${isActive
-            ? 'drop-shadow-[0_0_25px_rgba(111,59,245,0.5)]'
-            : 'drop-shadow-[0_0_15px_rgba(111,59,245,0.3)]'
+            ? 'drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]'
+            : 'drop-shadow-[0_0_10px_rgba(255,255,255,0.1)]'
           }`}
       >
         <defs>
@@ -84,11 +84,11 @@ export function SmallGhostLogo({ isActive = false }: SmallGhostLogoProps) {
 
           {/* THE FALLBACK (Safari) */}
           <linearGradient id="fallbackGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ff99cc" />
-            <stop offset="25%" stopColor="#7bbbff" />
-            <stop offset="50%" stopColor="#6f3bf5" />
-            <stop offset="75%" stopColor="#5b2fcb" />
-            <stop offset="100%" stopColor="#26153f" />
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="25%" stopColor="#e5e5e5" />
+            <stop offset="50%" stopColor="#a3a3a3" />
+            <stop offset="75%" stopColor="#525252" />
+            <stop offset="100%" stopColor="#171717" />
           </linearGradient>
         </defs>
 

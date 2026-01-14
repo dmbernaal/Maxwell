@@ -6,22 +6,22 @@
   --color-black: #000000;
   --color-white: #ffffff;
 
-  /* Backgrounds - "Breathing Obsidian" Palette */
-  --bg-primary: #120F14;
-  /* App background - Deepest Pinkish Obsidian (Subtle Tint) */
-  --bg-secondary: rgba(255, 255, 255, 0.03);
-  /* Component surface - Subtle Glass */
-  --bg-elevated: rgba(255, 255, 255, 0.07);
-  /* Hover/Active surface - Subtle Glass */
+  /* Backgrounds - "Terminal Data" Palette */
+  --bg-primary: #050505;
+  /* App background - Deepest Neutral Black */
+  --bg-secondary: #0a0a0a;
+  /* Component surface - Solid Data Block */
+  --bg-elevated: #171717;
+  /* Hover/Active surface */
 
   /* Text */
   --text-primary: #FFFFFF;
-  --text-secondary: rgba(255, 255, 255, 0.6);
-  --text-tertiary: rgba(255, 255, 255, 0.4);
+  --text-secondary: #a3a3a3;
+  --text-tertiary: #525252;
 
-  /* Borders - Ultra-thin translucents */
-  --border-subtle: rgba(255, 255, 255, 0.05);
-  --border-default: rgba(255, 255, 255, 0.1);
+  /* Borders - Sharp & Technical */
+  --border-subtle: #262626;
+  --border-default: #404040;
 
   /* Status */
   --verified: #4ade80;
