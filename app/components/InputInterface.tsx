@@ -7,7 +7,6 @@ import { AgentState, SearchMode, Attachment, ATTACHMENT_LIMITS } from '../types'
 import { convertToBase64, validateAttachment, generateAttachmentId } from '../lib/file-utils';
 import ModeDropdown from './ModeDropdown';
 import type { UnifiedMarket } from '@/app/lib/markets/types';
-import { TRENDING_SEARCHES } from '../lib/market-data';
 import MarketAutocomplete from './MarketAutocomplete';
 
 interface InputInterfaceProps {
@@ -57,7 +56,25 @@ export default function InputInterface({
   const [isFocused, setIsFocused] = useState(false);
 
   const [marketResults, setMarketResults] = useState<UnifiedMarket[]>([]);
+  const [topMarkets, setTopMarkets] = useState<UnifiedMarket[]>([]);
   const [showMarketDropdown, setShowMarketDropdown] = useState(false);
+
+  useEffect(() => {
+    if (!isMarketSearch) return;
+    
+    const fetchTopMarkets = async () => {
+      try {
+        const res = await fetch('/api/markets?limit=5&sort=volume');
+        if (res.ok) {
+          const data = await res.json();
+          setTopMarkets(data.markets || []);
+        }
+      } catch (e) {
+        console.error("Failed to fetch top markets", e);
+      }
+    };
+    fetchTopMarkets();
+  }, [isMarketSearch]);
 
   useEffect(() => {
     if (!isMarketSearch) return;
@@ -313,12 +330,8 @@ export default function InputInterface({
             <MarketAutocomplete
               query={query}
               results={marketResults}
-              trendingQueries={TRENDING_SEARCHES}
+              topMarkets={topMarkets}
               onSelectMarket={(m) => onMarketSelect?.(m)}
-              onSelectQuery={(q) => {
-                setQuery(q);
-                if (textareaRef.current) textareaRef.current.focus();
-              }}
               isVisible={showMarketDropdown}
             />
           ) : (

@@ -121,9 +121,4 @@ export const MOCK_MARKETS: UnifiedMarket[] = [
   },
 ];
 
-export const TRENDING_SEARCHES = [
-  "Interest Rates",
-  "Bitcoin 2025",
-  "Election 2028",
-  "GTA VI Release"
-];
+

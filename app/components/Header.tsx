@@ -7,15 +7,38 @@ import { SmallGhostLogo } from './SmallGhostLogo';
 import { User, Search } from 'lucide-react';
 import type { UnifiedMarket } from '@/app/lib/markets/types';
 import MarketAutocomplete from './MarketAutocomplete';
-import { TRENDING_SEARCHES } from '../lib/market-data';
+
 
 export default function Header() {
     const router = useRouter();
     const [query, setQuery] = useState('');
     const [isFocused, setIsFocused] = useState(false);
     const [marketResults, setMarketResults] = useState<UnifiedMarket[]>([]);
+    const [topMarkets, setTopMarkets] = useState<UnifiedMarket[]>([]);
     const [showDropdown, setShowDropdown] = useState(false);
+    const [selectedIndex, setSelectedIndex] = useState(-1);
     const searchInputRef = useRef<HTMLInputElement>(null);
+
+    const displayMarkets = query ? marketResults : topMarkets;
+
+    useEffect(() => {
+        setSelectedIndex(-1);
+    }, [query, marketResults, topMarkets]);
+
+    useEffect(() => {
+        const fetchTopMarkets = async () => {
+            try {
+                const res = await fetch('/api/markets?limit=5&sort=volume');
+                if (res.ok) {
+                    const data = await res.json();
+                    setTopMarkets(data.markets || []);
+                }
+            } catch (e) {
+                console.error("Failed to fetch top markets", e);
+            }
+        };
+        fetchTopMarkets();
+    }, []);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -53,11 +76,6 @@ export default function Header() {
         router.push(`/markets/${market.id}`);
     };
 
-    const handleQuerySelect = (q: string) => {
-        setQuery(q);
-        handleSearch(q);
-    };
-
     return (
         <motion.header
             initial={{ opacity: 0, y: -20 }}
@@ -91,13 +109,35 @@ export default function Header() {
                                     handleSearch(e.target.value);
                                     setShowDropdown(true);
                                 }}
+                                onKeyDown={(e) => {
+                                    if (!showDropdown || displayMarkets.length === 0) return;
+                                    
+                                    if (e.key === 'ArrowDown') {
+                                        e.preventDefault();
+                                        setSelectedIndex(prev => 
+                                            prev < displayMarkets.length - 1 ? prev + 1 : prev
+                                        );
+                                    } else if (e.key === 'ArrowUp') {
+                                        e.preventDefault();
+                                        setSelectedIndex(prev => prev > 0 ? prev - 1 : -1);
+                                    } else if (e.key === 'Enter' && selectedIndex >= 0) {
+                                        e.preventDefault();
+                                        handleMarketSelect(displayMarkets[selectedIndex]);
+                                    } else if (e.key === 'Escape') {
+                                        setShowDropdown(false);
+                                        setSelectedIndex(-1);
+                                    }
+                                }}
                                 onFocus={() => {
                                     setIsFocused(true);
                                     setShowDropdown(true);
                                 }}
                                 onBlur={() => {
                                     setIsFocused(false);
-                                    setTimeout(() => setShowDropdown(false), 200);
+                                    setTimeout(() => {
+                                        setShowDropdown(false);
+                                        setSelectedIndex(-1);
+                                    }, 200);
                                 }}
                                 placeholder="Search markets..."
                                 className="flex-1 bg-transparent text-[13px] text-white placeholder-white/30 focus:outline-none"
@@ -110,10 +150,10 @@ export default function Header() {
                         <MarketAutocomplete
                             query={query}
                             results={marketResults}
-                            trendingQueries={TRENDING_SEARCHES}
+                            topMarkets={topMarkets}
                             onSelectMarket={handleMarketSelect}
-                            onSelectQuery={handleQuerySelect}
                             isVisible={showDropdown}
+                            selectedIndex={selectedIndex}
                         />
                     </div>
                 </div>
