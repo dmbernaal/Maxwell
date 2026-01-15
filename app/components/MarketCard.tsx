@@ -90,8 +90,7 @@ function MatchupContent({ market, brandColor }: { market: UnifiedMarket; brandCo
 }
 
 function MultiOptionContent({ market, brandColor }: { market: UnifiedMarket; brandColor: string }) {
-  const hasMany = market.outcomes.length > 3;
-  const displayCount = hasMany ? 2 : Math.min(market.outcomes.length, 3);
+  const displayCount = Math.min(market.outcomes.length, 2);
   const topOutcomes = [...market.outcomes]
     .sort((a, b) => b.price - a.price)
     .slice(0, displayCount);
@@ -181,7 +180,7 @@ export default function MarketCard({ market, onClick }: MarketCardProps) {
       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
       onClick={() => onClick?.(market)}
       onKeyDown={handleKeyDown}
-      className="group relative flex flex-col h-[180px] p-5 rounded-md cursor-pointer overflow-hidden transition-all duration-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
+      className="group relative flex flex-col h-[180px] p-4 rounded-md cursor-pointer overflow-hidden transition-all duration-300 focus:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
       style={{
         backgroundColor: '#141414',
       }}
@@ -196,10 +195,32 @@ export default function MarketCard({ market, onClick }: MarketCardProps) {
       
       <div className="flex flex-col h-full justify-between z-10">
         
-        <div className="flex justify-between items-start gap-3 mb-3">
-          <div className="flex items-start gap-3 min-w-0 flex-1">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            {market.category && market.category !== 'Uncategorized' ? (
+              <span className="text-[10px] uppercase tracking-wider text-white/30 font-medium truncate">
+                {market.category}
+              </span>
+            ) : (
+              <span />
+            )}
+            <div 
+              className="shrink-0 flex items-center justify-center w-5 h-5 rounded bg-white/5"
+              style={{ color: brandColor }}
+              aria-label={platformName}
+              role="img"
+            >
+              {isPoly ? (
+                <PolymarketLogo className="w-3 h-3" aria-hidden="true" />
+              ) : (
+                <KalshiLogo className="w-3 h-3" aria-hidden="true" />
+              )}
+            </div>
+          </div>
+          
+          <div className="flex items-start gap-2.5">
             {market.imageUrl && (
-              <div className="shrink-0 w-8 h-8 rounded overflow-hidden bg-white/5">
+              <div className="shrink-0 w-9 h-9 rounded overflow-hidden bg-white/5">
                 <img 
                   src={market.imageUrl} 
                   alt=""
@@ -211,29 +232,9 @@ export default function MarketCard({ market, onClick }: MarketCardProps) {
                 />
               </div>
             )}
-            <div className="flex flex-col gap-1 min-w-0 flex-1">
-              {market.category && market.category !== 'Uncategorized' && (
-                <span className="text-[10px] uppercase tracking-wider text-white/30 font-medium">
-                  {market.category}
-                </span>
-              )}
-              <h3 className="text-sm font-medium text-white/90 leading-snug line-clamp-2 group-hover:text-white transition-colors duration-300">
-                {market.title}
-              </h3>
-            </div>
-          </div>
-          
-          <div 
-            className="shrink-0 flex items-center justify-center w-6 h-6 rounded-md bg-[#1a1a1a]"
-            style={{ color: brandColor }}
-            aria-label={platformName}
-            role="img"
-          >
-            {isPoly ? (
-              <PolymarketLogo className="w-3.5 h-3.5" aria-hidden="true" />
-            ) : (
-              <KalshiLogo className="w-3.5 h-3.5" aria-hidden="true" />
-            )}
+            <h3 className="text-sm font-medium text-white/90 leading-snug line-clamp-2 group-hover:text-white transition-colors duration-300">
+              {market.title}
+            </h3>
           </div>
         </div>
 
