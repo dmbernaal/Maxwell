@@ -19,6 +19,38 @@ export interface PolymarketMarketRaw {
   enableOrderBook?: boolean;
   acceptingOrders?: boolean;
   groupItemTitle?: string;  // For grouped markets (e.g., "March 31, 2026")
+  eventSlug?: string;       // Optional - if market belongs to an event
+}
+
+export interface PolymarketSeries {
+  id: string;
+  ticker: string;
+  slug: string;
+  title: string;
+  seriesType: string;
+  recurrence: string;
+  image?: string;
+  icon?: string;
+  layout: string;
+  active: boolean;
+  closed: boolean;
+  archived: boolean;
+  new: boolean;
+  featured: boolean;
+  restricted: boolean;
+  publishedAt: string;
+  createdBy: string;
+  updatedBy: string;
+  createdAt: string;
+  updatedAt: string;
+  commentsEnabled: boolean;
+  competitive: string;
+  volume24hr: number;
+  volume: number;
+  liquidity: number;
+  startDate: string;
+  commentCount: number;
+  requiresTranslation: boolean;
 }
 
 export interface PolymarketEventRaw {
@@ -44,6 +76,7 @@ export interface PolymarketEventRaw {
   markets: PolymarketMarketRaw[];
   tags?: Array<{ label: string; slug: string }>;
   competitive?: number;
+  series?: PolymarketSeries[];  // Array of series (usually 1)
 }
 
 export interface PolymarketPriceHistory {
@@ -56,4 +89,22 @@ export interface PolymarketPriceHistory {
 export interface PolymarketApiResponse {
   data?: PolymarketMarketRaw[];
   next_cursor?: string;
+}
+
+export interface PolymarketCommentRaw {
+  id: string;
+  body: string;
+  userAddress: string;
+  createdAt: string;
+  profile: {
+    name: string;
+    pseudonym: string;
+    profileImage: string;
+    positions?: Array<{
+      tokenId: string;
+      positionSize: string;
+    }>;
+  };
+  reactionCount: number;
+  replyCount?: number;
 }

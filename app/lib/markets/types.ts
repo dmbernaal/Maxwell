@@ -206,12 +206,26 @@ export interface OutcomePriceHistory {
 export interface OrderBook {
   /** Bid orders: [price, size][] */
   bids: [number, number][];
-  
   /** Ask orders: [price, size][] */
   asks: [number, number][];
-  
-  /** Timestamp when fetched */
-  asOf: number;
+  timestamp: number;
+}
+
+export interface MarketComment {
+  id: string;
+  userId: string;
+  username: string;
+  avatarUrl?: string;
+  text: string;
+  timestamp: number;
+  likes: number;
+  replyCount: number;
+  sentiment?: 'bullish' | 'bearish' | 'neutral';
+  platform: Platform;
+  userPosition?: {
+    outcome: string;
+    amount: string;
+  };
 }
 
 /**

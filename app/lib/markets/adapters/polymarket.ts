@@ -1,5 +1,5 @@
-import type { UnifiedMarket, PricePoint, MarketType, MarketOutcome, OutcomePriceHistory } from '../types';
-import type { PolymarketMarketRaw, PolymarketEventRaw, PolymarketPriceHistory } from './polymarket.types';
+import type { UnifiedMarket, PricePoint, MarketType, MarketOutcome, OutcomePriceHistory, MarketComment } from '../types';
+import type { PolymarketMarketRaw, PolymarketEventRaw, PolymarketPriceHistory, PolymarketCommentRaw } from './polymarket.types';
 
 const GAMMA_API_BASE = 'https://gamma-api.polymarket.com';
 
@@ -345,3 +345,182 @@ export async function fetchPolymarketMultiOutcomePriceHistory(
     return [];
   }
 }
+
+
+export async function fetchPolymarketComments(marketId: string): Promise<MarketComment[]> {
+  try {
+    const id = marketId.startsWith('poly:') ? marketId.slice(5) : marketId;
+    const isEvent = id.startsWith('event:');
+    
+    // STRATEGY 1: Try Series level first (if event has a series)
+    // This is the PRIMARY way Polymarket fetches comments for recurring events
+    if (isEvent) {
+      const eventId = id.slice(6);
+      try {
+        const eventUrl = `${GAMMA_API_BASE}/events/${eventId}`;
+        const eventRes = await fetch(eventUrl, {
+          headers: { 'Accept': 'application/json' },
+          next: { revalidate: 60 },
+        });
+
+        if (eventRes.ok) {
+          const eventData: PolymarketEventRaw = await eventRes.json();
+          
+          // Check if event has a series (recurring events like FOMC, NBA, etc.)
+          if (eventData.series && eventData.series.length > 0) {
+            const seriesId = eventData.series[0].id;
+            
+            // Fetch comments from Series level - THIS IS KEY!
+            // Series aggregates comments across all events in the series
+            const seriesUrl = `${GAMMA_API_BASE}/comments?parent_entity_type=Series&parent_entity_id=${seriesId}&limit=50&order=createdAt&ascending=false`;
+            const seriesRes = await fetch(seriesUrl, {
+              headers: { 'Accept': 'application/json' },
+              next: { revalidate: 30 },
+            });
+
+            if (seriesRes.ok) {
+              const seriesComments: PolymarketCommentRaw[] = await seriesRes.json();
+              if (Array.isArray(seriesComments) && seriesComments.length > 0) {
+                return seriesComments.map(c => ({
+                  id: c.id,
+                  userId: c.userAddress,
+                  username: c.profile.pseudonym || c.profile.name || c.userAddress.slice(0, 6),
+                  avatarUrl: c.profile.profileImage,
+                  text: c.body,
+                  timestamp: new Date(c.createdAt).getTime(),
+                  likes: c.reactionCount || 0,
+                  replyCount: c.replyCount || 0,
+                  platform: 'polymarket',
+                  sentiment: c.body.toLowerCase().includes('yes') || c.body.toLowerCase().includes('buy') ? 'bullish' :
+                             c.body.toLowerCase().includes('no') || c.body.toLowerCase().includes('sell') ? 'bearish' : 
+                             undefined
+                }));
+              }
+            }
+          }
+        }
+      } catch (err) {
+        // Series fetch failed, continue to Event level
+        console.warn('Failed to fetch series comments for event:', eventId);
+      }
+    }
+    
+    // STRATEGY 2: Try Event level (for standalone events without series)
+    // Note: 'market' entity type is invalid, always use 'Event' for comment lookup
+    const entityType = 'Event';
+    const entityId = isEvent ? id.slice(6) : id;
+
+const url = `${GAMMA_API_BASE}/comments?parent_entity_type=${entityType}&parent_entity_id=${entityId}&limit=50&order=createdAt&ascending=false`;
+    
+    const response = await fetch(url, {
+      headers: { 'Accept': 'application/json' },
+      next: { revalidate: 30 },
+    });
+
+    if (!response.ok) return [];
+
+    let comments: PolymarketCommentRaw[] = await response.json();
+    
+    // If no comments found and this is an event, try token-level fallback
+    if (comments.length === 0 && isEvent) {
+      try {
+        const eventId = id.slice(6);
+        const eventUrl = `${GAMMA_API_BASE}/events/${eventId}`;
+        const eventRes = await fetch(eventUrl, { next: { revalidate: 60 } });
+        
+        if (eventRes.ok) {
+          const eventData: PolymarketEventRaw = await eventRes.json();
+          const mainMarket = eventData.markets.sort((a, b) => 
+            Number(b.volume24hr || 0) - Number(a.volume24hr || 0)
+          )[0];
+
+          if (mainMarket && mainMarket.clobTokenIds) {
+            const tokenIds = parseJsonString<string[]>(mainMarket.clobTokenIds, []);
+            if (tokenIds.length > 0) {
+              const tokenUrl = `${GAMMA_API_BASE}/comments?parent_entity_type=Token&parent_entity_id=${tokenIds[0]}&limit=50&order=createdAt&ascending=false`;
+              const tokenRes = await fetch(tokenUrl, { next: { revalidate: 30 } });
+              
+              if (tokenRes.ok) {
+                const tokenComments = await tokenRes.json();
+                if (Array.isArray(tokenComments) && tokenComments.length > 0) {
+                  comments = tokenComments;
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch fallback comments for event:', id);
+      }
+    }
+    
+// STRATEGY 3: For individual markets with no comments, check if they belong to an event with a series
+    if (comments.length === 0 && !isEvent) {
+      try {
+        const marketUrl = `${GAMMA_API_BASE}/markets/${id}`;
+        const marketRes = await fetch(marketUrl, {
+          headers: { 'Accept': 'application/json' },
+          next: { revalidate: 60 },
+        });
+        
+        if (marketRes.ok) {
+          const marketData: PolymarketMarketRaw = await marketRes.json();
+          
+          // Try to find event by using the market's slug (since eventSlug might be null)
+          if (marketData.slug) {
+const slugEventUrl = `${GAMMA_API_BASE}/events?slug=${marketData.slug}`;
+            const eventRes = await fetch(slugEventUrl, {
+              headers: { 'Accept': 'application/json' },
+              next: { revalidate: 60 },
+            });
+            
+            if (eventRes.ok) {
+              const events: PolymarketEventRaw[] = await eventRes.json();
+              if (events.length > 0) {
+                const eventData = events[0];
+                
+                // Check if event has a series with comments
+                if (eventData.series && eventData.series.length > 0) {
+                  const seriesId = eventData.series[0].id;
+                  
+                  const seriesUrl = `${GAMMA_API_BASE}/comments?parent_entity_type=Series&parent_entity_id=${seriesId}&limit=50&order=createdAt&ascending=false`;
+                  const seriesRes = await fetch(seriesUrl, {
+                    headers: { 'Accept': 'application/json' },
+                    next: { revalidate: 30 },
+                  });
+                  
+                  if (seriesRes.ok) {
+                    const seriesComments: PolymarketCommentRaw[] = await seriesRes.json();
+                    if (Array.isArray(seriesComments) && seriesComments.length > 0) {
+                      comments = seriesComments;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch series comments for individual market:', id);
+      }
+    }
+    
+    return comments.map(c => ({
+      id: c.id,
+      userId: c.userAddress,
+      username: c.profile.pseudonym || c.profile.name || c.userAddress.slice(0, 6),
+      avatarUrl: c.profile.profileImage,
+      text: c.body,
+      timestamp: new Date(c.createdAt).getTime(),
+      likes: c.reactionCount || 0,
+      replyCount: c.replyCount || 0,
+      platform: 'polymarket',
+      sentiment: c.body.toLowerCase().includes('yes') || c.body.toLowerCase().includes('buy') ? 'bullish' :
+                 c.body.toLowerCase().includes('no') || c.body.toLowerCase().includes('sell') ? 'bearish' : 
+                 undefined
+    }));
+  } catch {
+    return [];
+  }
+}
+

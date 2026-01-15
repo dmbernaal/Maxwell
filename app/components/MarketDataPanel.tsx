@@ -5,6 +5,7 @@ import { createChart, IChartApi, ISeriesApi, AreaSeries, LineSeries, ColorType, 
 import { ExternalLink, ChevronDown, TrendingUp, TrendingDown, Clock, BarChart3 } from 'lucide-react';
 import type { UnifiedMarket, UnifiedMarketDetail, PricePoint, MarketOutcome, OrderBook, OutcomePriceHistory } from '@/app/lib/markets/types';
 import { PolymarketLogo, KalshiLogo, PLATFORM_COLORS } from './icons/PlatformIcons';
+import MarketComments from './MarketComments';
 
 interface MarketDataPanelProps {
   market: UnifiedMarket | UnifiedMarketDetail;
@@ -817,6 +818,8 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
           </CollapsibleSection>
         )}
       </div>
+
+      <MarketComments marketId={market.id} platform={market.platform} />
     </div>
   );
 }

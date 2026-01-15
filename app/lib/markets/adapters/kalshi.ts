@@ -98,7 +98,7 @@ export function normalizeKalshiOrderBook(raw: KalshiOrderBookRaw): OrderBook {
   return {
     bids: raw.orderbook.yes.map(([price, size]) => [centsToDecimal(price), size]),
     asks: raw.orderbook.no.map(([price, size]) => [centsToDecimal(price), size]),
-    asOf: Date.now(),
+    timestamp: Date.now(),
   };
 }
 
