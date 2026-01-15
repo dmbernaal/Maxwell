@@ -726,7 +726,10 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
 
       <div className="mt-4 space-y-1">
         {market.description && (
-          <CollapsibleSection title="Description">
+          <CollapsibleSection 
+            title={market.rules ? "Description" : "Description & Resolution Rules"} 
+            defaultOpen
+          >
             <p className="text-sm text-white/40 leading-relaxed">
               {market.description}
             </p>
@@ -735,7 +738,7 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
 
         {market.rules && (
           <CollapsibleSection title="Resolution Rules">
-            <p className="text-sm text-white/40 leading-relaxed whitespace-pre-wrap">
+            <p className="text-xs text-white/30 leading-relaxed whitespace-pre-wrap font-mono">
               {market.rules}
             </p>
           </CollapsibleSection>

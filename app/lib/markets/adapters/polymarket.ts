@@ -62,6 +62,7 @@ export function normalizePolymarketMarket(raw: PolymarketMarketRaw, eventSlug?: 
     url: `https://polymarket.com/event/${slug}`,
     title: raw.question,
     description: raw.description,
+    rules: undefined,
     category: eventCategory || raw.category || 'Uncategorized',
     imageUrl: raw.image || undefined,
     marketType,
@@ -229,8 +230,9 @@ export async function fetchPolymarketMarketById(id: string): Promise<UnifiedMark
 
     const event: PolymarketEventRaw = await response.json();
     
-    const groupedOutcomes: MarketOutcome[] = event.markets
-      .filter(m => m.active && !m.closed)
+    const activeMarkets = event.markets.filter(m => m.active && !m.closed);
+    
+    const groupedOutcomes: MarketOutcome[] = activeMarkets
       .map(m => {
         const prices = parseJsonString<string[]>(m.outcomePrices, ['0', '0']);
         return {
@@ -241,6 +243,8 @@ export async function fetchPolymarketMarketById(id: string): Promise<UnifiedMark
     
     const topOutcome = groupedOutcomes.sort((a, b) => b.price - a.price)[0];
     
+    const firstMarketRules = activeMarkets[0]?.description;
+    
     return {
       id: `poly:event:${event.id}`,
       externalId: event.id,
@@ -249,6 +253,8 @@ export async function fetchPolymarketMarketById(id: string): Promise<UnifiedMark
       url: `https://polymarket.com/event/${event.slug}`,
       title: event.title,
       description: event.description,
+      rules: firstMarketRules,
+      resolutionSource: event.resolutionSource || undefined,
       category: event.tags?.[0]?.label || 'Uncategorized',
       imageUrl: event.image || event.icon || undefined,
       marketType: 'multi-option',

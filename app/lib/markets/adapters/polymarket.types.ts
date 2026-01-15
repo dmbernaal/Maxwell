@@ -27,6 +27,7 @@ export interface PolymarketEventRaw {
   slug: string;
   title: string;
   description: string;
+  resolutionSource?: string;
   image?: string;
   icon?: string;
   active: boolean;
