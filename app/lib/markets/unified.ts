@@ -1,6 +1,6 @@
-import type { UnifiedMarket, Platform, MarketsRequest, MarketsResponse, ApiError } from './types';
-import { fetchPolymarketMarkets, fetchPolymarketMarketById } from './adapters/polymarket';
-import { fetchKalshiMarkets, fetchKalshiMarketById } from './adapters/kalshi';
+import type { UnifiedMarket, Platform, MarketsRequest, MarketsResponse, ApiError, PricePoint, OrderBook, OutcomePriceHistory } from './types';
+import { fetchPolymarketMarkets, fetchPolymarketMarketById, fetchPolymarketPriceHistory, fetchPolymarketMultiOutcomePriceHistory } from './adapters/polymarket';
+import { fetchKalshiMarkets, fetchKalshiMarketById, fetchKalshiPriceHistory, fetchKalshiOrderBook } from './adapters/kalshi';
 import { 
   decodeUnifiedCursor, 
   encodeUnifiedCursor, 
@@ -182,6 +182,134 @@ export async function fetchMarketById(id: string): Promise<UnifiedMarket | null>
   }
 
   return null;
+}
+
+export async function fetchPriceHistory(market: UnifiedMarket): Promise<PricePoint[]> {
+  if (market.platform === 'polymarket') {
+    const externalId = market.id.startsWith('poly:') ? market.id.slice(5) : market.id;
+    const isEvent = externalId.startsWith('event:');
+    
+    if (isEvent) {
+      const eventId = externalId.slice(6);
+      const url = `https://gamma-api.polymarket.com/events/${eventId}`;
+      
+      try {
+        const response = await fetch(url, {
+          headers: { 'Accept': 'application/json' },
+          next: { revalidate: 60 },
+        });
+        
+        if (!response.ok) return [];
+        
+        const event = await response.json();
+        const activeMarkets = event.markets?.filter((m: any) => m.active && !m.closed && m.clobTokenIds) || [];
+        
+        if (activeMarkets.length === 0) return [];
+        
+        const topMarket = activeMarkets.reduce((a: any, b: any) => {
+          const pricesA = JSON.parse(a.outcomePrices || '["0","0"]');
+          const pricesB = JSON.parse(b.outcomePrices || '["0","0"]');
+          return parseFloat(pricesA[0]) > parseFloat(pricesB[0]) ? a : b;
+        });
+        
+        if (topMarket?.clobTokenIds) {
+          const tokenIds = typeof topMarket.clobTokenIds === 'string' 
+            ? JSON.parse(topMarket.clobTokenIds) 
+            : topMarket.clobTokenIds;
+          
+          if (tokenIds?.[0]) {
+            return fetchPolymarketPriceHistory(tokenIds[0]);
+          }
+        }
+      } catch {
+        return [];
+      }
+      return [];
+    }
+    
+    try {
+      const url = `https://gamma-api.polymarket.com/markets/${externalId}`;
+      const response = await fetch(url, {
+        headers: { 'Accept': 'application/json' },
+        next: { revalidate: 60 },
+      });
+      
+      if (!response.ok) return [];
+      
+      const raw = await response.json();
+      
+      if (raw.clobTokenIds) {
+        const tokenIds = typeof raw.clobTokenIds === 'string' 
+          ? JSON.parse(raw.clobTokenIds) 
+          : raw.clobTokenIds;
+        
+        if (tokenIds?.[0]) {
+          return fetchPolymarketPriceHistory(tokenIds[0]);
+        }
+      }
+    } catch {
+      return [];
+    }
+    return [];
+  }
+  
+  if (market.platform === 'kalshi') {
+    const ticker = market.externalId;
+    if (ticker.startsWith('event:')) {
+      const eventTicker = ticker.slice(6);
+      try {
+        const url = `https://api.elections.kalshi.com/trade-api/v2/markets?event_ticker=${eventTicker}&limit=10`;
+        const response = await fetch(url, {
+          headers: { 'Accept': 'application/json' },
+          next: { revalidate: 60 },
+        });
+        
+        if (!response.ok) return [];
+        
+        const data = await response.json();
+        const activeMarkets = data.markets?.filter((m: any) => m.status === 'active') || [];
+        
+        if (activeMarkets.length === 0) return [];
+        
+        const topMarket = activeMarkets.reduce((a: any, b: any) => 
+          (a.yes_bid || 0) > (b.yes_bid || 0) ? a : b
+        );
+        
+        if (topMarket?.ticker) {
+          return fetchKalshiPriceHistory(topMarket.ticker);
+        }
+      } catch {
+        return [];
+      }
+      return [];
+    }
+    return fetchKalshiPriceHistory(ticker);
+  }
+  
+  return [];
+}
+
+export async function fetchOrderBook(market: UnifiedMarket): Promise<OrderBook | null> {
+  if (market.platform === 'kalshi') {
+    const ticker = market.externalId;
+    if (ticker.startsWith('event:')) return null;
+    return fetchKalshiOrderBook(ticker);
+  }
+  return null;
+}
+
+export async function fetchMultiOutcomePriceHistory(
+  market: UnifiedMarket,
+  topN: number = 4
+): Promise<OutcomePriceHistory[]> {
+  if (market.platform === 'polymarket' && market.marketType === 'multi-option') {
+    const externalId = market.id.startsWith('poly:') ? market.id.slice(5) : market.id;
+    if (externalId.startsWith('event:')) {
+      const eventId = externalId.slice(6);
+      return fetchPolymarketMultiOutcomePriceHistory(eventId, topN);
+    }
+  }
+  return [];
 }
 
 export function createApiError(

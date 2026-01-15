@@ -97,6 +97,25 @@ export interface UnifiedMarket {
   /** Last trade price */
   lastPrice?: number;
   
+  /** Previous price (for calculating change) */
+  previousPrice?: number;
+  
+  // ─────────────────────────────────────────────
+  // BID/ASK (NORMALIZED TO 0-1)
+  // ─────────────────────────────────────────────
+  
+  /** Best bid for YES */
+  yesBid?: number;
+  
+  /** Best ask for YES */
+  yesAsk?: number;
+  
+  /** Best bid for NO */
+  noBid?: number;
+  
+  /** Best ask for NO */
+  noAsk?: number;
+  
   // ─────────────────────────────────────────────
   // VOLUME (NORMALIZED TO USD)
   // ─────────────────────────────────────────────
@@ -110,7 +129,7 @@ export interface UnifiedMarket {
   /** Current liquidity */
   liquidity?: number;
   
-  /** Open interest (Kalshi only) */
+  /** Open interest (contracts outstanding) */
   openInterest?: number;
   
   // ─────────────────────────────────────────────
@@ -172,6 +191,16 @@ export interface PricePoint {
 }
 
 /**
+ * Price history for a single outcome in multi-outcome markets
+ */
+export interface OutcomePriceHistory {
+  outcomeName: string;
+  tokenId?: string;
+  history: PricePoint[];
+  color?: string;
+}
+
+/**
  * Order book data
  */
 export interface OrderBook {
@@ -189,8 +218,11 @@ export interface OrderBook {
  * Market with full detail (for detail page)
  */
 export interface UnifiedMarketDetail extends UnifiedMarket {
-  /** Historical price data */
+  /** Historical price data (for binary/simple markets) */
   priceHistory: PricePoint[];
+  
+  /** Per-outcome price history (for multi-outcome markets) */
+  outcomePriceHistories?: OutcomePriceHistory[];
   
   /** Current order book */
   orderBook?: OrderBook;

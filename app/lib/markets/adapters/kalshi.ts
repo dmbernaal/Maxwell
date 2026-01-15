@@ -1,4 +1,4 @@
-import type { UnifiedMarket, OrderBook, MarketOutcome } from '../types';
+import type { UnifiedMarket, OrderBook, MarketOutcome, PricePoint } from '../types';
 import type { KalshiMarketRaw, KalshiMarketsResponse, KalshiOrderBookRaw } from './kalshi.types';
 
 const KALSHI_API_BASE = 'https://api.elections.kalshi.com/trade-api/v2';
@@ -75,8 +75,14 @@ export function normalizeKalshiMarket(raw: KalshiMarketRaw): UnifiedMarket {
     yesPrice,
     noPrice,
     lastPrice: centsToDecimal(raw.last_price),
+    previousPrice: raw.previous_price ? centsToDecimal(raw.previous_price) : undefined,
+    yesBid: centsToDecimal(raw.yes_bid),
+    yesAsk: centsToDecimal(raw.yes_ask),
+    noBid: centsToDecimal(raw.no_bid),
+    noAsk: centsToDecimal(raw.no_ask),
     volume: raw.volume,
     volume24h: raw.volume_24h,
+    liquidity: raw.liquidity,
     openInterest: raw.open_interest,
     endDate: unixSecondsToDate(raw.close_time),
     createdAt: unixSecondsToDate(raw.open_time),
@@ -226,6 +232,61 @@ export async function fetchKalshiMarkets(options: FetchOptions = {}): Promise<{
   const nextCursor = data.cursor && data.cursor !== '' ? data.cursor : undefined;
   
   return { markets, nextCursor };
+}
+
+interface KalshiCandlestick {
+  end_period_ts: number;
+  price: {
+    close: number;
+    close_dollars: string;
+  };
+}
+
+interface KalshiCandlesticksResponse {
+  ticker: string;
+  candlesticks: KalshiCandlestick[];
+}
+
+export async function fetchKalshiOrderBook(ticker: string): Promise<OrderBook | null> {
+  try {
+    const url = `${KALSHI_API_BASE}/markets/${ticker}/orderbook`;
+    const response = await fetch(url, {
+      headers: { 'Accept': 'application/json' },
+      next: { revalidate: 10 },
+    });
+
+    if (!response.ok) return null;
+
+    const data: KalshiOrderBookRaw = await response.json();
+    return normalizeKalshiOrderBook(data);
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchKalshiPriceHistory(ticker: string): Promise<PricePoint[]> {
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const startTs = now - (7 * 24 * 60 * 60);
+    
+    const url = `${KALSHI_API_BASE}/markets/${ticker}/candlesticks?start_ts=${startTs}&end_ts=${now}&period_interval=60`;
+    
+    const response = await fetch(url, {
+      headers: { 'Accept': 'application/json' },
+      next: { revalidate: 300 },
+    });
+
+    if (!response.ok) return [];
+
+    const data: KalshiCandlesticksResponse = await response.json();
+    
+    return data.candlesticks.map(c => ({
+      timestamp: c.end_period_ts * 1000,
+      price: centsToDecimal(c.price.close),
+    }));
+  } catch {
+    return [];
+  }
 }
 
 export async function fetchKalshiMarketById(id: string): Promise<UnifiedMarket | null> {

@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { BarChart2, TrendingUp, Clock, Loader2, ChevronDown } from 'lucide-react';
-import Header from './components/Header';
+
 import InputInterface from './components/InputInterface';
 import ResponseDisplay from './components/ResponseDisplay';
 import UserMessage from './components/UserMessage';
@@ -246,7 +246,7 @@ export default function Home() {
   return (
     <main className="relative min-h-screen w-full bg-[var(--bg-primary)] overflow-y-auto overflow-x-hidden selection:bg-brand-accent/30 font-sans">
       
-      <Header />
+
 
       <AnimatePresence mode="wait">
         {currentLayout === 'relaxed' ? (

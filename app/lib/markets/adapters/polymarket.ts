@@ -1,4 +1,4 @@
-import type { UnifiedMarket, PricePoint, MarketType, MarketOutcome } from '../types';
+import type { UnifiedMarket, PricePoint, MarketType, MarketOutcome, OutcomePriceHistory } from '../types';
 import type { PolymarketMarketRaw, PolymarketEventRaw, PolymarketPriceHistory } from './polymarket.types';
 
 const GAMMA_API_BASE = 'https://gamma-api.polymarket.com';
@@ -191,6 +191,26 @@ export async function fetchPolymarketMarkets(options: FetchOptions = {}): Promis
   return { markets: allMarkets, nextCursor: undefined };
 }
 
+const CLOB_API_BASE = 'https://clob.polymarket.com';
+
+export async function fetchPolymarketPriceHistory(tokenId: string): Promise<PricePoint[]> {
+  try {
+    const url = `${CLOB_API_BASE}/prices-history?market=${tokenId}&interval=max&fidelity=360`;
+    
+    const response = await fetch(url, {
+      headers: { 'Accept': 'application/json' },
+      next: { revalidate: 300 },
+    });
+
+    if (!response.ok) return [];
+
+    const data: PolymarketPriceHistory = await response.json();
+    return normalizePolymarketPriceHistory(data);
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchPolymarketMarketById(id: string): Promise<UnifiedMarket | null> {
   const externalId = id.startsWith('poly:') ? id.slice(5) : id;
   const isEvent = externalId.startsWith('event:');
@@ -261,4 +281,61 @@ export async function fetchPolymarketMarketById(id: string): Promise<UnifiedMark
 
   const raw: PolymarketMarketRaw = await response.json();
   return normalizePolymarketMarket(raw);
+}
+
+const MULTI_OUTCOME_COLORS = [
+  '#4a9eff',
+  '#f59e0b',
+  '#10b981',
+  '#8b5cf6',
+  '#ef4444',
+  '#06b6d4',
+];
+
+export async function fetchPolymarketMultiOutcomePriceHistory(
+  eventId: string,
+  topN: number = 4
+): Promise<OutcomePriceHistory[]> {
+  try {
+    const url = `${GAMMA_API_BASE}/events/${eventId}`;
+    const response = await fetch(url, {
+      headers: { 'Accept': 'application/json' },
+      next: { revalidate: 60 },
+    });
+
+    if (!response.ok) return [];
+
+    const event: PolymarketEventRaw = await response.json();
+    
+    const marketsWithTokens = event.markets
+      .filter(m => m.active && !m.closed && m.clobTokenIds)
+      .map(m => {
+        const clobTokenIds = parseJsonString<string[]>(m.clobTokenIds || '[]', []);
+        const prices = parseJsonString<string[]>(m.outcomePrices, ['0', '0']);
+        return {
+          name: m.groupItemTitle || m.question,
+          tokenId: clobTokenIds[0],
+          price: parseStringNumber(prices[0] ?? '0'),
+        };
+      })
+      .filter(m => m.tokenId)
+      .sort((a, b) => b.price - a.price)
+      .slice(0, topN);
+
+    const results: OutcomePriceHistory[] = await Promise.all(
+      marketsWithTokens.map(async (market, idx) => {
+        const history = await fetchPolymarketPriceHistory(market.tokenId);
+        return {
+          outcomeName: market.name,
+          tokenId: market.tokenId,
+          history,
+          color: MULTI_OUTCOME_COLORS[idx % MULTI_OUTCOME_COLORS.length],
+        };
+      })
+    );
+
+    return results.filter(r => r.history.length > 0);
+  } catch {
+    return [];
+  }
 }

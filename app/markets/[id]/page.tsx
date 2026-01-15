@@ -1,89 +1,199 @@
 'use client';
 
-import React, { use, useEffect, useState } from 'react';
+import React, { use, useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Sparkles } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Loader2 } from 'lucide-react';
 
 import MarketDataPanel from '../../components/MarketDataPanel';
 import { MarketIntelligencePanel } from '../../components/maxwell/MarketIntelligencePanel';
-import { MOCK_MARKETS } from '../../lib/market-data';
 import { useMaxwell } from '../../hooks/use-maxwell';
-import { SmallGhostLogo } from '../../components/SmallGhostLogo';
+import type { UnifiedMarket } from '../../lib/markets/types';
+import { getCachedAnalysis, setCachedAnalysis, type CachedAnalysis } from '../../lib/markets/analysis-cache';
 
 type Params = Promise<{ id: string }>;
+
+function extractVerdict(adjudication: string | null): string {
+  if (!adjudication) return 'UNCERTAIN';
+  const upper = adjudication.toUpperCase();
+  if (upper.includes('YES') || upper.includes('LIKELY YES')) return 'YES';
+  if (upper.includes('NO') || upper.includes('LIKELY NO')) return 'NO';
+  if (upper.includes('LIKELY')) return 'LIKELY';
+  if (upper.includes('UNLIKELY')) return 'UNLIKELY';
+  return 'UNCERTAIN';
+}
 
 export default function MarketDetailPage(props: { params: Params }) {
   const params = use(props.params);
   const router = useRouter();
   const maxwell = useMaxwell();
   
-  const market = MOCK_MARKETS.find(m => m.id === params.id);
-  const [hasStartedAnalysis, setHasStartedAnalysis] = useState(false);
+  const [market, setMarket] = useState<UnifiedMarket | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [cachedAnalysis, setCachedAnalysisState] = useState<CachedAnalysis | null>(null);
+  const [isCacheLoading, setIsCacheLoading] = useState(true);
 
   useEffect(() => {
-    if (market && !hasStartedAnalysis && maxwell.phase === 'idle') {
-      setHasStartedAnalysis(true);
-      const query = `Analyze the prediction market: "${market.title}". giving a probability verdict and key evidence.`;
-      maxwell.search(query);
-    }
-  }, [market, maxwell, hasStartedAnalysis]);
+    const loadCachedAnalysis = async () => {
+      try {
+        const cached = await getCachedAnalysis(params.id);
+        if (cached) {
+          setCachedAnalysisState(cached);
+          maxwell.hydrate({
+            phase: 'complete',
+            subQueries: [],
+            sources: cached.sources,
+            searchMetadata: [],
+            verification: cached.verification,
+            verificationProgress: null,
+            answer: cached.answer,
+            adjudication: cached.adjudication,
+            phaseDurations: { total: cached.durationMs },
+            phaseStartTimes: {},
+            events: [],
+            error: null,
+          });
+        }
+      } catch (e) {
+        console.error('Error loading cached analysis:', e);
+      } finally {
+        setIsCacheLoading(false);
+      }
+    };
+    
+    loadCachedAnalysis();
+  }, [params.id]);
 
-  if (!market) {
+  useEffect(() => {
+    const fetchMarket = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const res = await fetch(`/api/markets/${encodeURIComponent(params.id)}`);
+        
+        if (!res.ok) {
+          if (res.status === 404) {
+            setError('Market not found');
+          } else {
+            setError('Failed to load market');
+          }
+          return;
+        }
+        
+        const data = await res.json();
+        setMarket(data.market);
+      } catch (e) {
+        setError('Failed to load market');
+        console.error('Error fetching market:', e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchMarket();
+  }, [params.id]);
+
+  useEffect(() => {
+    const saveToCache = async () => {
+      if (
+        maxwell.phase === 'complete' && 
+        market && 
+        maxwell.answer && 
+        maxwell.adjudication &&
+        !cachedAnalysis
+      ) {
+        const analysis: CachedAnalysis = {
+          marketId: params.id,
+          query: market.title,
+          verdict: extractVerdict(maxwell.adjudication),
+          confidence: maxwell.verification?.overallConfidence || 0,
+          answer: maxwell.answer,
+          adjudication: maxwell.adjudication,
+          sources: maxwell.sources,
+          verification: maxwell.verification,
+          timestamp: Date.now(),
+          durationMs: maxwell.phaseDurations.total || 0,
+        };
+        
+        await setCachedAnalysis(analysis);
+        setCachedAnalysisState(analysis);
+      }
+    };
+    
+    saveToCache();
+  }, [maxwell.phase, maxwell.answer, maxwell.adjudication, market, params.id, cachedAnalysis, maxwell.verification, maxwell.sources, maxwell.phaseDurations.total]);
+
+  const handleRunAnalysis = useCallback((forceRefresh = false) => {
+    if (!market) return;
+    
+    if (forceRefresh) {
+      setCachedAnalysisState(null);
+      maxwell.reset();
+    }
+    
+    const query = `Analyze the prediction market: "${market.title}". 
+Resolution rules: ${market.rules || 'Standard resolution based on official sources.'}
+Deadline: ${market.endDate ? new Date(market.endDate).toLocaleDateString() : 'Not specified'}
+
+Provide a probability verdict (YES/NO/LIKELY/UNLIKELY) with confidence level and key supporting evidence.`;
+    maxwell.search(query);
+  }, [market, maxwell]);
+
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#120F14] flex items-center justify-center text-white/40 font-mono">
-        Market not found
+      <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
+        <Loader2 className="w-6 h-6 text-white/40 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error || !market) {
+    return (
+      <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col items-center justify-center gap-4">
+        <span className="text-white/40 font-mono">{error || 'Market not found'}</span>
+        <button 
+          onClick={() => router.push('/')}
+          className="text-sm text-white/60 hover:text-white transition-colors"
+        >
+          ← Back to markets
+        </button>
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#120F14] text-white flex flex-col md:flex-row overflow-hidden">
-      
-      <div className="md:hidden p-4 border-b border-white/5 flex items-center justify-between bg-[#120F14] z-20">
-        <button 
-          onClick={() => router.back()}
-          className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 transition-colors"
-        >
-          <ArrowLeft size={16} />
-        </button>
-        <div className="w-8 h-8">
-           <SmallGhostLogo isActive={maxwell.phase !== 'idle' && maxwell.phase !== 'complete'} />
+    <main className="min-h-screen bg-[var(--bg-primary)] text-white pt-20 pb-6 px-6 lg:px-10">
+      <div className="max-w-[1200px] mx-auto">
+        <div className="flex flex-col lg:flex-row gap-8">
+          <div className="w-full lg:w-[55%] lg:pr-4">
+            <MarketDataPanel market={market} />
+          </div>
+
+          <div className="w-full lg:w-[45%] lg:pl-4">
+            <div className="lg:sticky lg:top-24">
+              <MarketIntelligencePanel 
+                phase={maxwell.phase}
+                subQueries={maxwell.subQueries}
+                searchMetadata={maxwell.searchMetadata}
+                sources={maxwell.sources}
+                verification={maxwell.verification}
+                verificationProgress={maxwell.verificationProgress}
+                phaseDurations={maxwell.phaseDurations}
+                phaseStartTimes={maxwell.phaseStartTimes}
+                events={maxwell.events}
+                answer={maxwell.answer}
+                adjudication={maxwell.adjudication}
+                config={maxwell.config}
+                onQuery={(q) => maxwell.search(q)}
+                onRunAnalysis={handleRunAnalysis}
+                market={market}
+                isCached={!!cachedAnalysis}
+                cacheTimestamp={cachedAnalysis?.timestamp}
+              />
+            </div>
+          </div>
         </div>
       </div>
-
-      <div className="flex-1 md:flex-[1.4] h-[50vh] md:h-screen overflow-hidden border-r border-white/5 relative z-10">
-        
-        <motion.button 
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          onClick={() => router.back()}
-          className="hidden md:flex absolute top-6 left-6 z-50 p-2.5 rounded-full bg-[#18151d]/80 backdrop-blur-md border border-white/10 hover:border-white/20 text-white/40 hover:text-white transition-all group"
-        >
-          <ArrowLeft size={18} className="group-hover:-translate-x-0.5 transition-transform" />
-        </motion.button>
-
-        <MarketDataPanel market={market} />
-      </div>
-
-      <div className="flex-1 h-[50vh] md:h-screen bg-[#18151d] relative z-20 shadow-[-20px_0_40px_rgba(0,0,0,0.5)]">
-        <MarketIntelligencePanel 
-          phase={maxwell.phase}
-          subQueries={maxwell.subQueries}
-          searchMetadata={maxwell.searchMetadata}
-          sources={maxwell.sources}
-          verification={maxwell.verification}
-          verificationProgress={maxwell.verificationProgress}
-          phaseDurations={maxwell.phaseDurations}
-          phaseStartTimes={maxwell.phaseStartTimes}
-          events={maxwell.events}
-          answer={maxwell.answer}
-          adjudication={maxwell.adjudication}
-          config={maxwell.config}
-          onQuery={(q) => maxwell.search(q)}
-        />
-      </div>
-
     </main>
   );
 }

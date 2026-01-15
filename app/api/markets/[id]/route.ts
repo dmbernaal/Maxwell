@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { fetchMarketById, createApiError } from '@/app/lib/markets/unified';
+import { fetchMarketById, fetchPriceHistory, fetchOrderBook, fetchMultiOutcomePriceHistory, createApiError } from '@/app/lib/markets/unified';
 import type { MarketDetailResponse } from '@/app/lib/markets/types';
 
 interface RouteParams {
@@ -26,10 +26,20 @@ export async function GET(_request: Request, context: RouteParams) {
       );
     }
 
+    const isMultiOutcome = market.marketType === 'multi-option' && market.outcomes.length > 2;
+
+    const [priceHistory, orderBook, outcomePriceHistories] = await Promise.all([
+      fetchPriceHistory(market),
+      fetchOrderBook(market),
+      isMultiOutcome ? fetchMultiOutcomePriceHistory(market, 4) : Promise.resolve([]),
+    ]);
+
     const response: MarketDetailResponse = {
       market: {
         ...market,
-        priceHistory: [],
+        priceHistory,
+        outcomePriceHistories: outcomePriceHistories.length > 0 ? outcomePriceHistories : undefined,
+        orderBook: orderBook ?? undefined,
         fullDescription: market.description || '',
       },
       asOf: Date.now(),
