@@ -17,6 +17,7 @@ export default function Header() {
     const [topMarkets, setTopMarkets] = useState<UnifiedMarket[]>([]);
     const [showDropdown, setShowDropdown] = useState(false);
     const [selectedIndex, setSelectedIndex] = useState(-1);
+    const [isScrolled, setIsScrolled] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
 
     const displayMarkets = query ? marketResults : topMarkets;
@@ -24,6 +25,17 @@ export default function Header() {
     useEffect(() => {
         setSelectedIndex(-1);
     }, [query, marketResults, topMarkets]);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 10);
+        };
+        
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        handleScroll();
+        
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     useEffect(() => {
         const fetchTopMarkets = async () => {
@@ -81,7 +93,17 @@ export default function Header() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
-            className="fixed top-0 left-0 right-0 z-50 px-6 lg:px-10 py-4"
+            className="fixed top-0 left-0 right-0 z-50 px-6 lg:px-10 py-4 transition-all duration-300"
+            style={{
+                background: isScrolled 
+                    ? 'rgba(10, 10, 12, 0.8)' 
+                    : 'transparent',
+                backdropFilter: isScrolled ? 'blur(20px) saturate(180%)' : 'none',
+                WebkitBackdropFilter: isScrolled ? 'blur(20px) saturate(180%)' : 'none',
+                boxShadow: isScrolled 
+                    ? '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.03)' 
+                    : 'none',
+            }}
         >
             <div className="max-w-[1200px] mx-auto flex items-center h-full">
                 {/* Left: Brand + Search Group */}

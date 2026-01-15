@@ -50,6 +50,7 @@ export const UnifiedMarketDetailSchema = UnifiedMarketSchema.extend({
 export const MarketsRequestSchema = z.object({
   query: z.string().optional(),
   platform: z.enum(['polymarket', 'kalshi', 'all']).optional(),
+  category: z.string().optional(),
   sort: z.enum(['volume', 'trending', 'endDate', 'newest']).optional(),
   limit: z.coerce.number().min(1).max(100).optional(),
   cursor: z.string().optional(),

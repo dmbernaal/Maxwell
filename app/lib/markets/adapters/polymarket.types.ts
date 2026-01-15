@@ -11,10 +11,38 @@ export interface PolymarketMarketRaw {
   active: boolean;
   closed: boolean;
   endDate: string;
-  createdTime: string;
-  category: string;
+  createdTime?: string;    // Optional - not present in events response
+  createdAt?: string;      // Alternative field name in events
+  category?: string;       // Optional in events response
   image?: string;
   clobTokenIds?: string;
+  enableOrderBook?: boolean;
+  acceptingOrders?: boolean;
+  groupItemTitle?: string;  // For grouped markets (e.g., "March 31, 2026")
+}
+
+export interface PolymarketEventRaw {
+  id: string;
+  ticker: string;
+  slug: string;
+  title: string;
+  description: string;
+  image?: string;
+  icon?: string;
+  active: boolean;
+  closed: boolean;
+  archived: boolean;
+  liquidity: number;
+  volume: number;
+  volume24hr: number;
+  createdAt: string;
+  updatedAt: string;
+  endDate: string;
+  startDate: string;
+  enableOrderBook: boolean;
+  markets: PolymarketMarketRaw[];
+  tags?: Array<{ label: string; slug: string }>;
+  competitive?: number;
 }
 
 export interface PolymarketPriceHistory {

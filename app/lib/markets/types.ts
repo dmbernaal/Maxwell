@@ -16,6 +16,20 @@
  */
 export type Platform = 'polymarket' | 'kalshi';
 
+/**
+ * Market type classification for UI rendering
+ */
+export type MarketType = 'binary' | 'matchup' | 'multi-option';
+
+/**
+ * Individual outcome/option in a market
+ */
+export interface MarketOutcome {
+  name: string;
+  price: number;
+  imageUrl?: string;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // UNIFIED MARKET
 // ─────────────────────────────────────────────────────────────────────────────
@@ -61,7 +75,17 @@ export interface UnifiedMarket {
   imageUrl?: string;
   
   // ─────────────────────────────────────────────
-  // PRICING (NORMALIZED TO 0-1)
+  // MARKET TYPE & OUTCOMES
+  // ─────────────────────────────────────────────
+  
+  /** Classification for UI rendering */
+  marketType: MarketType;
+  
+  /** All outcomes with their prices (supports multi-outcome) */
+  outcomes: MarketOutcome[];
+  
+  // ─────────────────────────────────────────────
+  // PRICING (NORMALIZED TO 0-1) - Legacy for binary
   // ─────────────────────────────────────────────
   
   /** YES probability (0.0 - 1.0) */
@@ -124,6 +148,12 @@ export interface UnifiedMarket {
   
   /** Featured/promoted market? */
   featured?: boolean;
+  
+  /** Event grouping ID (for related markets) */
+  eventId?: string;
+  
+  /** Event title for grouping */
+  eventTitle?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -182,6 +212,7 @@ export interface UnifiedMarketDetail extends UnifiedMarket {
 export interface MarketsRequest {
   query?: string;
   platform?: Platform | 'all';
+  category?: string;
   sort?: 'volume' | 'trending' | 'endDate' | 'newest';
   limit?: number;
   cursor?: string;

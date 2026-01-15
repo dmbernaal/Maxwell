@@ -48,8 +48,7 @@ body {
   color: var(--text-primary);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   margin: 0;
-  overflow: hidden;
-  /* App-like feel */
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
 

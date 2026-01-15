@@ -10,6 +10,7 @@ export async function GET(request: Request) {
     const rawParams = {
       query: searchParams.get('query') || undefined,
       platform: searchParams.get('platform') || undefined,
+      category: searchParams.get('category') || undefined,
       sort: searchParams.get('sort') || undefined,
       limit: searchParams.get('limit') || undefined,
       cursor: searchParams.get('cursor') || undefined,
@@ -27,6 +28,7 @@ export async function GET(request: Request) {
     const response = await fetchUnifiedMarkets({
       query: parsed.data.query,
       platform: parsed.data.platform as Platform | 'all',
+      category: parsed.data.category,
       sort: parsed.data.sort,
       limit: parsed.data.limit,
       cursor: parsed.data.cursor,

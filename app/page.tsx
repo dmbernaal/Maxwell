@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { BarChart2, TrendingUp, Clock } from 'lucide-react';
+import { BarChart2, TrendingUp, Clock, Loader2, ChevronDown } from 'lucide-react';
 import Header from './components/Header';
 import InputInterface from './components/InputInterface';
 import ResponseDisplay from './components/ResponseDisplay';
@@ -11,6 +11,7 @@ import UserMessage from './components/UserMessage';
 import { MaxwellCanvas } from './components/maxwell';
 import MarketGrid from './components/MarketGrid';
 import MarketGridSkeleton from './components/MarketGridSkeleton';
+import CategoryTabs from './components/CategoryTabs';
 import type { UnifiedMarket } from './lib/markets/types';
 import { useChatStore } from './store';
 import { useChatApi } from './hooks/use-chat-api';
@@ -59,34 +60,75 @@ export default function Home() {
   const historyIds = useRef(new Set<string>());
   const renderedSessionId = useRef(activeSessionId);
   const [marketResults, setMarketResults] = useState<UnifiedMarket[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isMarketsLoading, setIsMarketsLoading] = useState(true);
   const [platform, setPlatform] = useState<Platform>('all');
   const [sort, setSort] = useState<Sort>('volume');
+  const [category, setCategory] = useState<string | null>(null);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchMarkets = async () => {
       try {
         setIsMarketsLoading(true);
         const queryParams = new URLSearchParams({
-          limit: '20',
+          limit: '50',
           sort,
-          ...(platform !== 'all' && { platform })
+          ...(platform !== 'all' && { platform }),
+          ...(category && { category })
         });
         const res = await fetch(`/api/markets?${queryParams.toString()}`);
         if (res.ok) {
           const data = await res.json();
-          setMarketResults(data.markets || []);
+          const markets = data.markets || [];
+          setMarketResults(markets);
+          setNextCursor(data.nextCursor);
+          
+          if (!category) {
+            const cats = [...new Set(markets.map((m: UnifiedMarket) => m.category))]
+              .filter((c): c is string => c !== 'Uncategorized' && !!c);
+            setAvailableCategories(cats);
+          }
         }
       } catch (e) {
         console.error("Failed to fetch markets", e);
       } finally {
-        // Add a small delay to prevent flickering if api is too fast
-        // and to let the skeleton animation play a bit
         setTimeout(() => setIsMarketsLoading(false), 500);
       }
     };
     fetchMarkets();
-  }, [platform, sort]);
+  }, [platform, sort, category]);
+
+  const loadMore = async () => {
+    if (!nextCursor || isLoadingMore) return;
+    
+    try {
+      setIsLoadingMore(true);
+        const queryParams = new URLSearchParams({
+          limit: '20',
+          sort,
+          ...(platform !== 'all' && { platform }),
+          ...(category && { category }),
+          cursor: nextCursor
+        });
+      const res = await fetch(`/api/markets?${queryParams.toString()}`);
+      if (res.ok) {
+        const data = await res.json();
+        const newMarkets = data.markets || [];
+        setMarketResults(prev => {
+          const existingIds = new Set(prev.map(m => m.id));
+          const uniqueNew = newMarkets.filter((m: UnifiedMarket) => !existingIds.has(m.id));
+          return [...prev, ...uniqueNew];
+        });
+        setNextCursor(data.nextCursor);
+      }
+    } catch (e) {
+      console.error("Failed to load more markets", e);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
     useChatStore.persist.rehydrate();
@@ -202,7 +244,7 @@ export default function Home() {
   if (!hasHydrated) return null;
 
   return (
-    <main className="relative min-h-screen w-full bg-[var(--bg-primary)] overflow-hidden selection:bg-brand-accent/30 font-sans">
+    <main className="relative min-h-screen w-full bg-[var(--bg-primary)] overflow-y-auto overflow-x-hidden selection:bg-brand-accent/30 font-sans">
       
       <Header />
 
@@ -213,7 +255,7 @@ export default function Home() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.2 } }}
-            className="pt-24 px-6 lg:px-10"
+            className="pt-24 px-6 lg:px-10 pb-16"
           >
             <div className="max-w-[1200px] mx-auto">
               <motion.div
@@ -222,8 +264,18 @@ export default function Home() {
                 transition={{ duration: 0.5, delay: 0.1 }}
                 className="flex flex-col gap-6"
               >
+                {availableCategories.length > 0 && (
+                  <CategoryTabs
+                    categories={availableCategories}
+                    selected={category}
+                    onSelect={setCategory}
+                  />
+                )}
+
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <h2 className="text-xs font-mono uppercase tracking-widest text-white/40">Trending Markets</h2>
+                  <h2 className="text-xs font-mono uppercase tracking-widest text-white/40">
+                    {category || 'All Markets'}
+                  </h2>
                   
                   <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1 md:pb-0">
                     <div className="flex p-0.5 bg-white/5 rounded-lg border border-white/5 backdrop-blur-sm shrink-0">
@@ -271,10 +323,29 @@ export default function Home() {
                 {isMarketsLoading ? (
                   <MarketGridSkeleton />
                 ) : (
-                  <MarketGrid 
-                    markets={marketResults} 
-                    onSelectMarket={(market) => router.push(`/markets/${market.id}`)}
-                  />
+                  <>
+                    <MarketGrid 
+                      markets={marketResults} 
+                      onSelectMarket={(market) => router.push(`/markets/${market.id}`)}
+                    />
+                    
+                    {nextCursor && (
+                      <div className="flex justify-center pt-8 pb-4">
+                        <button
+                          onClick={loadMore}
+                          disabled={isLoadingMore}
+                          className="group flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white/90 transition-all border border-white/5 hover:border-white/10 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isLoadingMore ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
+                          )}
+                          <span>{isLoadingMore ? 'Loading...' : 'Load More'}</span>
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )}
               </motion.div>
             </div>
@@ -336,63 +407,65 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <motion.div
-        className="relative z-10 h-screen flex flex-col pt-20"
-        animate={{ width: isMaxwellActive ? '55%' : '100%' }}
-        transition={{ type: 'spring', stiffness: 300, damping: 40 }}
-      >
-        <div
-          ref={scrollRef}
-          onScroll={handleChatScroll}
-          className="flex-1 overflow-y-auto w-full flex flex-col items-center no-scrollbar"
-          style={{
-            overflowAnchor: 'auto',
-            maskImage: 'linear-gradient(to bottom, transparent 0%, black 200px, black calc(100% - 300px), transparent calc(100% - 100px))',
-            WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 200px, black calc(100% - 300px), transparent calc(100% - 100px))'
-          }}
+      {currentLayout === 'active' && (
+        <motion.div
+          className="relative z-10 h-screen flex flex-col pt-20"
+          animate={{ width: isMaxwellActive ? '55%' : '100%' }}
+          transition={{ type: 'spring', stiffness: 300, damping: 40 }}
         >
-          <motion.div
-            variants={spacerVariants}
-            initial="relaxed"
-            animate={currentLayout}
-            transition={{ duration: 0.5 }}
-            className="shrink-0 w-full"
-          />
+          <div
+            ref={scrollRef}
+            onScroll={handleChatScroll}
+            className="flex-1 overflow-y-auto w-full flex flex-col items-center no-scrollbar"
+            style={{
+              overflowAnchor: 'auto',
+              maskImage: 'linear-gradient(to bottom, transparent 0%, black 200px, black calc(100% - 300px), transparent calc(100% - 100px))',
+              WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 200px, black calc(100% - 300px), transparent calc(100% - 100px))'
+            }}
+          >
+            <motion.div
+              variants={spacerVariants}
+              initial="relaxed"
+              animate={currentLayout}
+              transition={{ duration: 0.5 }}
+              className="shrink-0 w-full"
+            />
 
-          <div className="w-full max-w-4xl px-4 md:px-6 pb-40 flex flex-col gap-6">
-            <AnimatePresence mode="popLayout">
-              <motion.div
-                key={activeSessionId}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.4, ease: 'easeOut' }}
-                className="flex flex-col gap-6 w-full"
-              >
-                {messages.map((msg, index) => {
-                  const isHistory = historyIds.current.has(msg.id);
-                  return (
-                    <div key={msg.id} className="w-full">
-                      {msg.role === 'user' ? (
-                        <UserMessage content={msg.content} attachments={msg.attachments} isHistory={isHistory} />
-                      ) : (
-                        <ResponseDisplay
-                          message={msg}
-                          isHistory={isHistory}
-                          status={index === messages.length - 1 ? agentState : 'complete'}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
-              </motion.div>
-            </AnimatePresence>
+            <div className="w-full max-w-4xl px-4 md:px-6 pb-40 flex flex-col gap-6">
+              <AnimatePresence mode="popLayout">
+                <motion.div
+                  key={activeSessionId}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.4, ease: 'easeOut' }}
+                  className="flex flex-col gap-6 w-full"
+                >
+                  {messages.map((msg, index) => {
+                    const isHistory = historyIds.current.has(msg.id);
+                    return (
+                      <div key={msg.id} className="w-full">
+                        {msg.role === 'user' ? (
+                          <UserMessage content={msg.content} attachments={msg.attachments} isHistory={isHistory} />
+                        ) : (
+                          <ResponseDisplay
+                            message={msg}
+                            isHistory={isHistory}
+                            status={index === messages.length - 1 ? agentState : 'complete'}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </motion.div>
+              </AnimatePresence>
 
-            {agentState !== 'relaxed' && agentState !== 'complete' && (!messages.length || messages[messages.length - 1].role !== 'agent') && (
-              <ResponseDisplay message={null} status={agentState} />
-            )}
+              {agentState !== 'relaxed' && agentState !== 'complete' && (!messages.length || messages[messages.length - 1].role !== 'agent') && (
+                <ResponseDisplay message={null} status={agentState} />
+              )}
+            </div>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
+      )}
 
     </main>
   );

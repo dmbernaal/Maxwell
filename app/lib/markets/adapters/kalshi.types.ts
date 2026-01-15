@@ -13,7 +13,7 @@ export interface KalshiMarketRaw {
   open_interest: number;
   close_time: number;
   open_time: number;
-  status: 'open' | 'closed' | 'settled';
+  status: 'open' | 'closed' | 'settled' | 'active';
   result: 'yes' | 'no' | '' | null;
   category: string;
   rules_primary?: string;
