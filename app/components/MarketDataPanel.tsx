@@ -516,15 +516,15 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
         const isRightHalf = pointX > chartWidth * 0.5;
         const tooltipOffset = isRightHalf ? -12 : 12;
         const tooltipAlign = isRightHalf ? 'right' : 'left';
-        const tooltipTransform = isRightHalf ? 'translateX(-100%) translateY(-50%)' : 'translateY(-50%)';
+        const tooltipTransform = isRightHalf ? 'translateX(-100%) translateY(-100%)' : 'translateY(-100%)';
         
         container.innerHTML = `
           <div style="position:absolute;top:0;left:${pointX}px;transform:translateX(-50%);font-size:10px;font-family:ui-monospace,monospace;color:rgba(255,255,255,0.5);white-space:nowrap;">
             ${timeStr}
           </div>
           ${tooltipData.map(t => `
-            <div style="position:absolute;left:${pointX + tooltipOffset}px;top:${t.y}px;transform:${tooltipTransform};white-space:nowrap;">
-              <div style="background:${t.color};color:#000;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;">
+            <div style="position:absolute;left:${pointX + tooltipOffset}px;top:${t.y - 8}px;transform:${tooltipTransform};white-space:nowrap;z-index:10;">
+              <div style="background:${t.color};color:#000;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;box-shadow:0 2px 4px rgba(0,0,0,0.2);">
                 ${t.name} ${t.value.toFixed(1)}%
               </div>
             </div>
@@ -549,6 +549,71 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
         },
       });
       areaSeries.setData(singleOutcomeData);
+      
+      seriesRefs.current.push({
+        series: areaSeries as unknown as ISeriesApi<'Line'>,
+        name: market.outcomes[0]?.name || 'Yes',
+        color: brandColor,
+      });
+
+      chart.subscribeCrosshairMove((param: MouseEventParams<Time>) => {
+        const container = tooltipContainerRef.current;
+        if (!container) return;
+        
+        if (!param.point || param.logical === undefined || param.point.x < 0) {
+          container.style.display = 'none';
+          return;
+        }
+        
+        const tooltipData: TooltipData[] = [];
+        const logicalIndex = param.logical;
+        
+        seriesRefs.current.forEach(({ series, name, color }) => {
+          const data = series.dataByIndex(logicalIndex, MismatchDirection.NearestLeft);
+          if (data && 'value' in data) {
+            const value = data.value as number;
+            const y = series.priceToCoordinate(value);
+            if (y !== null) {
+              tooltipData.push({ name, value, color, y });
+            }
+          }
+        });
+        
+        if (tooltipData.length === 0) {
+          container.style.display = 'none';
+          return;
+        }
+        
+        const time = param.time as number;
+        const date = new Date(time * 1000);
+        const timeStr = date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric',
+          year: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+        });
+        
+        container.style.display = 'block';
+        const pointX = param.point.x;
+        const chartWidth = chartContainerRef.current?.clientWidth || 0;
+        const isRightHalf = pointX > chartWidth * 0.5;
+        const tooltipOffset = isRightHalf ? -12 : 12;
+        const tooltipTransform = isRightHalf ? 'translateX(-100%) translateY(-100%)' : 'translateY(-100%)';
+        
+        container.innerHTML = `
+          <div style="position:absolute;top:0;left:${pointX}px;transform:translateX(-50%);font-size:10px;font-family:ui-monospace,monospace;color:rgba(255,255,255,0.5);white-space:nowrap;">
+            ${timeStr}
+          </div>
+          ${tooltipData.map(t => `
+            <div style="position:absolute;left:${pointX + tooltipOffset}px;top:${t.y - 8}px;transform:${tooltipTransform};white-space:nowrap;z-index:10;">
+              <div style="background:${t.color};color:#000;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;box-shadow:0 2px 4px rgba(0,0,0,0.2);">
+                ${t.name} ${t.value.toFixed(1)}%
+              </div>
+            </div>
+          `).join('')}
+        `;
+      });
     }
     
     chart.timeScale().fitContent();
