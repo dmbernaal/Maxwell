@@ -43,7 +43,7 @@ function parseOutcomes(raw: PolymarketMarketRaw): MarketOutcome[] {
   }));
 }
 
-export function normalizePolymarketMarket(raw: PolymarketMarketRaw, eventSlug?: string): UnifiedMarket {
+export function normalizePolymarketMarket(raw: PolymarketMarketRaw, eventSlug?: string, eventCategory?: string): UnifiedMarket {
   const outcomes = parseOutcomes(raw);
   const outcomeNames = outcomes.map(o => o.name);
   const marketType = detectMarketType(outcomeNames);
@@ -62,7 +62,7 @@ export function normalizePolymarketMarket(raw: PolymarketMarketRaw, eventSlug?: 
     url: `https://polymarket.com/event/${slug}`,
     title: raw.question,
     description: raw.description,
-    category: raw.category || 'Uncategorized',
+    category: eventCategory || raw.category || 'Uncategorized',
     imageUrl: raw.image || undefined,
     marketType,
     outcomes,
@@ -139,7 +139,8 @@ export async function fetchPolymarketMarkets(options: FetchOptions = {}): Promis
     if (activeMarkets.length === 0) continue;
     
     if (activeMarkets.length === 1) {
-      allMarkets.push(normalizePolymarketMarket(activeMarkets[0], event.slug));
+      const eventCategory = event.tags?.[0]?.label;
+      allMarkets.push(normalizePolymarketMarket(activeMarkets[0], event.slug, eventCategory));
     } else {
       const groupedOutcomes: MarketOutcome[] = activeMarkets.map(m => {
         const prices = parseJsonString<string[]>(m.outcomePrices, ['0', '0']);
