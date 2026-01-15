@@ -115,7 +115,7 @@ function BinaryHero({ market, brandColor }: { market: UnifiedMarket; brandColor:
   );
 }
 
-function OutcomesList({ outcomes, brandColor }: { outcomes: MarketOutcome[]; brandColor: string }) {
+function OutcomesList({ outcomes, brandColor, outcomeColors }: { outcomes: MarketOutcome[]; brandColor: string; outcomeColors?: Map<string, string> }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const sortedOutcomes = [...outcomes].sort((a, b) => b.price - a.price);
   const topPrice = sortedOutcomes[0]?.price || 0;
@@ -135,14 +135,23 @@ function OutcomesList({ outcomes, brandColor }: { outcomes: MarketOutcome[]; bra
           const pct = Math.round(outcome.price * 100);
           const isLeading = outcome.price === topPrice && idx === 0;
           const barWidth = Math.max(4, (outcome.price / topPrice) * 100);
+          const outcomeColor = outcomeColors?.get(outcome.name);
+          const hasChartColor = !!outcomeColor;
           
           return (
             <div key={outcome.name} className="group">
               <div className="flex items-center justify-between gap-4 py-1">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <span className={`text-[11px] font-mono w-5 shrink-0 ${isLeading ? 'text-white/50' : 'text-white/20'}`}>
-                    {idx + 1}.
-                  </span>
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  {hasChartColor ? (
+                    <div 
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: outcomeColor }}
+                    />
+                  ) : (
+                    <span className={`text-[11px] font-mono w-5 shrink-0 ${isLeading ? 'text-white/50' : 'text-white/20'}`}>
+                      {idx + 1}.
+                    </span>
+                  )}
                   <span className={`text-[13px] truncate ${isLeading ? 'text-white font-medium' : 'text-white/60'}`}>
                     {outcome.name}
                   </span>
@@ -153,7 +162,7 @@ function OutcomesList({ outcomes, brandColor }: { outcomes: MarketOutcome[]; bra
                       className="h-full rounded-full transition-all duration-500"
                       style={{ 
                         width: `${barWidth}%`,
-                        backgroundColor: isLeading ? brandColor : 'rgba(255,255,255,0.2)',
+                        backgroundColor: hasChartColor ? outcomeColor : (isLeading ? brandColor : 'rgba(255,255,255,0.2)'),
                       }}
                     />
                   </div>
@@ -644,6 +653,17 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
   const isMatchup = market.marketType === 'matchup' || (market.outcomes.length === 2 && !market.outcomes.some(o => o.name.toLowerCase() === 'yes'));
   const isBinary = market.marketType === 'binary' || (!isMultiOption && !isMatchup);
 
+  const outcomeColors = useMemo(() => {
+    if (!hasMultiOutcomePriceHistory(market)) return undefined;
+    const colorMap = new Map<string, string>();
+    market.outcomePriceHistories.forEach(outcome => {
+      if (outcome.color) {
+        colorMap.set(outcome.outcomeName, outcome.color);
+      }
+    });
+    return colorMap.size > 0 ? colorMap : undefined;
+  }, [market]);
+
   return (
     <div className="flex flex-col h-full bg-[var(--bg-primary)] overflow-y-auto overflow-x-hidden pb-6">
       <div className="flex items-center justify-between py-4">
@@ -696,7 +716,7 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
 
       {isBinary && <BinaryHero market={market} brandColor={brandColor} />}
       {isMatchup && <MatchupHero market={market} brandColor={brandColor} />}
-      {isMultiOption && <OutcomesList outcomes={market.outcomes} brandColor={brandColor} />}
+      {isMultiOption && <OutcomesList outcomes={market.outcomes} brandColor={brandColor} outcomeColors={outcomeColors} />}
 
       <SpreadDisplay market={market} />
 
