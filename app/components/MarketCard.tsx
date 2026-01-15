@@ -197,15 +197,30 @@ export default function MarketCard({ market, onClick }: MarketCardProps) {
       <div className="flex flex-col h-full justify-between z-10">
         
         <div className="flex justify-between items-start gap-3 mb-3">
-          <div className="flex flex-col gap-1.5 min-w-0 flex-1">
-            {market.category && market.category !== 'Uncategorized' && (
-              <span className="text-[10px] uppercase tracking-wider text-white/30 font-medium">
-                {market.category}
-              </span>
+          <div className="flex items-start gap-3 min-w-0 flex-1">
+            {market.imageUrl && (
+              <div className="shrink-0 w-8 h-8 rounded overflow-hidden bg-white/5">
+                <img 
+                  src={market.imageUrl} 
+                  alt=""
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.parentElement!.style.display = 'none';
+                  }}
+                />
+              </div>
             )}
-            <h3 className="text-sm font-medium text-white/90 leading-snug line-clamp-2 group-hover:text-white transition-colors duration-300">
-              {market.title}
-            </h3>
+            <div className="flex flex-col gap-1 min-w-0 flex-1">
+              {market.category && market.category !== 'Uncategorized' && (
+                <span className="text-[10px] uppercase tracking-wider text-white/30 font-medium">
+                  {market.category}
+                </span>
+              )}
+              <h3 className="text-sm font-medium text-white/90 leading-snug line-clamp-2 group-hover:text-white transition-colors duration-300">
+                {market.title}
+              </h3>
+            </div>
           </div>
           
           <div 

@@ -44,6 +44,11 @@ function isSportsParlay(title: string): boolean {
          title.startsWith('no ');
 }
 
+function getKalshiImageUrl(seriesTicker: string): string {
+  const cloudFrontUrl = `https://d1lvyva3zy5u58.cloudfront.net/series-images-webp/${seriesTicker}.webp`;
+  return `https://kalshi.com/_next/image?url=${encodeURIComponent(cloudFrontUrl)}&w=96&q=80`;
+}
+
 export function normalizeKalshiMarket(raw: KalshiMarketRaw): UnifiedMarket {
   const yesPrice = centsToDecimal(raw.yes_bid || raw.last_price || 50);
   const noPrice = centsToDecimal(raw.no_bid || (100 - (raw.last_price || 50)));
@@ -53,6 +58,8 @@ export function normalizeKalshiMarket(raw: KalshiMarketRaw): UnifiedMarket {
     { name: 'No', price: noPrice },
   ];
 
+  const seriesTicker = raw.ticker.split('-')[0];
+  
   return {
     id: `kalshi:${raw.ticker}`,
     externalId: raw.ticker,
@@ -62,6 +69,7 @@ export function normalizeKalshiMarket(raw: KalshiMarketRaw): UnifiedMarket {
     title: raw.title,
     description: raw.subtitle,
     category: raw.category || 'Uncategorized',
+    imageUrl: getKalshiImageUrl(seriesTicker),
     marketType: 'binary',
     outcomes,
     yesPrice,
@@ -140,6 +148,7 @@ async function fetchEventsWithMarkets(limit: number): Promise<UnifiedMarket[]> {
           title: event.title,
           description: event.sub_title,
           category: event.category || 'Uncategorized',
+          imageUrl: getKalshiImageUrl(event.series_ticker),
           marketType: 'multi-option',
           outcomes: groupedOutcomes,
           volume: eventMarkets.reduce((sum, m) => sum + (m.volume || 0), 0),
