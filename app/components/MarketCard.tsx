@@ -81,7 +81,7 @@ function MatchupContent({ market, brandColor }: { market: UnifiedMarket; brandCo
         })}
       </div>
 
-      <div className="flex items-center justify-between pt-1 border-t border-white/5">
+      <div className="flex items-center justify-between pt-2">
         <abbr title="Volume" className="text-[10px] uppercase tracking-wider text-white/30 font-medium no-underline">Vol</abbr>
         <span className="text-xs font-mono text-white/50">{formattedVolume}</span>
       </div>
@@ -90,9 +90,12 @@ function MatchupContent({ market, brandColor }: { market: UnifiedMarket; brandCo
 }
 
 function MultiOptionContent({ market, brandColor }: { market: UnifiedMarket; brandColor: string }) {
+  const hasMany = market.outcomes.length > 3;
+  const displayCount = hasMany ? 2 : Math.min(market.outcomes.length, 3);
   const topOutcomes = [...market.outcomes]
     .sort((a, b) => b.price - a.price)
-    .slice(0, 3);
+    .slice(0, displayCount);
+  const remainingCount = market.outcomes.length - displayCount;
   const formattedVolume = formatVolume(market.volume);
   
   return (
@@ -132,14 +135,13 @@ function MultiOptionContent({ market, brandColor }: { market: UnifiedMarket; bra
         })}
       </div>
 
-      {market.outcomes.length > 3 && (
-        <span className="text-[10px] text-white/30 pl-6">
-          +{market.outcomes.length - 3} more
-        </span>
-      )}
-
-      <div className="flex items-center justify-between pt-1.5 border-t border-white/5">
-        <abbr title="Volume" className="text-[10px] uppercase tracking-wider text-white/30 font-medium no-underline">Vol</abbr>
+      <div className="flex items-center justify-between pt-2">
+        <div className="flex items-center gap-2">
+          <abbr title="Volume" className="text-[10px] uppercase tracking-wider text-white/30 font-medium no-underline">Vol</abbr>
+          {remainingCount > 0 && (
+            <span className="text-[10px] text-white/20">+{remainingCount}</span>
+          )}
+        </div>
         <span className="text-xs font-mono text-white/50">{formattedVolume}</span>
       </div>
     </div>
