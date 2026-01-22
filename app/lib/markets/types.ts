@@ -204,33 +204,11 @@ export interface OutcomePriceHistory {
  * Order book data
  */
 export interface OrderBook {
-  /** Bid orders: [price, size][] */
   bids: [number, number][];
-  /** Ask orders: [price, size][] */
   asks: [number, number][];
   timestamp: number;
 }
 
-export interface MarketComment {
-  id: string;
-  userId: string;
-  username: string;
-  avatarUrl?: string;
-  text: string;
-  timestamp: number;
-  likes: number;
-  replyCount: number;
-  sentiment?: 'bullish' | 'bearish' | 'neutral';
-  platform: Platform;
-  userPosition?: {
-    outcome: string;
-    amount: string;
-  };
-}
-
-/**
- * Market with full detail (for detail page)
- */
 export interface UnifiedMarketDetail extends UnifiedMarket {
   /** Historical price data (for binary/simple markets) */
   priceHistory: PricePoint[];

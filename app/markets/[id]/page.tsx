@@ -1,14 +1,48 @@
 'use client';
 
 import React, { use, useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation'
+import { Loader2, RefreshCw } from 'lucide-react';
 
 import MarketDataPanel from '../../components/MarketDataPanel';
-import { MarketIntelligencePanel } from '../../components/maxwell/MarketIntelligencePanel';
+import { IntelligencePanel } from '../../components/maxwell/IntelligencePanel';
 import { useMaxwell } from '../../hooks/use-maxwell';
 import type { UnifiedMarket } from '../../lib/markets/types';
+import type { MarketContext, MarketOutcomeContext, IntelligenceMarketType } from '../../lib/maxwell/types';
 import { getCachedAnalysis, setCachedAnalysis, type CachedAnalysis } from '../../lib/markets/analysis-cache';
+
+function buildMarketContext(market: UnifiedMarket): MarketContext {
+  const outcomes: MarketOutcomeContext[] = market.outcomes.map(outcome => ({
+    name: outcome.name,
+    price: outcome.price,
+    priceChange24h: undefined,
+    volume: undefined,
+  }));
+
+  let type: IntelligenceMarketType;
+  if (market.marketType === 'binary') {
+    type = 'binary';
+  } else if (market.marketType === 'matchup') {
+    type = 'matchup';
+  } else {
+    type = 'multi-option';
+  }
+
+  return {
+    id: market.id,
+    platform: market.platform,
+    title: market.title,
+    type,
+    outcomes,
+    rules: market.rules || '',
+    resolutionSource: market.resolutionSource,
+    endDate: market.endDate,
+    volume: market.volume,
+    volume24h: market.volume24h,
+    liquidity: market.liquidity,
+    crossPlatformOdds: undefined,
+  };
+}
 
 type Params = Promise<{ id: string }>;
 
@@ -20,6 +54,22 @@ function extractVerdict(adjudication: string | null): string {
   if (upper.includes('LIKELY')) return 'LIKELY';
   if (upper.includes('UNLIKELY')) return 'UNLIKELY';
   return 'UNCERTAIN';
+}
+
+function formatTimestamp(timestamp: number): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 export default function MarketDetailPage(props: { params: Params }) {
@@ -48,6 +98,7 @@ export default function MarketDetailPage(props: { params: Params }) {
             verificationProgress: null,
             answer: cached.answer,
             adjudication: cached.adjudication,
+            intelligence: cached.intelligence,
             phaseDurations: { total: cached.durationMs },
             phaseStartTimes: {},
             events: [],
@@ -111,6 +162,7 @@ export default function MarketDetailPage(props: { params: Params }) {
           adjudication: maxwell.adjudication,
           sources: maxwell.sources,
           verification: maxwell.verification,
+          intelligence: maxwell.intelligence,
           timestamp: Date.now(),
           durationMs: maxwell.phaseDurations.total || 0,
         };
@@ -131,13 +183,12 @@ export default function MarketDetailPage(props: { params: Params }) {
       maxwell.reset();
     }
     
-    const query = `Analyze the prediction market: "${market.title}". 
-Resolution rules: ${market.rules || 'Standard resolution based on official sources.'}
-Deadline: ${market.endDate ? new Date(market.endDate).toLocaleDateString() : 'Not specified'}
-
-Provide a probability verdict (YES/NO/LIKELY/UNLIKELY) with confidence level and key supporting evidence.`;
-    maxwell.search(query);
+    const marketContext = buildMarketContext(market);
+    const query = `Analyze: "${market.title}"`;
+    maxwell.search(query, marketContext);
   }, [market, maxwell]);
+
+  const isAnalyzing = maxwell.phase !== 'idle' && maxwell.phase !== 'complete';
 
   if (isLoading) {
     return (
@@ -163,36 +214,52 @@ Provide a probability verdict (YES/NO/LIKELY/UNLIKELY) with confidence level and
 
   return (
     <main className="min-h-screen bg-[var(--bg-primary)] text-white pt-20 pb-6 px-6 lg:px-10">
-      <div className="max-w-[1200px] mx-auto">
-        <div className="flex flex-col lg:flex-row gap-8">
-          <div className="w-full lg:w-[55%] lg:pr-4">
+      <div className="max-w-[1350px] mx-auto">
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <div className="flex-1">
             <MarketDataPanel market={market} />
           </div>
-
-          <div className="w-full lg:w-[45%] lg:pl-4">
-            <div className="lg:sticky lg:top-24">
-              <MarketIntelligencePanel 
-                phase={maxwell.phase}
-                subQueries={maxwell.subQueries}
-                searchMetadata={maxwell.searchMetadata}
-                sources={maxwell.sources}
-                verification={maxwell.verification}
-                verificationProgress={maxwell.verificationProgress}
-                phaseDurations={maxwell.phaseDurations}
-                phaseStartTimes={maxwell.phaseStartTimes}
-                events={maxwell.events}
-                answer={maxwell.answer}
-                adjudication={maxwell.adjudication}
-                config={maxwell.config}
-                onQuery={(q) => maxwell.search(q)}
-                onRunAnalysis={handleRunAnalysis}
-                market={market}
-                isCached={!!cachedAnalysis}
-                cacheTimestamp={cachedAnalysis?.timestamp}
-              />
-            </div>
+          
+          <div className="shrink-0 flex flex-col items-end gap-2 pt-10">
+            {cachedAnalysis && (
+              <span className="text-[10px] font-mono text-white/30 uppercase tracking-wider">
+                Analyzed {formatTimestamp(cachedAnalysis.timestamp)}
+              </span>
+            )}
+            <button
+              onClick={() => handleRunAnalysis(!!cachedAnalysis)}
+              disabled={isAnalyzing}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all
+                bg-white/5 hover:bg-white/10 text-white/70 hover:text-white
+                disabled:opacity-50 disabled:cursor-not-allowed
+                border border-white/10 hover:border-white/20"
+            >
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Analyzing...</span>
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>{cachedAnalysis ? 'Re-run' : 'Analyze'}</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
+
+        <IntelligencePanel
+          data={maxwell.intelligence}
+          isLoading={isAnalyzing}
+          error={maxwell.error ? new Error(maxwell.error) : null}
+          onRetry={() => handleRunAnalysis(true)}
+          phase={maxwell.phase}
+          sourceCount={maxwell.sources.length}
+          verificationProgress={maxwell.verificationProgress}
+          phaseDurations={maxwell.phaseDurations}
+          phaseStartTimes={maxwell.phaseStartTimes}
+        />
       </div>
     </main>
   );

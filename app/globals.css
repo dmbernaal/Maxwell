@@ -82,3 +82,179 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ============================================================================
+   Phase 9: Maxwell Intelligence Animations
+   All animations are GPU-accelerated and respect prefers-reduced-motion
+   ============================================================================ */
+
+/**
+ * Waveform Breathe Animation
+ * Used by: WaveformSignature.tsx
+ * Effect: Smooth opacity + scale transition for signal strength visualization
+ * Duration: 4 seconds (slow, meditative)
+ * Pattern: ease-in-out (smooth acceleration/deceleration)
+ * Performance: GPU-accelerated via opacity and transform
+ */
+@keyframes waveform-pulse {
+  0% {
+    opacity: 0.6;
+    transform: scaleY(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  100% {
+    opacity: 0.6;
+    transform: scaleY(0.9);
+  }
+}
+
+/**
+ * Apply to waveform bars
+ * Usage: <div className="waveform-pulse">
+ */
+.waveform-pulse {
+  animation: waveform-pulse 4s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+/**
+ * Edge Glow Animation (Cyan)
+ * Used by: DeltaGlow.tsx
+ * Effect: Pulsing box-shadow for delta detection
+ * Duration: 2 seconds (attention-grabbing but not distracting)
+ * Pattern: ease-in-out
+ * Performance: GPU-accelerated via box-shadow
+ */
+@keyframes edge-glow-cyan {
+  0% {
+    box-shadow:
+      0 0 0 rgba(34, 211, 238, 0),
+      0 0 8px rgba(34, 211, 238, 0.2);
+    border-color: rgba(34, 211, 238, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 0 rgba(34, 211, 238, 0),
+      0 0 16px rgba(34, 211, 238, 0.4);
+    border-color: rgba(34, 211, 238, 0.6);
+  }
+  100% {
+    box-shadow:
+      0 0 0 rgba(34, 211, 238, 0),
+      0 0 8px rgba(34, 211, 238, 0.2);
+    border-color: rgba(34, 211, 238, 0.3);
+  }
+}
+
+/**
+ * Edge Glow Animation (Amber)
+ * Used by: DeltaGlow.tsx
+ * Effect: Pulsing box-shadow for warnings
+ * Duration: 2 seconds
+ * Pattern: ease-in-out
+ */
+@keyframes edge-glow-amber {
+  0% {
+    box-shadow:
+      0 0 0 rgba(245, 158, 11, 0),
+      0 0 8px rgba(245, 158, 11, 0.2);
+    border-color: rgba(245, 158, 11, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 0 rgba(245, 158, 11, 0),
+      0 0 16px rgba(245, 158, 11, 0.4);
+    border-color: rgba(245, 158, 11, 0.6);
+  }
+  100% {
+    box-shadow:
+      0 0 0 rgba(245, 158, 11, 0),
+      0 0 8px rgba(245, 158, 11, 0.2);
+    border-color: rgba(245, 158, 11, 0.3);
+  }
+}
+
+/**
+ * Apply to detected delta elements
+ * Usage: <div className="edge-glow-cyan"> or <div className="edge-glow-amber">
+ */
+.edge-glow-cyan {
+  animation: edge-glow-cyan 2s ease-in-out infinite;
+  will-change: box-shadow, border-color;
+}
+
+.edge-glow-amber {
+  animation: edge-glow-amber 2s ease-in-out infinite;
+  will-change: box-shadow, border-color;
+}
+
+/**
+ * Skeleton Shimmer Animation
+ * Used by: SkeletonBlock.tsx
+ * Effect: Light gradient sweep across loading blocks
+ * Duration: 2s (standard for skeleton loaders)
+ * Pattern: linear (constant speed)
+ */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+/**
+ * Terminal-style skeleton background
+ * Uses existing terminal colors: #0a0a0a (bg), #1a1a1a (surface), #252525 (highlight)
+ */
+.skeleton-terminal {
+  background: linear-gradient(
+    90deg,
+    #1a1a1a 0%,
+    #252525 50%,
+    #1a1a1a 100%
+  );
+  background-size: 1000px 100%;
+  animation: skeleton-shimmer 2s linear infinite;
+  will-change: background-position;
+}
+
+/**
+ * Respects user's reduced motion preference
+ * All animations are disabled when user prefers reduced motion
+ */
+@media (prefers-reduced-motion: reduce) {
+  .waveform-pulse,
+  .edge-glow-cyan,
+  .edge-glow-amber,
+  .skeleton-terminal {
+    animation: none;
+  }
+
+  .waveform-pulse {
+    opacity: 1;
+    transform: none;
+  }
+
+  .edge-glow-cyan {
+    box-shadow:
+      0 0 8px rgba(34, 211, 238, 0.2),
+      0 0 0 rgba(34, 211, 238, 0);
+    border-color: rgba(34, 211, 238, 0.3);
+  }
+
+  .edge-glow-amber {
+    box-shadow:
+      0 0 8px rgba(245, 158, 11, 0.2),
+      0 0 0 rgba(245, 158, 11, 0);
+    border-color: rgba(245, 158, 11, 0.3);
+  }
+
+  .skeleton-terminal {
+    background: #1a1a1a;
+  }
+}

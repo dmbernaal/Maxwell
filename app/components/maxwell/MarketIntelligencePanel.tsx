@@ -8,6 +8,7 @@ import { VerificationPanel } from './VerificationPanel';
 import ResponseDisplay from '../ResponseDisplay';
 import InputInterface from '../InputInterface';
 import { PhaseProgress } from './PhaseProgress';
+import { IntelligencePanel } from './IntelligencePanel';
 
 import type { 
     ExecutionPhase, 
@@ -17,7 +18,8 @@ import type {
     MaxwellSource, 
     VerificationOutput, 
     MaxwellEvent,
-    MaxwellState 
+    MaxwellState,
+    MaxwellIntelligence
 } from '../../lib/maxwell/types';
 import type { VerificationProgress } from '../../hooks/use-maxwell';
 import type { ExecutionConfig } from '../../lib/maxwell/configFactory';
@@ -43,6 +45,7 @@ interface MarketIntelligencePanelProps {
     market?: UnifiedMarket;
     isCached?: boolean;
     cacheTimestamp?: number;
+    intelligence?: MaxwellIntelligence | null;
 }
 
 export function MarketIntelligencePanel({
@@ -62,7 +65,8 @@ export function MarketIntelligencePanel({
     onRunAnalysis,
     market,
     isCached,
-    cacheTimestamp
+    cacheTimestamp,
+    intelligence
 }: MarketIntelligencePanelProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -100,7 +104,7 @@ export function MarketIntelligencePanel({
     } : null;
 
     const isAnalyzing = phase !== 'idle' && phase !== 'complete' && phase !== 'error';
-    const hasReport = answer || verification || isAnalyzing;
+    const hasReport = answer || verification || isAnalyzing || intelligence;
     
     const formatTimestamp = (timestamp: number): string => {
         const date = new Date(timestamp);
@@ -127,9 +131,24 @@ export function MarketIntelligencePanel({
                             </span>
                         </div>
                     )}
-                    {!isAnalyzing && isCached && cacheTimestamp && (
-                        <span className="text-[11px] text-white/25 font-mono">
+                     {!isAnalyzing && isCached && cacheTimestamp && (
+                        <span className="text-[11px] text-white/40 font-mono">
                             {formatTimestamp(cacheTimestamp)}
+                        </span>
+                    )}
+                    {!isAnalyzing && !isCached && !hasReport && (
+                        <span className="text-[11px] text-white/20 font-mono">
+                            No report yet
+                        </span>
+                    )}
+                    {!isAnalyzing && isCached && cacheTimestamp && (
+                        <span className="text-[11px] text-white/40 font-mono">
+                            {formatTimestamp(cacheTimestamp)}
+                        </span>
+                    )}
+                    {!isAnalyzing && !isCached && !hasReport && (
+                        <span className="text-[11px] text-white/20 font-mono">
+                            No report yet
                         </span>
                     )}
                     {!isAnalyzing && !isCached && !hasReport && (
@@ -181,15 +200,18 @@ export function MarketIntelligencePanel({
 
                 {hasReport && (
                     <div className="space-y-6 pt-2">
-                        {(adjudication || phase === 'adjudication' || phase === 'complete') && (
+                        {intelligence && (
+                            <IntelligencePanel data={intelligence} />
+                        )}
+
+                        {!intelligence && (adjudication || phase === 'adjudication' || phase === 'complete') && (
                             <VerdictCard 
                                 adjudication={adjudication} 
-                                confidence={verification?.overallConfidence || 0}
-                                phase={phase}
+                                verification={verification}
                             />
                         )}
 
-                        {(verification || verificationProgress) && (
+                        {!intelligence && (verification || verificationProgress) && (
                             <div className="rounded-xl bg-white/[0.02] p-4">
                                 <VerificationPanel 
                                     verification={verification} 
@@ -199,7 +221,7 @@ export function MarketIntelligencePanel({
                             </div>
                         )}
 
-                        {answer && (
+                        {!intelligence && answer && (
                             <div>
                                 <span className="text-[10px] font-mono uppercase tracking-widest text-white/20 mb-3 block">
                                     Analysis

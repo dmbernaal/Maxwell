@@ -1,5 +1,5 @@
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval';
-import type { MaxwellSource, VerificationOutput } from '../maxwell/types';
+import type { MaxwellSource, VerificationOutput, MaxwellIntelligence } from '../maxwell/types';
 
 export interface CachedAnalysis {
   marketId: string;
@@ -10,6 +10,7 @@ export interface CachedAnalysis {
   adjudication: string | null;
   sources: MaxwellSource[];
   verification: VerificationOutput | null;
+  intelligence: MaxwellIntelligence | null;
   timestamp: number;
   durationMs: number;
 }

@@ -15,6 +15,9 @@ import type {
     Passage,
     VerificationOutput,
     DecompositionOutput,
+    MarketContext,
+    MaxwellIntelligence,
+    ResolutionRisk,
 } from './types';
 
 // ============================================
@@ -23,6 +26,7 @@ import type {
 
 export interface DecomposeRequest {
     query: string;
+    marketContext?: MarketContext;
 }
 
 export interface DecomposeResponse extends DecompositionOutput {
@@ -78,6 +82,7 @@ export interface SynthesizeRequest {
     query: string;
     sources: MaxwellSource[];
     synthesisModel: string;
+    marketContext?: MarketContext;
 }
 
 // Response is SSE stream with synthesis-chunk events
@@ -111,6 +116,26 @@ export interface AdjudicateRequest {
 
 // Response is SSE stream with adjudication-chunk events
 // Final event contains: { text: string, durationMs: number }
+
+// ============================================
+// PRESENT ENDPOINT
+// ============================================
+
+export interface PresentRequest {
+    query: string;
+    marketContext: MarketContext;
+    synthesis: string;
+    verification: VerificationOutput;
+    adjudication: string;
+    sources: MaxwellSource[];
+    pipelineDurationMs: number;
+    resolutionRisk?: ResolutionRisk;
+}
+
+export interface PresentResponse {
+    intelligence: MaxwellIntelligence;
+    durationMs: number;
+}
 
 // ============================================
 // UTILITY FUNCTIONS

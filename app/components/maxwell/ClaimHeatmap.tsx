@@ -55,6 +55,21 @@ function ClaimTooltip({ sentence, position }: ClaimTooltipProps) {
     if (!claim) return null;
 
     const confidencePercent = Math.round((claim.confidence || 0) * 100);
+    
+    // Calculate safe position for mobile
+    // If screen is narrow, center it or limit width
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const tooltipWidth = isMobile ? Math.min(320, window.innerWidth - 32) : 320;
+    
+    let leftPos = position.x;
+    if (isMobile) {
+        // Center on screen horizontally for mobile, ignoring precise click x
+        leftPos = (window.innerWidth - tooltipWidth) / 2;
+    } else {
+        // Desktop: Keep it near cursor but safe from edge
+        leftPos = Math.min(position.x, window.innerWidth - tooltipWidth - 20);
+        leftPos = Math.max(20, leftPos); // Keep away from left edge
+    }
 
     return (
         <motion.div
@@ -62,11 +77,12 @@ function ClaimTooltip({ sentence, position }: ClaimTooltipProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-            className="fixed z-[100] w-80 pointer-events-none"
+            className="fixed z-[100] pointer-events-none"
             style={{
-                left: Math.min(position.x, window.innerWidth - 340),
+                left: leftPos,
                 top: position.y - 8,
                 transform: 'translateY(-100%)',
+                width: tooltipWidth
             }}
         >
             <div className="relative flex flex-col gap-3 p-4 bg-[#1a1721] border border-white/10 rounded-xl shadow-2xl shadow-black/50 backdrop-blur-xl overflow-hidden">
@@ -124,8 +140,11 @@ function ClaimTooltip({ sentence, position }: ClaimTooltipProps) {
                 </div>
             </div>
 
-            {/* Arrow */}
-            <div className="absolute left-1/2 -translate-x-1/2 top-full border-8 border-transparent border-t-[#1a1721]" />
+            {/* Arrow - Hide on mobile as it might not align if centered */}
+            {!isMobile && (
+                <div className="absolute left-0 top-full border-8 border-transparent border-t-[#1a1721]" 
+                     style={{ left: Math.max(10, position.x - leftPos) - 8 }} />
+            )}
         </motion.div>
     );
 }
@@ -159,6 +178,14 @@ function HighlightedSpan({
         setTooltipPosition({ x: e.clientX, y: e.clientY });
     };
 
+    const handleClick = (e: React.MouseEvent) => {
+        // On touch devices, toggle tooltip
+        e.preventDefault();
+        e.stopPropagation();
+        setTooltipPosition({ x: e.clientX, y: e.clientY });
+        setIsHovered(!isHovered);
+    };
+
     // If no matched claim, render plain text
     if (!sentence?.matchedClaim) {
         return <>{text}</>;
@@ -169,10 +196,11 @@ function HighlightedSpan({
     return (
         <>
             <span
-                className={`${bgClass} rounded-sm cursor-help transition-all duration-200 hover:brightness-125`}
+                className={`${bgClass} rounded-sm cursor-help transition-all duration-200 hover:brightness-125 select-none md:select-text`}
                 onMouseEnter={handleMouseEnter}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={() => setIsHovered(false)}
+                onClick={handleClick}
             >
                 {text}
             </span>
@@ -195,7 +223,7 @@ function HighlightedSpan({
 
 function HeatmapStats({ stats }: { stats: ClaimMappingResult['stats'] }) {
     return (
-        <div className="flex items-center gap-4 text-[10px] text-white/40 mb-4">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] text-white/40 mb-4">
             <div className="flex items-center gap-1.5">
                 <Shield size={12} className="text-white/30" />
                 <span>
@@ -209,7 +237,7 @@ function HeatmapStats({ stats }: { stats: ClaimMappingResult['stats'] }) {
                 <span className="text-white/60 font-medium">{stats.coveragePercent}%</span>
             </div>
 
-            <div className="flex items-center gap-4 ml-auto">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 ml-auto">
                 <div className="flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                     <span className="text-[10px] font-medium text-white/40 uppercase tracking-wider">High</span>

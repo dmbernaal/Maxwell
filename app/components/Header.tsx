@@ -105,7 +105,7 @@ export default function Header() {
                     : 'none',
             }}
         >
-            <div className="max-w-[1200px] mx-auto flex items-center h-full">
+            <div className="max-w-[1350px] mx-auto flex items-center h-full">
                 {/* Left: Brand + Search Group */}
                 <div className="flex items-center gap-6">
                     {/* Brand */}

@@ -77,6 +77,12 @@ export const DEFAULT_VERIFICATION_CONCURRENCY = QUALITY_PRESETS[DEFAULT_QUALITY_
 /** Model for adjudication (fast, authoritative) */
 export const ADJUDICATOR_MODEL = 'google/gemini-3-flash-preview';
 
+/** Model for resolution risk analysis (fast classification task) */
+export const RESOLUTION_RISK_MODEL = 'google/gemini-3-flash-preview';
+
+/** Model for presenter transformation (structured output, fast) */
+export const PRESENTER_MODEL = 'google/gemini-3-flash-preview';
+
 // ============================================
 // DECOMPOSITION CONFIGURATION
 // ============================================

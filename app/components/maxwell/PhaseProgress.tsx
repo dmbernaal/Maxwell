@@ -128,7 +128,7 @@ export function PhaseProgress({ phase, phaseDurations, phaseStartTimes }: PhaseP
                 </div>
 
                 {/* Waterfall Legend */}
-                <div className="flex justify-between mt-1.5">
+                <div className="flex flex-wrap justify-between gap-y-1 mt-1.5">
                     {Object.entries(durations).map(([key, duration]) => {
                         if (duration === 0) return null;
                         const colorMap: Record<string, string> = {
@@ -138,7 +138,7 @@ export function PhaseProgress({ phase, phaseDurations, phaseStartTimes }: PhaseP
                             verification: 'text-emerald-400'
                         };
                         return (
-                            <div key={key} className="flex items-center gap-1.5">
+                            <div key={key} className="flex items-center gap-1.5 mr-2 last:mr-0">
                                 <span className={`w-1 h-1 rounded-full ${colorMap[key].replace('text', 'bg')}`} />
                                 <span className={`text-[9px] uppercase tracking-wider ${colorMap[key]} opacity-60`}>
                                     {(duration / 1000).toFixed(1)}s

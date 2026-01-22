@@ -43,13 +43,11 @@ export interface PolymarketSeries {
   updatedBy: string;
   createdAt: string;
   updatedAt: string;
-  commentsEnabled: boolean;
   competitive: string;
   volume24hr: number;
   volume: number;
   liquidity: number;
   startDate: string;
-  commentCount: number;
   requiresTranslation: boolean;
 }
 
@@ -89,22 +87,4 @@ export interface PolymarketPriceHistory {
 export interface PolymarketApiResponse {
   data?: PolymarketMarketRaw[];
   next_cursor?: string;
-}
-
-export interface PolymarketCommentRaw {
-  id: string;
-  body: string;
-  userAddress: string;
-  createdAt: string;
-  profile: {
-    name: string;
-    pseudonym: string;
-    profileImage: string;
-    positions?: Array<{
-      tokenId: string;
-      positionSize: string;
-    }>;
-  };
-  reactionCount: number;
-  replyCount?: number;
 }
