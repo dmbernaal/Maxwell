@@ -2,10 +2,13 @@
 
 import React, { use, useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation'
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
+import { IntelligenceHero } from '../../components/maxwell/IntelligenceHero';
+import { OutcomesAnalysisTable } from '../../components/maxwell/OutcomesAnalysisTable';
+import { EvidenceGrid } from '../../components/maxwell/EvidenceGrid';
+import { ResearchProgress } from '../../components/maxwell/ResearchProgress';
 import MarketDataPanel from '../../components/MarketDataPanel';
-import { IntelligencePanel } from '../../components/maxwell/IntelligencePanel';
 import { useMaxwell } from '../../hooks/use-maxwell';
 import type { UnifiedMarket } from '../../lib/markets/types';
 import type { MarketContext, MarketOutcomeContext, IntelligenceMarketType } from '../../lib/maxwell/types';
@@ -63,12 +66,12 @@ function formatTimestamp(timestamp: number): string {
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
-  
+
   if (diffMins < 1) return 'just now';
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
-  
+
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
@@ -76,7 +79,7 @@ export default function MarketDetailPage(props: { params: Params }) {
   const params = use(props.params);
   const router = useRouter();
   const maxwell = useMaxwell();
-  
+
   const [market, setMarket] = useState<UnifiedMarket | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -111,7 +114,7 @@ export default function MarketDetailPage(props: { params: Params }) {
         setIsCacheLoading(false);
       }
     };
-    
+
     loadCachedAnalysis();
   }, [params.id]);
 
@@ -121,7 +124,7 @@ export default function MarketDetailPage(props: { params: Params }) {
         setIsLoading(true);
         setError(null);
         const res = await fetch(`/api/markets/${encodeURIComponent(params.id)}`);
-        
+
         if (!res.ok) {
           if (res.status === 404) {
             setError('Market not found');
@@ -130,7 +133,7 @@ export default function MarketDetailPage(props: { params: Params }) {
           }
           return;
         }
-        
+
         const data = await res.json();
         setMarket(data.market);
       } catch (e) {
@@ -140,16 +143,16 @@ export default function MarketDetailPage(props: { params: Params }) {
         setIsLoading(false);
       }
     };
-    
+
     fetchMarket();
   }, [params.id]);
 
   useEffect(() => {
     const saveToCache = async () => {
       if (
-        maxwell.phase === 'complete' && 
-        market && 
-        maxwell.answer && 
+        maxwell.phase === 'complete' &&
+        market &&
+        maxwell.answer &&
         maxwell.adjudication &&
         !cachedAnalysis
       ) {
@@ -166,23 +169,23 @@ export default function MarketDetailPage(props: { params: Params }) {
           timestamp: Date.now(),
           durationMs: maxwell.phaseDurations.total || 0,
         };
-        
+
         await setCachedAnalysis(analysis);
         setCachedAnalysisState(analysis);
       }
     };
-    
+
     saveToCache();
   }, [maxwell.phase, maxwell.answer, maxwell.adjudication, market, params.id, cachedAnalysis, maxwell.verification, maxwell.sources, maxwell.phaseDurations.total]);
 
   const handleRunAnalysis = useCallback((forceRefresh = false) => {
     if (!market) return;
-    
+
     if (forceRefresh) {
       setCachedAnalysisState(null);
       maxwell.reset();
     }
-    
+
     const marketContext = buildMarketContext(market);
     const query = `Analyze: "${market.title}"`;
     maxwell.search(query, marketContext);
@@ -202,7 +205,7 @@ export default function MarketDetailPage(props: { params: Params }) {
     return (
       <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col items-center justify-center gap-4">
         <span className="text-white/40 font-mono">{error || 'Market not found'}</span>
-        <button 
+        <button
           onClick={() => router.push('/')}
           className="text-sm text-white/60 hover:text-white transition-colors"
         >
@@ -214,52 +217,52 @@ export default function MarketDetailPage(props: { params: Params }) {
 
   return (
     <main className="min-h-screen bg-[var(--bg-primary)] text-white pt-20 pb-6 px-6 lg:px-10">
-      <div className="max-w-[1350px] mx-auto">
-        <div className="flex items-start justify-between gap-4 mb-6">
-          <div className="flex-1">
-            <MarketDataPanel market={market} />
-          </div>
-          
-          <div className="shrink-0 flex flex-col items-end gap-2 pt-10">
-            {cachedAnalysis && (
-              <span className="text-[10px] font-mono text-white/30 uppercase tracking-wider">
-                Analyzed {formatTimestamp(cachedAnalysis.timestamp)}
-              </span>
-            )}
-            <button
-              onClick={() => handleRunAnalysis(!!cachedAnalysis)}
-              disabled={isAnalyzing}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all
-                bg-white/5 hover:bg-white/10 text-white/70 hover:text-white
-                disabled:opacity-50 disabled:cursor-not-allowed
-                border border-white/10 hover:border-white/20"
-            >
-              {isAnalyzing ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Analyzing...</span>
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>{cachedAnalysis ? 'Re-run' : 'Analyze'}</span>
-                </>
-              )}
-            </button>
-          </div>
+      <div className="max-w-[1350px] mx-auto space-y-6">
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={() => router.push('/')}
+            className="text-xs text-white/40 hover:text-white transition-colors"
+          >
+            ← Back to markets
+          </button>
         </div>
 
-        <IntelligencePanel
-          data={maxwell.intelligence}
-          isLoading={isAnalyzing}
-          error={maxwell.error ? new Error(maxwell.error) : null}
-          onRetry={() => handleRunAnalysis(true)}
-          phase={maxwell.phase}
-          sourceCount={maxwell.sources.length}
-          verificationProgress={maxwell.verificationProgress}
-          phaseDurations={maxwell.phaseDurations}
-          phaseStartTimes={maxwell.phaseStartTimes}
+        <IntelligenceHero 
+          market={market}
+          intelligence={maxwell.intelligence}
+          isLoading={false}
+          isAnalyzing={isAnalyzing}
+          onAnalyze={() => handleRunAnalysis(!!cachedAnalysis)}
         />
+
+        {maxwell.intelligence?.outcomes && maxwell.intelligence.outcomes.length > 0 && (
+          <OutcomesAnalysisTable outcomes={maxwell.intelligence.outcomes} />
+        )}
+
+        {isAnalyzing ? (
+          <ResearchProgress
+            phase={maxwell.phase}
+            phaseDurations={maxwell.phaseDurations}
+            phaseStartTimes={maxwell.phaseStartTimes}
+            sourceCount={maxwell.sources.length}
+            verificationProgress={maxwell.verificationProgress}
+          />
+        ) : maxwell.intelligence ? (
+          <EvidenceGrid 
+            intelligence={maxwell.intelligence} 
+          />
+        ) : null}
+
+        {market && (
+          <>
+            <div className="flex items-center gap-4 py-4 pt-8">
+              <div className="h-px flex-1 bg-white/5" />
+              <span className="text-xs font-medium text-white/30 uppercase tracking-widest">Market Data</span>
+              <div className="h-px flex-1 bg-white/5" />
+            </div>
+            <MarketDataPanel market={market} />
+          </>
+        )}
       </div>
     </main>
   );
