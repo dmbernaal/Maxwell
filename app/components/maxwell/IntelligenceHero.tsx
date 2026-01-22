@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { PanelFrame } from './primitives/PanelFrame';
 import { SkeletonBlock } from './primitives/SkeletonBlock';
 import { UnifiedMarket } from '@/app/lib/markets/types';
@@ -8,10 +7,6 @@ import {
   Layers, 
   Bot, 
   Share2, 
-  Sparkles, 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  Minus,
   Activity,
   Copy,
   Play,
@@ -38,23 +33,23 @@ function getVerdictColor(verdict: string) {
     case 'UNDERPRICED':
     case 'YES':
     case 'LIKELY':
-      return 'text-emerald-500';
+      return 'text-emerald-400';
     case 'OVERPRICED':
     case 'NO':
     case 'UNLIKELY':
-      return 'text-rose-500';
+      return 'text-rose-400';
     case 'FAIR':
     case 'UNCERTAIN':
     default:
-      return 'text-amber-500';
+      return 'text-amber-400';
   }
 }
 
 function getConfidenceColor(confidence: number) {
-  if (confidence >= 80) return 'bg-emerald-500';
-  if (confidence >= 60) return 'bg-emerald-500/80';
-  if (confidence >= 40) return 'bg-amber-500';
-  return 'bg-rose-500';
+  if (confidence >= 80) return 'bg-emerald-400';
+  if (confidence >= 60) return 'bg-emerald-400/80';
+  if (confidence >= 40) return 'bg-amber-400';
+  return 'bg-rose-400';
 }
 
 function formatRelativeTime(date: Date) {
@@ -85,11 +80,11 @@ const ConfidenceGauge = ({ value, colorClass }: { value: number, colorClass: str
 
 const MarketMetaItem = ({ icon: Icon, label, value }: { icon: any, label: string, value: React.ReactNode }) => (
   <div className="flex items-center justify-between group">
-    <div className="flex items-center gap-2 text-white/30 group-hover:text-white/40 transition-colors">
+    <div className="flex items-center gap-2 text-white/50 group-hover:text-white/70 transition-colors">
       <Icon className="w-3.5 h-3.5" />
-      <span className="text-[10px] uppercase tracking-widest font-medium">{label}</span>
+      <span className="text-[10px] uppercase tracking-wider font-medium font-mono text-white/40">{label}</span>
     </div>
-    <span className="font-mono text-[11px] text-white/60">{value}</span>
+    <span className="font-mono text-[11px] text-white/70">{value}</span>
   </div>
 );
 
@@ -136,9 +131,10 @@ export function IntelligenceHero({
   const marketProb = market.yesPrice * 100;
   const maxwellProb = intelligence ? getMaxwellProbability(intelligence) : 0;
   
-  let edge = 0;
-  let displayVerdict = intelligence?.assessment.verdict || 'UNCERTAIN';
-  let topPickName = '';
+  let topOutcomeName = '';
+  let topOutcomeStatus = '';
+  let topOutcomeEdge = 0;
+  let isFairlyValued = false;
 
   if (intelligence) {
     if (isMultiOption && intelligence.outcomes && intelligence.outcomes.length > 0) {
@@ -149,19 +145,26 @@ export function IntelligenceHero({
       })[0];
 
       if (bestOutcome) {
-        edge = bestOutcome.maxwellRange.mid - bestOutcome.marketPrice;
-        displayVerdict = bestOutcome.view;
-        topPickName = bestOutcome.name;
+        topOutcomeName = bestOutcome.name;
+        topOutcomeEdge = bestOutcome.maxwellRange.mid - bestOutcome.marketPrice;
+        topOutcomeStatus = bestOutcome.view;
+      } else {
+        isFairlyValued = true;
       }
     } else {
-      edge = maxwellProb - marketProb;
+      topOutcomeEdge = maxwellProb - marketProb;
+      topOutcomeStatus = intelligence.assessment.verdict;
+      topOutcomeName = "Yes"; 
+      
+      if (Math.abs(topOutcomeEdge) < 2) {
+      }
     }
   }
   
   const platformColor = market.platform === 'polymarket' ? 'bg-blue-500' : 'bg-emerald-500';
 
   return (
-    <PanelFrame className="min-h-[220px] p-0 overflow-hidden relative group/hero">
+    <PanelFrame className="min-h-[220px] p-0 overflow-hidden relative group/hero bg-[#121214] border-white/[0.08]">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/[0.03] via-transparent to-transparent pointer-events-none" />
       
       <div className="absolute top-3 right-3 opacity-0 group-hover/hero:opacity-100 transition-opacity duration-300">
@@ -173,23 +176,23 @@ export function IntelligenceHero({
         <div className="p-6 lg:p-8 flex flex-col justify-between relative">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className={cn("px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase flex items-center gap-1.5 text-white bg-white/5 border border-white/5")}>
+              <div className={cn("px-2 py-0.5 rounded text-[10px] font-medium tracking-wider uppercase flex items-center gap-1.5 text-white/40 font-mono bg-white/5 border border-white/5")}>
                 <span className={cn("w-1.5 h-1.5 rounded-full", platformColor)} />
                 {market.platform}
               </div>
-              <span className="font-mono text-[10px] text-white/30">ID: {market.id.split(':')[1] || market.id}</span>
+              <span className="font-mono text-[10px] text-white/40 tracking-wider">ID: {market.id.split(':')[1] || market.id}</span>
             </div>
             
-            <h1 className="text-xl lg:text-2xl font-medium text-white/90 leading-tight tracking-tight line-clamp-3">
+            <h1 className="text-xl lg:text-2xl font-medium text-white leading-tight tracking-tight line-clamp-3">
               {market.title}
             </h1>
           </div>
 
           <div className="mt-6 flex items-center gap-3">
-            <button className="p-2 rounded-md hover:bg-white/5 text-white/30 hover:text-white transition-colors border border-transparent hover:border-white/5">
+            <button className="p-2 rounded-md hover:bg-white/5 text-white/40 hover:text-white transition-colors border border-transparent hover:border-white/5">
               <Share2 className="w-4 h-4" />
             </button>
-            <button className="p-2 rounded-md hover:bg-white/5 text-white/30 hover:text-white transition-colors border border-transparent hover:border-white/5">
+            <button className="p-2 rounded-md hover:bg-white/5 text-white/40 hover:text-white transition-colors border border-transparent hover:border-white/5">
               <Copy className="w-4 h-4" />
             </button>
           </div>
@@ -198,11 +201,8 @@ export function IntelligenceHero({
         <div className="p-6 lg:p-8 flex flex-col items-center justify-center relative">
             {!intelligence ? (
             <div className="flex flex-col items-center text-center space-y-4 max-w-xs relative z-10">
-              <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-2 shadow-[0_0_30px_-5px_rgba(255,255,255,0.1)] border border-white/10">
-                <Sparkles className="w-6 h-6 text-emerald-400/80" />
-              </div>
-              <h3 className="text-lg font-medium text-white/90">Verification Ready</h3>
-              <p className="text-sm text-white/40 leading-relaxed">
+              <h3 className="text-lg font-medium text-white">Verification Ready</h3>
+              <p className="text-sm text-white/60 leading-relaxed">
                 Run Maxwell to audit this market against live data sources and calculate true probability.
               </p>
               
@@ -232,69 +232,57 @@ export function IntelligenceHero({
               )}
             </div>
           ) : (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
-              className="flex flex-col items-center w-full"
-            >
-              <div className="mb-2 flex items-center gap-2">
-                <span className="text-[10px] uppercase tracking-[0.2em] text-white/30 font-semibold">
-                  {isMultiOption ? "Top Opportunity" : "Maxwell Verdict"}
-                </span>
-              </div>
-
-              <div className={cn(
-                "text-6xl lg:text-7xl font-bold tracking-tighter mb-4 tabular-nums",
-                getVerdictColor(displayVerdict)
-              )}>
-                {displayVerdict}
-              </div>
-
-              <div className="w-full max-w-[240px] mb-6 flex flex-col items-center gap-2">
-                <div className="flex justify-between w-full text-[10px] text-white/40 font-mono">
-                  <span>Confidence</span>
-                  <span>{intelligence.verification.score}%</span>
-                </div>
-                <ConfidenceGauge 
-                  value={intelligence.verification.score} 
-                  colorClass={getConfidenceColor(intelligence.verification.score)} 
-                />
-              </div>
-
-              {isMultiOption && topPickName ? (
-                <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/[0.03] border border-white/5">
-                  <span className="text-xs text-white/90 font-medium">
-                    {topPickName}
+              <div className="flex flex-col items-center w-full text-center">
+                <div className="mb-3">
+                  <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">
+                    TOP OPPORTUNITY
                   </span>
-                  <div className="w-px h-3 bg-white/10" />
-                  <div className={cn(
-                    "text-xs font-mono font-bold flex items-center gap-1",
-                    edge > 0 ? "text-emerald-400" : edge < 0 ? "text-rose-400" : "text-white/40"
-                  )}>
-                    {edge > 0 ? <ArrowUpRight className="w-3 h-3" /> : edge < 0 ? <ArrowDownRight className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
-                    {Math.abs(Math.round(edge))}% Edge
+                </div>
+
+                {isFairlyValued ? (
+                   <h2 className="text-3xl lg:text-4xl font-semibold text-white tracking-tight mb-2">
+                     Market Fairly Valued
+                   </h2>
+                ) : (
+                  <>
+                    <h2 className="text-3xl lg:text-4xl font-semibold text-white tracking-tight mb-3">
+                      {topOutcomeName}
+                    </h2>
+                    
+                    <div className={cn(
+                      "inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/5 backdrop-blur-sm",
+                      "text-sm font-mono font-medium"
+                    )}>
+                      <span className={getVerdictColor(topOutcomeStatus)}>
+                        {topOutcomeStatus}
+                      </span>
+                      <span className="text-white/20">|</span>
+                      <span className={cn(
+                        topOutcomeEdge > 0 ? "text-emerald-400" : "text-rose-400"
+                      )}>
+                        {topOutcomeEdge > 0 ? '+' : ''}{Math.round(topOutcomeEdge)}% Edge
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                {intelligence.assessment.headline && (
+                  <p className="text-white/60 text-sm font-medium mt-6 max-w-lg leading-relaxed border-t border-white/5 pt-4">
+                    {intelligence.assessment.headline}
+                  </p>
+                )}
+
+                <div className="mt-6 flex flex-col items-center gap-2 opacity-50 hover:opacity-100 transition-opacity">
+                  <div className="flex justify-between w-full max-w-[100px] text-[9px] text-white/50 font-mono">
+                    <span>CONFIDENCE</span>
+                    <span>{intelligence.verification.score}%</span>
                   </div>
+                  <ConfidenceGauge 
+                    value={intelligence.verification.score} 
+                    colorClass={getConfidenceColor(intelligence.verification.score)} 
+                  />
                 </div>
-              ) : isBinary && (
-                <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-white/[0.03] border border-white/5">
-                  <span className="text-xs text-white/40 font-mono">
-                    Max: <span className="text-white/80">{maxwellProb}%</span>
-                  </span>
-                  <span className="text-white/20 text-[10px]">vs</span>
-                  <span className="text-xs text-white/40 font-mono">
-                    Mkt: <span className="text-white/80">{Math.round(marketProb)}%</span>
-                  </span>
-                  <div className={cn(
-                    "ml-2 pl-3 border-l border-white/10 text-xs font-mono font-bold flex items-center gap-1",
-                    edge > 0 ? "text-emerald-400" : edge < 0 ? "text-rose-400" : "text-white/40"
-                  )}>
-                    {edge > 0 ? <ArrowUpRight className="w-3 h-3" /> : edge < 0 ? <ArrowDownRight className="w-3 h-3" /> : <Minus className="w-3 h-3" />}
-                    {Math.abs(Math.round(edge))}% Edge
-                  </div>
-                </div>
-              )}
-            </motion.div>
+              </div>
           )}
         </div>
 
@@ -302,14 +290,14 @@ export function IntelligenceHero({
           <div className="flex items-center justify-between group">
             <div className="flex items-center gap-2 text-white/30 group-hover:text-white/40 transition-colors">
               <Clock className="w-3.5 h-3.5" />
-              <span className="text-[10px] uppercase tracking-widest font-medium">Updated</span>
+              <span className="text-[10px] uppercase tracking-widest font-medium font-mono text-white/40">Updated</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-              <span className="font-mono text-[11px] text-white/60">
+              <span className="font-mono text-[11px] text-white/70">
                 {formatRelativeTime(new Date())}
               </span>
             </div>

@@ -40,10 +40,10 @@ export function OutcomesAnalysisTable({ outcomes }: OutcomesAnalysisTableProps) 
   });
 
   return (
-    <PanelFrame className="p-0 overflow-hidden flex flex-col">
-      <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between bg-white/[0.01]">
+    <PanelFrame className="p-0 overflow-hidden flex flex-col bg-[#121214] border-white/[0.08]">
+      <div className="px-6 py-4 border-b border-white/[0.08] flex items-center justify-between bg-[#121214]">
         <h3 className="text-sm font-medium text-white/90">Outcome Analysis</h3>
-        <span className="text-[10px] uppercase tracking-wider text-white/30 font-mono">
+        <span className="text-[10px] uppercase tracking-wider text-white/40 font-mono">
           {outcomes.length} Outcomes Analyzed
         </span>
       </div>
@@ -51,7 +51,7 @@ export function OutcomesAnalysisTable({ outcomes }: OutcomesAnalysisTableProps) 
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-white/5 text-[10px] uppercase tracking-wider text-white/30 font-medium font-mono">
+            <tr className="border-b border-white/[0.08] text-[10px] uppercase tracking-wider text-white/40 font-medium font-sans">
               <th className="px-6 py-3 w-[25%]">Outcome</th>
               <th className="px-4 py-3 text-right">Mkt</th>
               <th className="px-4 py-3 text-right">Maxwell</th>
@@ -61,7 +61,7 @@ export function OutcomesAnalysisTable({ outcomes }: OutcomesAnalysisTableProps) 
               <th className="px-4 py-3 w-[40px]"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5">
+          <tbody className="divide-y divide-white/[0.08]">
             {sortedOutcomes.map((outcome) => {
               const edge = outcome.maxwellRange.mid - outcome.marketPrice;
               const isExpanded = expandedRow === outcome.name;
@@ -69,21 +69,21 @@ export function OutcomesAnalysisTable({ outcomes }: OutcomesAnalysisTableProps) 
               return (
                 <React.Fragment key={outcome.name}>
                   <tr 
-                    className="group hover:bg-white/[0.02] transition-colors cursor-pointer"
+                    className="group hover:bg-white/[0.04] transition-colors cursor-pointer"
                     onClick={() => setExpandedRow(isExpanded ? null : outcome.name)}
                   >
                     <td className="px-6 py-3">
-                      <div className="font-medium text-white/90 truncate max-w-[200px] md:max-w-none">
+                      <div className="text-sm font-medium text-white/90 truncate max-w-[200px] md:max-w-none">
                         {outcome.name}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right font-mono text-white/60">
+                    <td className="px-4 py-3 text-right text-xs font-mono text-white/70">
                       {Math.round(outcome.marketPrice)}%
                     </td>
-                    <td className="px-4 py-3 text-right font-mono text-white/90">
+                    <td className="px-4 py-3 text-right text-xs font-mono text-white/70">
                       {Math.round(outcome.maxwellRange.mid)}%
                     </td>
-                    <td className={cn("px-4 py-3 text-right font-mono font-medium", getEdgeColor(edge))}>
+                    <td className={cn("px-4 py-3 text-right text-xs font-mono font-medium", getEdgeColor(edge))}>
                       <div className="flex items-center justify-end gap-1">
                         {edge > 0 ? (
                           <ArrowUpRight className="w-3 h-3" />

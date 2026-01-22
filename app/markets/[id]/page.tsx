@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react';
 
 import { IntelligenceHero } from '../../components/maxwell/IntelligenceHero';
+import { IntelligenceSummary } from '../../components/maxwell/IntelligenceSummary';
 import { OutcomesAnalysisTable } from '../../components/maxwell/OutcomesAnalysisTable';
 import { EvidenceGrid } from '../../components/maxwell/EvidenceGrid';
 import { ResearchProgress } from '../../components/maxwell/ResearchProgress';
@@ -195,7 +196,7 @@ export default function MarketDetailPage(props: { params: Params }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
+      <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
         <Loader2 className="w-6 h-6 text-white/40 animate-spin" />
       </div>
     );
@@ -203,7 +204,7 @@ export default function MarketDetailPage(props: { params: Params }) {
 
   if (error || !market) {
     return (
-      <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen bg-[#09090b] flex flex-col items-center justify-center gap-4">
         <span className="text-white/40 font-mono">{error || 'Market not found'}</span>
         <button
           onClick={() => router.push('/')}
@@ -216,7 +217,7 @@ export default function MarketDetailPage(props: { params: Params }) {
   }
 
   return (
-    <main className="min-h-screen bg-[var(--bg-primary)] text-white pt-20 pb-6 px-6 lg:px-10">
+    <main className="min-h-screen bg-[#09090b] text-white pt-20 pb-6 px-6 lg:px-10">
       <div className="max-w-[1350px] mx-auto space-y-6">
         <div className="flex justify-end mb-4">
           <button
@@ -234,6 +235,10 @@ export default function MarketDetailPage(props: { params: Params }) {
           isAnalyzing={isAnalyzing}
           onAnalyze={() => handleRunAnalysis(!!cachedAnalysis)}
         />
+
+        {maxwell.intelligence && (
+          <IntelligenceSummary intelligence={maxwell.intelligence} />
+        )}
 
         {maxwell.intelligence?.outcomes && maxwell.intelligence.outcomes.length > 0 && (
           <OutcomesAnalysisTable outcomes={maxwell.intelligence.outcomes} />
@@ -255,10 +260,8 @@ export default function MarketDetailPage(props: { params: Params }) {
 
         {market && (
           <>
-            <div className="flex items-center gap-4 py-4 pt-8">
-              <div className="h-px flex-1 bg-white/5" />
-              <span className="text-xs font-medium text-white/30 uppercase tracking-widest">Market Data</span>
-              <div className="h-px flex-1 bg-white/5" />
+            <div className="pt-8">
+              <span className="text-xs font-mono text-white/40 uppercase tracking-widest mb-4 block">Market Data</span>
             </div>
             <MarketDataPanel market={market} />
           </>

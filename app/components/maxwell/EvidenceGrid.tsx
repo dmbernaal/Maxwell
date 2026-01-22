@@ -47,9 +47,8 @@ function EvidenceCard({ factor, onClick }: { factor: UnifiedFactor; onClick?: ()
             exit={{ opacity: 0, scale: 0.95 }}
             className={cn(
                 "group relative flex flex-col gap-3 p-4",
-                "bg-white/5 border border-white/5 hover:border-white/10",
-                "rounded-sm transition-colors duration-200 cursor-pointer",
-                "hover:bg-white/[0.07]"
+                "bg-[#121214] hover:bg-white/[0.04]",
+                "rounded-md transition-colors duration-200 cursor-pointer"
             )}
             onClick={onClick}
         >
@@ -62,18 +61,18 @@ function EvidenceCard({ factor, onClick }: { factor: UnifiedFactor; onClick?: ()
                 </div>
                 {factor.sourceIndex && (
                     <div className="flex items-center gap-1.5 opacity-40 group-hover:opacity-60 transition-opacity">
-                        <span className="text-[10px] font-mono">SOURCE [{factor.sourceIndex}]</span>
+                        <span className="text-[10px] font-mono text-white/40">SOURCE [{factor.sourceIndex}]</span>
                         <div className="w-1 h-1 rounded-full bg-emerald-500" />
                     </div>
                 )}
             </div>
 
             <div className="space-y-2">
-                <h3 className="font-medium text-sm text-white leading-snug line-clamp-2 group-hover:text-white transition-colors">
+                <h3 className="font-medium text-sm text-white/90 leading-snug line-clamp-2 group-hover:text-emerald-400 transition-colors">
                     {factor.headline}
                 </h3>
                 {factor.description && (
-                    <p className="text-xs text-white/60 italic line-clamp-3 leading-relaxed">
+                    <p className="text-xs text-white/50 italic line-clamp-3 leading-relaxed">
                         "{factor.description}"
                     </p>
                 )}
@@ -93,7 +92,7 @@ function EvidenceCard({ factor, onClick }: { factor: UnifiedFactor; onClick?: ()
                         />
                     ))}
                 </div>
-                <span className="text-[10px] text-white/30 font-mono ml-auto uppercase">
+                <span className="text-[10px] text-white/40 font-mono ml-auto uppercase tracking-wider">
                     {factor.type} FACTOR
                 </span>
             </div>
@@ -154,15 +153,15 @@ export function EvidenceGrid({ intelligence, className }: EvidenceGridProps) {
 
     return (
         <div className={cn("space-y-6", className)}>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4">
                 <div className="flex items-center gap-3">
-                    <h2 className="text-sm font-medium tracking-widest text-white/90">EVIDENCE</h2>
-                    <span className="px-1.5 py-0.5 rounded bg-white/10 text-[10px] font-mono text-white/60">
+                    <h2 className="text-sm font-medium tracking-wider text-white">EVIDENCE</h2>
+                    <span className="px-1.5 py-0.5 rounded bg-white/10 text-[10px] font-mono text-white/40">
                         {allFactors.length}
                     </span>
                 </div>
 
-                <div className="flex items-center gap-1 bg-white/5 p-1 rounded-sm overflow-x-auto">
+                <div className="flex items-center gap-1 bg-white/5 p-1 rounded-md overflow-x-auto">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
@@ -171,13 +170,13 @@ export function EvidenceGrid({ intelligence, className }: EvidenceGridProps) {
                                 setExpanded(false);
                             }}
                             className={cn(
-                                "px-3 py-1.5 rounded-sm text-[11px] font-medium transition-all whitespace-nowrap",
+                                "px-3 py-1.5 rounded-sm text-xs font-medium transition-all whitespace-nowrap",
                                 activeTab === tab.id 
-                                    ? "bg-white/10 text-white shadow-sm" 
-                                    : "text-white/40 hover:text-white/60 hover:bg-white/5"
+                                    ? "bg-white/[0.08] text-white shadow-sm" 
+                                    : "text-white/40 hover:text-white hover:bg-white/[0.04]"
                             )}
                         >
-                            {tab.label} <span className="opacity-40 ml-1">[{tab.count}]</span>
+                            {tab.label} <span className="opacity-50 ml-1">[{tab.count}]</span>
                         </button>
                     ))}
                 </div>
