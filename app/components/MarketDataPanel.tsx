@@ -67,11 +67,11 @@ function CollapsibleSection({ title, children, defaultOpen = false }: { title: s
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between py-3 text-left group hover:bg-white/[0.02] transition-colors px-4"
       >
-        <span className="text-[10px] uppercase tracking-widest text-white/20 font-semibold font-mono group-hover:text-white/40 transition-colors">
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono group-hover:text-white/40 transition-colors">
           {title}
         </span>
         <ChevronDown 
-          className={`w-3.5 h-3.5 text-white/20 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} 
+          className={`w-3.5 h-3.5 text-white/40 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} 
         />
       </button>
       {isOpen && (
@@ -85,25 +85,25 @@ function CollapsibleSection({ title, children, defaultOpen = false }: { title: s
 
 function StatsRow({ market }: { market: UnifiedMarket }) {
   return (
-    <div className="grid grid-cols-4 gap-px bg-white/[0.08] border-y border-white/[0.08]">
-      <div className="bg-[#121214] py-2 px-3 flex flex-col items-center">
-        <span className="text-[9px] uppercase tracking-wider text-white/20 font-mono mb-1">Vol</span>
+    <div className="flex items-center justify-start gap-8 px-4 py-3 border-b border-white/[0.04]">
+      <div className="flex flex-col items-start">
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono mb-1">Vol</span>
         <span className="text-[11px] font-mono tabular-nums text-white/70">${formatCompact(market.volume)}</span>
       </div>
-      <div className="bg-[#121214] py-2 px-3 flex flex-col items-center">
-        <span className="text-[9px] uppercase tracking-wider text-white/20 font-mono mb-1">24h</span>
+      <div className="flex flex-col items-start">
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono mb-1">24h</span>
         <span className="text-[11px] font-mono tabular-nums text-white/70">
           {market.volume24h > 0 ? `$${formatCompact(market.volume24h)}` : '-'}
         </span>
       </div>
-      <div className="bg-[#121214] py-2 px-3 flex flex-col items-center">
-        <span className="text-[9px] uppercase tracking-wider text-white/20 font-mono mb-1">Liq</span>
+      <div className="flex flex-col items-start">
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono mb-1">Liq</span>
         <span className="text-[11px] font-mono tabular-nums text-white/70">
           {market.liquidity && market.liquidity > 0 ? `$${formatCompact(market.liquidity)}` : '-'}
         </span>
       </div>
-      <div className="bg-[#121214] py-2 px-3 flex flex-col items-center">
-        <span className="text-[9px] uppercase tracking-wider text-white/20 font-mono mb-1">End</span>
+      <div className="flex flex-col items-start">
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono mb-1">End</span>
         <span className="text-[11px] font-mono tabular-nums text-white/70">
           {formatTimeRemaining(new Date(market.endDate))}
         </span>
@@ -120,17 +120,17 @@ function SpreadDisplay({ market }: { market: UnifiedMarket }) {
   return (
     <div className="flex items-center gap-4 text-[11px] font-mono py-2 px-4 border-t border-white/[0.04]">
       <div className="flex items-center gap-2">
-        <span className="text-white/20 uppercase tracking-widest text-[9px] font-semibold">Bid</span>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono">Bid</span>
         <span className="text-emerald-400 tabular-nums">{Math.round(market.yesBid * 100)}¢</span>
       </div>
-      <div className="w-px h-3 bg-white/[0.08]" />
+      <div className="w-px h-3 bg-white/[0.04]" />
       <div className="flex items-center gap-2">
-        <span className="text-white/20 uppercase tracking-widest text-[9px] font-semibold">Ask</span>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono">Ask</span>
         <span className="text-rose-400 tabular-nums">{Math.round(market.yesAsk * 100)}¢</span>
       </div>
-      <div className="w-px h-3 bg-white/[0.08]" />
+      <div className="w-px h-3 bg-white/[0.04]" />
       <div className="flex items-center gap-2 ml-auto">
-        <span className="text-white/20 uppercase tracking-widest text-[9px] font-semibold">Spread</span>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono">Spread</span>
         <span className="text-white/40 tabular-nums">{spread}¢</span>
       </div>
     </div>
@@ -150,10 +150,10 @@ function OutcomesList({ outcomes, brandColor, outcomeColors }: { outcomes: Marke
   return (
     <div className="py-3 px-4 border-t border-white/[0.04]">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] uppercase tracking-widest text-white/20 font-semibold font-mono">
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono">
           Outcomes
         </span>
-        <span className="text-[10px] font-mono text-white/20">
+        <span className="text-[10px] font-mono text-white/40">
           {sortedOutcomes.length} Total
         </span>
       </div>
@@ -161,15 +161,19 @@ function OutcomesList({ outcomes, brandColor, outcomeColors }: { outcomes: Marke
         {displayedOutcomes.map((outcome, idx) => {
           const pct = Math.round(outcome.price * 100);
           const isLeading = outcome.price === topPrice && idx === 0;
-          const barWidth = Math.max(4, (outcome.price / topPrice) * 100);
-          const outcomeColor = outcomeColors?.get(outcome.name);
-          const hasChartColor = !!outcomeColor;
+          const barWidth = outcome.price * 100;
+          const outcomeColor = outcomeColors?.get(outcome.name) || brandColor;
+          const hasChartColor = !!outcomeColors?.get(outcome.name);
           
           return (
-            <div key={outcome.name} className="group relative">
+            <div key={outcome.name} className="group relative rounded-sm overflow-hidden bg-white/[0.04]">
               <div 
-                className="absolute inset-0 bg-white/[0.02] rounded-sm"
-                style={{ width: `${barWidth}%`, opacity: 0.5 }}
+                className="absolute inset-y-0 left-0"
+                style={{ 
+                  width: `${barWidth}%`, 
+                  backgroundColor: outcomeColor,
+                  opacity: 0.2
+                }}
               />
               
               <div className="relative flex items-center justify-between gap-3 px-2 py-1.5">
@@ -180,7 +184,7 @@ function OutcomesList({ outcomes, brandColor, outcomeColors }: { outcomes: Marke
                       style={{ backgroundColor: outcomeColor }}
                     />
                   ) : (
-                    <span className={`text-[9px] font-mono w-4 shrink-0 ${isLeading ? 'text-white/40' : 'text-white/10'}`}>
+                    <span className={`text-[10px] font-mono w-4 shrink-0 ${isLeading ? 'text-white/40' : 'text-white/40'}`}>
                       {idx + 1}
                     </span>
                   )}
@@ -199,10 +203,9 @@ function OutcomesList({ outcomes, brandColor, outcomeColors }: { outcomes: Marke
       {hasMore && (
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="mt-3 w-full py-1.5 flex items-center justify-center text-[10px] font-mono text-white/30 hover:text-white/50 transition-colors bg-white/[0.02] hover:bg-white/[0.04] rounded-sm"
+          className="w-full py-2 text-center text-[10px] text-white/30 hover:text-white/50 transition-colors mt-2"
         >
           <span>{isExpanded ? 'Show Less' : `Show ${hiddenCount} More`}</span>
-          <ChevronDown className={`w-3 h-3 ml-1 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
         </button>
       )}
     </div>
@@ -230,15 +233,15 @@ function OrderBookDisplay({ orderBook }: { orderBook: OrderBook }) {
   return (
     <div className="border-t border-white/[0.04] py-3 px-4">
       <div className="flex items-center gap-2 mb-3">
-        <Layers className="w-3 h-3 text-white/20" />
-        <span className="text-[10px] uppercase tracking-widest text-white/20 font-semibold font-mono">
+        <Layers className="w-3 h-3 text-white/40" />
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono">
           Order Book
         </span>
       </div>
       
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-0.5">
-          <div className="flex justify-between text-[9px] uppercase tracking-wider text-white/20 font-mono px-1 mb-1.5">
+          <div className="flex justify-between text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono px-1 mb-1.5">
             <span>Bid</span>
             <span>Size</span>
           </div>
@@ -255,12 +258,12 @@ function OrderBookDisplay({ orderBook }: { orderBook: OrderBook }) {
             </div>
           ))}
           {bids.length === 0 && (
-            <div className="text-[10px] text-white/20 text-center py-2 italic">Empty</div>
+            <div className="text-[10px] text-white/40 text-center py-2 italic">Empty</div>
           )}
         </div>
         
         <div className="space-y-0.5">
-          <div className="flex justify-between text-[9px] uppercase tracking-wider text-white/20 font-mono px-1 mb-1.5">
+          <div className="flex justify-between text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono px-1 mb-1.5">
             <span>Ask</span>
             <span>Size</span>
           </div>
@@ -277,7 +280,7 @@ function OrderBookDisplay({ orderBook }: { orderBook: OrderBook }) {
             </div>
           ))}
           {asks.length === 0 && (
-            <div className="text-[10px] text-white/20 text-center py-2 italic">Empty</div>
+            <div className="text-[10px] text-white/40 text-center py-2 italic">Empty</div>
           )}
         </div>
       </div>
@@ -564,9 +567,9 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
 
   if (!hasHistory && !hasMultiHistory) {
     return (
-      <div className="py-8 flex flex-col items-center justify-center text-white/20">
+      <div className="py-8 flex flex-col items-center justify-center text-white/40">
         <Activity className="w-8 h-8 mb-2 opacity-50" />
-        <span className="text-[10px] font-mono uppercase tracking-widest">No Price History</span>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono">No Price History</span>
       </div>
     );
   }
@@ -590,8 +593,8 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
            </div>
         ) : (
           <div className="flex items-center gap-2">
-            <Activity className="w-3.5 h-3.5 text-white/20" />
-            <span className="text-[10px] uppercase tracking-widest text-white/20 font-semibold font-mono">
+            <Activity className="w-3.5 h-3.5 text-white/40" />
+            <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono">
               Price Action
             </span>
           </div>
@@ -602,7 +605,7 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
             <button
               key={range}
               onClick={() => setTimeRange(range)}
-              className={`px-2 py-0.5 rounded-[3px] text-[9px] font-mono transition-all ${
+              className={`px-2 py-0.5 rounded-[3px] text-[10px] font-mono transition-all ${
                 timeRange === range 
                   ? 'bg-white/10 text-white shadow-sm' 
                   : 'text-white/30 hover:text-white/50'
@@ -645,7 +648,7 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
   }, [market]);
 
   return (
-    <div className="relative w-full bg-[#121214] border border-white/[0.08] rounded-md overflow-hidden flex flex-col h-full">
+    <div className="relative w-full bg-[#121214] border border-white/[0.04] rounded-md overflow-hidden flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-3 bg-white/[0.02] border-b border-white/[0.04]">
         <div className="flex items-center gap-2">
           <div 
@@ -654,7 +657,7 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
           >
             {isPoly ? <PolymarketLogo className="w-3 h-3" /> : <KalshiLogo className="w-3 h-3" />}
           </div>
-          <span className="text-[10px] font-mono uppercase tracking-widest text-white/30 font-semibold">
+          <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono">
             {platformName} Terminal
           </span>
         </div>
@@ -663,7 +666,7 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
           href={market.url} 
           target="_blank" 
           rel="noopener noreferrer"
-          className="text-white/20 hover:text-white/40 transition-colors"
+          className="text-white/40 hover:text-white/40 transition-colors"
         >
           <ExternalLink className="w-3 h-3" />
         </a>
@@ -672,7 +675,7 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
       <div className="overflow-y-auto overflow-x-hidden flex-1 scrollbar-none">
         <div className="px-4 py-4">
            {market.category && market.category !== 'Uncategorized' && (
-            <span className="text-[9px] uppercase tracking-widest text-white/20 font-mono mb-2 block">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono mb-2 block">
               {market.category}
             </span>
           )}

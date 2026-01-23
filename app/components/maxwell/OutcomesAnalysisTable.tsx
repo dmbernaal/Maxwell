@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PanelFrame } from './primitives/PanelFrame';
-import { ArrowUpRight, ArrowDownRight, Minus, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
 import { OutcomeAnalysis } from '@/app/lib/maxwell/types';
 import { cn } from '@/app/lib/utils';
+import { StatusBadge } from './primitives/StatusBadge';
 
 interface OutcomesAnalysisTableProps {
   outcomes: OutcomeAnalysis[];
@@ -15,16 +15,16 @@ function getEdgeColor(edge: number) {
   return 'text-white/40';
 }
 
-function getVerdictBadgeColor(verdict: string) {
+function getVerdictProps(verdict: string): { label: string; color: 'emerald' | 'rose' | 'amber' | 'zinc' } {
   switch (verdict) {
     case 'UNDERPRICED':
-      return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+      return { label: 'Underpriced', color: 'emerald' };
     case 'OVERPRICED':
-      return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+      return { label: 'Overpriced', color: 'rose' };
     case 'FAIR':
-      return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+      return { label: 'Fair Value', color: 'zinc' };
     default:
-      return 'bg-white/5 text-white/40 border-white/10';
+      return { label: verdict, color: 'zinc' };
   }
 }
 
@@ -40,131 +40,108 @@ export function OutcomesAnalysisTable({ outcomes }: OutcomesAnalysisTableProps) 
   });
 
   return (
-    <PanelFrame className="p-0 overflow-hidden flex flex-col bg-[#121214] border-white/[0.08]">
-      <div className="px-6 py-4 border-b border-white/[0.08] flex items-center justify-between bg-[#121214]">
-        <h3 className="text-sm font-medium text-white/90">Outcome Analysis</h3>
-        <span className="text-[10px] uppercase tracking-wider text-white/40 font-mono">
-          {outcomes.length} Outcomes Analyzed
-        </span>
+    <div className="w-full overflow-hidden rounded-md border border-white/[0.08] bg-[#121214]">
+      <div className="h-10 border-b border-white/[0.08] flex items-center px-4 bg-[#121214]">
+        <div className="flex-1 text-[10px] font-medium uppercase tracking-wider text-white/40">Outcome</div>
+        <div className="w-24 text-right text-[10px] font-medium uppercase tracking-wider text-white/40">Mkt</div>
+        <div className="w-24 text-right text-[10px] font-medium uppercase tracking-wider text-white/40">Maxwell</div>
+        <div className="w-24 text-right text-[10px] font-medium uppercase tracking-wider text-white/40">Edge</div>
+        <div className="w-32 text-center text-[10px] font-medium uppercase tracking-wider text-white/40">Verdict</div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-white/[0.08] text-[10px] uppercase tracking-wider text-white/40 font-medium font-sans">
-              <th className="px-6 py-3 w-[25%]">Outcome</th>
-              <th className="px-4 py-3 text-right">Mkt</th>
-              <th className="px-4 py-3 text-right">Maxwell</th>
-              <th className="px-4 py-3 text-right">Edge</th>
-              <th className="px-4 py-3 text-center">Verdict</th>
-              <th className="px-6 py-3 w-[35%] hidden md:table-cell">Analysis</th>
-              <th className="px-4 py-3 w-[40px]"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/[0.08]">
-            {sortedOutcomes.map((outcome) => {
-              const edge = outcome.maxwellRange.mid - outcome.marketPrice;
-              const isExpanded = expandedRow === outcome.name;
+      <div className="divide-y divide-white/[0.08]">
+        {sortedOutcomes.map((outcome) => {
+          const edge = outcome.maxwellRange.mid - outcome.marketPrice;
+          const isExpanded = expandedRow === outcome.name;
 
-              return (
-                <React.Fragment key={outcome.name}>
-                  <tr 
-                    className="group hover:bg-white/[0.04] transition-colors cursor-pointer"
-                    onClick={() => setExpandedRow(isExpanded ? null : outcome.name)}
+          return (
+            <div key={outcome.name} className="group flex flex-col bg-[#121214]">
+              <div 
+                className={cn(
+                  "h-12 flex items-center px-4 cursor-pointer transition-colors duration-150 relative",
+                  isExpanded ? "bg-white/[0.02]" : "hover:bg-white/[0.03]"
+                )}
+                onClick={() => setExpandedRow(isExpanded ? null : outcome.name)}
+              >
+                {isExpanded && (
+                  <motion.div 
+                    layoutId="activeRow"
+                    className="absolute left-0 top-0 bottom-0 w-[2px] bg-blue-500" 
+                  />
+                )}
+
+                <div className="flex-1 text-sm font-medium text-white/90 truncate pr-4">
+                  {outcome.name}
+                </div>
+                
+                <div className="w-24 text-right text-xs font-mono text-white/70">
+                  {Math.round(outcome.marketPrice)}%
+                </div>
+                
+                <div className="w-24 text-right text-xs font-mono text-white/70">
+                  {Math.round(outcome.maxwellRange.mid)}%
+                </div>
+                
+                <div className={cn("w-24 text-right text-xs font-mono font-medium flex justify-end items-center gap-1", getEdgeColor(edge))}>
+                  {edge > 0 ? (
+                    <ArrowUpRight className="w-3 h-3" />
+                  ) : edge < 0 ? (
+                    <ArrowDownRight className="w-3 h-3" />
+                  ) : (
+                    <Minus className="w-3 h-3" />
+                  )}
+                  {Math.abs(Math.round(edge))}%
+                </div>
+                
+                <div className="w-32 flex justify-center">
+                  <StatusBadge {...getVerdictProps(outcome.view)} />
+                </div>
+              </div>
+
+              <AnimatePresence initial={false}>
+                {isExpanded && (
+                  <motion.div
+                    key="content"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+                    className="overflow-hidden bg-[#121214]"
                   >
-                    <td className="px-6 py-3">
-                      <div className="text-sm font-medium text-white/90 truncate max-w-[200px] md:max-w-none">
-                        {outcome.name}
+                    <div className="p-4 pl-6 border-b border-white/[0.08] flex gap-8">
+                      <div className="flex-1">
+                        <div className="text-[10px] uppercase tracking-wider text-white/30 font-semibold mb-2">Analysis</div>
+                        <p className="text-sm text-white/70 leading-relaxed font-light">
+                          {outcome.oneLiner}
+                        </p>
                       </div>
-                    </td>
-                    <td className="px-4 py-3 text-right text-xs font-mono text-white/70">
-                      {Math.round(outcome.marketPrice)}%
-                    </td>
-                    <td className="px-4 py-3 text-right text-xs font-mono text-white/70">
-                      {Math.round(outcome.maxwellRange.mid)}%
-                    </td>
-                    <td className={cn("px-4 py-3 text-right text-xs font-mono font-medium", getEdgeColor(edge))}>
-                      <div className="flex items-center justify-end gap-1">
-                        {edge > 0 ? (
-                          <ArrowUpRight className="w-3 h-3" />
-                        ) : edge < 0 ? (
-                          <ArrowDownRight className="w-3 h-3" />
-                        ) : (
-                          <Minus className="w-3 h-3" />
-                        )}
-                        {Math.abs(Math.round(edge))}%
+                      
+                      <div className="w-64 space-y-3 pt-1 border-l border-white/[0.08] pl-6">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-white/40">Confidence Range</span>
+                          <span className="font-mono text-white/80">
+                            {Math.round(outcome.maxwellRange.low)}% - {Math.round(outcome.maxwellRange.high)}%
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-white/40">Confidence Level</span>
+                          <span className={cn(
+                            "font-medium",
+                            outcome.confidence === 'HIGH' ? "text-emerald-400" :
+                            outcome.confidence === 'MEDIUM' ? "text-amber-400" : "text-rose-400"
+                          )}>
+                            {outcome.confidence}
+                          </span>
+                        </div>
                       </div>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={cn(
-                        "inline-block px-2 py-0.5 rounded text-[10px] font-bold tracking-wider border",
-                        getVerdictBadgeColor(outcome.view)
-                      )}>
-                        {outcome.view}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3 hidden md:table-cell">
-                      <div className="text-sm text-white/50 truncate max-w-[300px]">
-                        {outcome.oneLiner}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button className="text-white/20 group-hover:text-white/60 transition-colors">
-                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                      </button>
-                    </td>
-                  </tr>
-                  
-                  <AnimatePresence>
-                    {isExpanded && (
-                      <tr>
-                        <td colSpan={7} className="p-0">
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="bg-white/[0.02] border-b border-white/5 overflow-hidden"
-                          >
-                            <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-2 gap-6">
-                              <div>
-                                <h4 className="text-[10px] uppercase tracking-wider text-white/30 font-semibold mb-2">
-                                  Analysis
-                                </h4>
-                                <p className="text-sm text-white/80 leading-relaxed">
-                                  {outcome.oneLiner}
-                                </p>
-                              </div>
-                              <div className="space-y-3">
-                                <div className="flex justify-between items-center text-sm border-b border-white/5 pb-2">
-                                  <span className="text-white/40">Confidence Range</span>
-                                  <span className="font-mono text-white/80">
-                                    {Math.round(outcome.maxwellRange.low)}% - {Math.round(outcome.maxwellRange.high)}%
-                                  </span>
-                                </div>
-                                <div className="flex justify-between items-center text-sm border-b border-white/5 pb-2">
-                                  <span className="text-white/40">Confidence Level</span>
-                                  <span className={cn(
-                                    "font-medium",
-                                    outcome.confidence === 'HIGH' ? "text-emerald-400" :
-                                    outcome.confidence === 'MEDIUM' ? "text-amber-400" : "text-rose-400"
-                                  )}>
-                                    {outcome.confidence}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </motion.div>
-                        </td>
-                      </tr>
-                    )}
-                  </AnimatePresence>
-                </React.Fragment>
-              );
-            })}
-          </tbody>
-        </table>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          );
+        })}
       </div>
-    </PanelFrame>
+    </div>
   );
 }

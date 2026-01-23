@@ -1,6 +1,7 @@
 import React from 'react';
 import { PanelFrame } from './primitives/PanelFrame';
 import { SkeletonBlock } from './primitives/SkeletonBlock';
+import { StatusBadge } from './primitives/StatusBadge';
 import { UnifiedMarket } from '@/app/lib/markets/types';
 import { 
   Clock, 
@@ -98,9 +99,9 @@ export function IntelligenceHero({
   const isBinary = market.marketType === 'binary' || (!market.marketType && market.outcomes.length === 2);
   const isMultiOption = market.marketType === 'multi-option' || (!isBinary && market.outcomes.length > 2);
   
-  if (isLoading) {
+    if (isLoading) {
     return (
-      <PanelFrame className="h-[240px] p-0 overflow-hidden relative">
+      <PanelFrame className="h-[240px] p-0 overflow-hidden relative rounded-md border border-white/[0.08]">
         <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
         <div className="h-full grid grid-cols-1 lg:grid-cols-[1fr_1.5fr_1fr] divide-y lg:divide-y-0 lg:divide-x divide-white/5">
           <div className="p-8 flex flex-col justify-between">
@@ -164,7 +165,7 @@ export function IntelligenceHero({
   const platformColor = market.platform === 'polymarket' ? 'bg-blue-500' : 'bg-emerald-500';
 
   return (
-    <PanelFrame className="min-h-[220px] p-0 overflow-hidden relative group/hero bg-[#121214] border-white/[0.08]">
+    <PanelFrame className="min-h-[220px] p-0 overflow-hidden relative group/hero bg-[#121214] border border-white/[0.08] rounded-md">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/[0.03] via-transparent to-transparent pointer-events-none" />
       
       <div className="absolute top-3 right-3 opacity-0 group-hover/hero:opacity-100 transition-opacity duration-300">
@@ -211,10 +212,10 @@ export function IntelligenceHero({
                   onClick={onAnalyze}
                   disabled={isAnalyzing}
                   className={cn(
-                    "mt-4 px-6 py-2.5 rounded-lg font-medium text-sm transition-all duration-200",
+                    "mt-4 px-6 py-2.5 rounded-md font-medium text-sm transition-all duration-200",
                     "bg-white text-black hover:bg-white/90 hover:scale-105 active:scale-95",
                     "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100",
-                    "flex items-center gap-2 shadow-lg shadow-white/5 ring-1 ring-white/20"
+                    "flex items-center gap-2 ring-1 ring-white/20"
                   )}
                 >
                   {isAnalyzing ? (
@@ -250,14 +251,18 @@ export function IntelligenceHero({
                     </h2>
                     
                     <div className={cn(
-                      "inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/5 backdrop-blur-sm",
-                      "text-sm font-mono font-medium"
+                      "inline-flex items-center gap-3 mt-1"
                     )}>
-                      <span className={getVerdictColor(topOutcomeStatus)}>
-                        {topOutcomeStatus}
-                      </span>
-                      <span className="text-white/20">|</span>
+                      <StatusBadge 
+                        label={topOutcomeStatus}
+                        color={
+                          ['UNDERPRICED', 'YES', 'LIKELY'].includes(topOutcomeStatus) ? 'emerald' :
+                          ['OVERPRICED', 'NO', 'UNLIKELY'].includes(topOutcomeStatus) ? 'rose' : 'amber'
+                        }
+                      />
+                      <span className="text-white/20 text-xs">|</span>
                       <span className={cn(
+                        "text-sm font-mono font-medium",
                         topOutcomeEdge > 0 ? "text-emerald-400" : "text-rose-400"
                       )}>
                         {topOutcomeEdge > 0 ? '+' : ''}{Math.round(topOutcomeEdge)}% Edge

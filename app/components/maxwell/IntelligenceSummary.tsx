@@ -16,7 +16,7 @@ export function IntelligenceSummary({ intelligence }: IntelligenceSummaryProps) 
   if (!intelligence?.raw?.adjudication) return null;
 
   return (
-    <PanelFrame className="p-0 overflow-hidden relative bg-[#121214] border-white/[0.08]">
+    <PanelFrame className="p-0 overflow-hidden relative bg-[#121214] border border-white/[0.08] rounded-md">
       <button 
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full flex items-center justify-between p-4 lg:px-6 lg:py-4 hover:bg-white/[0.02] transition-colors group"

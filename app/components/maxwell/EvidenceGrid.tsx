@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/app/lib/utils';
 import type { MaxwellIntelligence, ThesisFactor, ResolutionRiskLevel } from '@/app/lib/maxwell/types';
 
+import { StatusBadge, StatusColor } from './primitives/StatusBadge';
+
 type EvidenceType = 'pro' | 'con' | 'risk';
 
 interface UnifiedFactor {
@@ -22,10 +24,10 @@ interface EvidenceGridProps {
     className?: string;
 }
 
-const IMPACT_COLORS: Record<string, string> = {
-    HIGH: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20',
-    MEDIUM: 'text-amber-400 bg-amber-400/10 border-amber-400/20',
-    LOW: 'text-zinc-400 bg-zinc-400/10 border-zinc-400/20',
+const IMPACT_COLORS: Record<string, StatusColor> = {
+    HIGH: 'emerald',
+    MEDIUM: 'amber',
+    LOW: 'zinc',
 };
 
 const mapThesisFactor = (f: ThesisFactor, type: EvidenceType, index: number): UnifiedFactor => ({
@@ -48,21 +50,18 @@ function EvidenceCard({ factor, onClick }: { factor: UnifiedFactor; onClick?: ()
             className={cn(
                 "group relative flex flex-col gap-3 p-4",
                 "bg-[#121214] hover:bg-white/[0.04]",
-                "rounded-md transition-colors duration-200 cursor-pointer"
+                "rounded-md border border-white/[0.08] transition-colors duration-200 cursor-pointer"
             )}
             onClick={onClick}
         >
             <div className="flex items-center justify-between">
-                <div className={cn(
-                    "text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded border",
-                    IMPACT_COLORS[factor.impact || 'MEDIUM']
-                )}>
-                    {factor.impact || 'MED'} IMPACT
-                </div>
+                <StatusBadge 
+                    label={`${factor.impact || 'MED'} IMPACT`}
+                    color={IMPACT_COLORS[factor.impact || 'MEDIUM']}
+                />
                 {factor.sourceIndex && (
                     <div className="flex items-center gap-1.5 opacity-40 group-hover:opacity-60 transition-opacity">
                         <span className="text-[10px] font-mono text-white/40">SOURCE [{factor.sourceIndex}]</span>
-                        <div className="w-1 h-1 rounded-full bg-emerald-500" />
                     </div>
                 )}
             </div>
@@ -170,9 +169,9 @@ export function EvidenceGrid({ intelligence, className }: EvidenceGridProps) {
                                 setExpanded(false);
                             }}
                             className={cn(
-                                "px-3 py-1.5 rounded-sm text-xs font-medium transition-all whitespace-nowrap",
+                                "px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap",
                                 activeTab === tab.id 
-                                    ? "bg-white/[0.08] text-white shadow-sm" 
+                                    ? "bg-white/[0.08] text-white" 
                                     : "text-white/40 hover:text-white hover:bg-white/[0.04]"
                             )}
                         >
@@ -192,7 +191,7 @@ export function EvidenceGrid({ intelligence, className }: EvidenceGridProps) {
                         <motion.div 
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            className="col-span-full flex items-center justify-center h-32 border border-dashed border-white/10 rounded-sm"
+                            className="col-span-full flex items-center justify-center h-32 border border-dashed border-white/10 rounded-md"
                         >
                             <span className="text-sm text-white/20">No factors found for this category</span>
                         </motion.div>
@@ -208,7 +207,7 @@ export function EvidenceGrid({ intelligence, className }: EvidenceGridProps) {
                 >
                     <button
                         onClick={() => setExpanded(!expanded)}
-                        className="group flex items-center gap-2 text-xs text-white/40 hover:text-white transition-colors px-4 py-2 hover:bg-white/5 rounded-sm"
+                        className="group flex items-center gap-2 text-xs text-white/40 hover:text-white transition-colors px-4 py-2 hover:bg-white/5 rounded-md"
                     >
                         <span>{expanded ? 'Show Less' : `View ${filteredFactors.length - VISIBLE_COUNT} More Factors`}</span>
                         <svg 
