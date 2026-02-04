@@ -4,10 +4,12 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import type { UnifiedMarket, MarketOutcome } from '@/app/lib/markets/types';
 import { PolymarketLogo, KalshiLogo, PLATFORM_COLORS } from './icons/PlatformIcons';
+import { MicroCornerGrid } from './MicroCornerGrid';
 
 interface MarketCardProps {
   market: UnifiedMarket;
   onClick?: (market: UnifiedMarket) => void;
+  index?: number;
 }
 
 function formatVolume(volume: number): string {
@@ -145,10 +147,12 @@ function MultiOptionContent({ market, brandColor }: { market: UnifiedMarket; bra
   );
 }
 
-export default function MarketCard({ market, onClick }: MarketCardProps) {
+export default function MarketCard({ market, onClick, index = 0 }: MarketCardProps) {
   const isPoly = market.platform === 'polymarket';
   const brandColor = isPoly ? PLATFORM_COLORS.polymarket : PLATFORM_COLORS.kalshi;
   const platformName = isPoly ? 'Polymarket' : 'Kalshi';
+  
+
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -232,6 +236,13 @@ export default function MarketCard({ market, onClick }: MarketCardProps) {
 
         {renderContent()}
       </div>
+      
+      <>
+        <MicroCornerGrid className="absolute -top-[7px] -right-[7px] opacity-30" />
+        <MicroCornerGrid className="absolute -top-[7px] -left-[7px] rotate-90 opacity-30" />
+        <MicroCornerGrid className="absolute -bottom-[7px] -right-[7px] -rotate-90 opacity-30" />
+        <MicroCornerGrid className="absolute -bottom-[7px] -left-[7px] rotate-180 opacity-30" />
+      </>
     </motion.div>
   );
 }

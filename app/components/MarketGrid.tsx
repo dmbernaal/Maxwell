@@ -44,6 +44,7 @@ export default function MarketGrid({ markets, onSelectMarket }: MarketGridProps)
               <MarketCard
                 market={market}
                 onClick={onSelectMarket}
+                index={index}
               />
             </motion.div>
           );

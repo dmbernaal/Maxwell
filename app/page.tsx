@@ -8,6 +8,7 @@ import { BarChart2, TrendingUp, Clock, Loader2, ChevronDown } from 'lucide-react
 import MarketGrid from './components/MarketGrid';
 import MarketGridSkeleton from './components/MarketGridSkeleton';
 import CategoryTabs from './components/CategoryTabs';
+import { CornerGridDecoration } from './components/maxwell/primitives/CornerGridDecoration';
 import type { UnifiedMarket } from './lib/markets/types';
 
 type Platform = 'all' | 'polymarket' | 'kalshi';
@@ -90,7 +91,9 @@ export default function Home() {
     <main className="relative min-h-screen w-full bg-app font-sans">
       <div className="max-w-[1600px] mx-auto border-x border-border-base min-h-[calc(100vh-3.5rem)] bg-app">
         
-        <div className="sticky top-16 z-40 bg-[#111111] border-b border-[#2A2A2A] px-6 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 w-full">
+        <div className="sticky top-16 z-40 bg-[#111111] border-b border-[#2A2A2A] px-6 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 w-full relative overflow-visible">
+          <CornerGridDecoration className="absolute -top-[10px] -right-[11px] z-30" />
+          <CornerGridDecoration className="absolute -top-[10px] -left-[11px] z-30" />
           <div className="flex items-center gap-4 overflow-x-auto no-scrollbar">
              {availableCategories.length > 0 && (
               <CategoryTabs
