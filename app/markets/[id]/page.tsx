@@ -2,7 +2,7 @@
 
 import React, { use, useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react';
+
 import { ResizablePanels } from '../../components/ui/resizable';
 
 import { IntelligencePanel } from '../../components/maxwell/IntelligencePanel';
@@ -210,18 +210,10 @@ export default function MarketDetailPage(props: { params: Params }) {
 
   const isAnalyzing = maxwell.phase !== 'idle' && maxwell.phase !== 'complete';
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
-        <Loader2 className="w-6 h-6 text-white/40 animate-spin" />
-      </div>
-    );
-  }
-
-  if (error || !market) {
+  if (error) {
     return (
       <div className="min-h-screen bg-[#09090b] flex flex-col items-center justify-center gap-4">
-        <span className="text-white/40 font-mono">{error || 'Market not found'}</span>
+        <span className="text-white/40 font-mono">{error}</span>
         <button
           onClick={() => router.push('/')}
           className="text-sm text-white/60 hover:text-white transition-colors"
@@ -234,8 +226,6 @@ export default function MarketDetailPage(props: { params: Params }) {
 
   return (
     <main className="h-screen bg-app text-white flex flex-col overflow-hidden">
-      {/* Top Bar / Header Area */}
-      {/* Top Bar / Header Area */}
       <GlobalCommandBar market={market || undefined} />
 
       <ResizablePanels
@@ -244,25 +234,43 @@ export default function MarketDetailPage(props: { params: Params }) {
         className="flex-1"
       >
         <div className="h-full border-r border-border-base bg-panel overflow-y-auto">
-          {market && <MarketChat marketId={market.id} />}
+          {market ? <MarketChat marketId={market.id} /> : (
+            <div className="h-full flex flex-col items-center justify-center">
+              <div className="w-48 h-4 bg-[#1A1A1A] rounded animate-pulse" />
+            </div>
+          )}
         </div>
 
         <div className="h-full bg-app overflow-y-auto no-scrollbar">
-          <IntelligencePanel
-            data={maxwell.intelligence}
-            isLoading={isAnalyzing}
-            phase={maxwell.phase}
-            phaseDurations={maxwell.phaseDurations}
-            phaseStartTimes={maxwell.phaseStartTimes}
-            sourceCount={maxwell.sources.length}
-            verificationProgress={maxwell.verificationProgress}
-            onRetry={() => handleRunAnalysis(true)}
-            className="min-h-full"
-          />
+          {market ? (
+            <IntelligencePanel
+              data={maxwell.intelligence}
+              isLoading={isAnalyzing}
+              phase={maxwell.phase}
+              phaseDurations={maxwell.phaseDurations}
+              phaseStartTimes={maxwell.phaseStartTimes}
+              sourceCount={maxwell.sources.length}
+              verificationProgress={maxwell.verificationProgress}
+              onRetry={() => handleRunAnalysis(true)}
+              className="min-h-full"
+            />
+          ) : (
+            <div className="min-h-full p-6 space-y-6">
+              <div className="h-32 bg-[#141414] rounded-lg border border-[#2A2A2A] animate-pulse" />
+              <div className="h-48 bg-[#141414] rounded-lg border border-[#2A2A2A] animate-pulse" />
+              <div className="h-64 bg-[#141414] rounded-lg border border-[#2A2A2A] animate-pulse" />
+            </div>
+          )}
         </div>
 
         <div className="h-full border-l border-border-base bg-app overflow-y-auto">
-          {market && <MarketDataPanel market={market} />}
+          {market ? <MarketDataPanel market={market} /> : (
+            <div className="p-4 space-y-4">
+              <div className="h-20 bg-[#141414] rounded-lg animate-pulse" />
+              <div className="h-32 bg-[#141414] rounded-lg animate-pulse" />
+              <div className="h-40 bg-[#141414] rounded-lg animate-pulse" />
+            </div>
+          )}
         </div>
       </ResizablePanels>
     </main>

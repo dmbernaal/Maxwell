@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import type { UnifiedMarket, MarketOutcome } from '@/app/lib/markets/types';
 import { PolymarketLogo, KalshiLogo, PLATFORM_COLORS } from './icons/PlatformIcons';
 import { MicroCornerGrid } from './MicroCornerGrid';
@@ -152,7 +153,20 @@ export default function MarketCard({ market, onClick, index = 0 }: MarketCardPro
   const brandColor = isPoly ? PLATFORM_COLORS.polymarket : PLATFORM_COLORS.kalshi;
   const platformName = isPoly ? 'Polymarket' : 'Kalshi';
   
-
+  const router = useRouter();
+  const prefetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const handleMouseEnter = () => {
+    prefetchTimeoutRef.current = setTimeout(() => {
+      router.prefetch(`/markets/${market.id}`);
+    }, 100);
+  };
+  
+  const handleMouseLeave = () => {
+    if (prefetchTimeoutRef.current) {
+      clearTimeout(prefetchTimeoutRef.current);
+    }
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -182,6 +196,8 @@ export default function MarketCard({ market, onClick, index = 0 }: MarketCardPro
       transition={{ type: 'spring', stiffness: 400, damping: 30 }}
       onClick={() => onClick?.(market)}
       onKeyDown={handleKeyDown}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       className="group relative flex flex-col h-[180px] p-5 cursor-pointer overflow-hidden transition-all duration-200 focus:outline-none bg-surface hover:bg-[#1F1F1F] hover:z-10 focus-visible:z-10 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#FA5D19]"
     >
       <div 
