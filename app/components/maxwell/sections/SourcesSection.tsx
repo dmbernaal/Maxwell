@@ -33,16 +33,16 @@ export function SourcesSection({ data, onViewAll }: SourcesSectionProps) {
       <CornerGridDecoration className="absolute -top-[10px] -right-[11px] z-30" />
       <CornerGridDecoration className="absolute -top-[10px] -left-[11px] z-30" />
       
-      <div className="h-14 flex items-center px-6 bg-transparent select-none border-b border-[#2A2A2A]">
+      <div className="h-12 flex items-center px-6 bg-transparent select-none border-b border-[#2A2A2A]">
         <div className="flex items-center gap-2">
           <ChevronDown className="w-3.5 h-3.5 text-[#FA5D19]" />
-          <span className="font-medium text-[13px] text-white tracking-tight">
+          <span className="font-semibold text-[16px] text-white tracking-tight uppercase">
             Sources ({verification.sourcesAnalyzed})
           </span>
         </div>
       </div>
 
-      <div className="p-6 pl-10 bg-[#141414] relative overflow-visible">
+      <div className="p-6 bg-[#141414] relative overflow-visible">
         <CornerGridDecoration className="absolute -top-[10px] -right-[11px] z-30" />
         <CornerGridDecoration className="absolute -top-[10px] -left-[11px] z-30" />
         
@@ -56,7 +56,7 @@ export function SourcesSection({ data, onViewAll }: SourcesSectionProps) {
           />
 
           <div className="space-y-4 pt-4">
-            <h4 className="text-[11px] uppercase tracking-wider text-[#666666] font-medium mb-2">
+            <h4 className="text-[12px] uppercase tracking-wider text-white/40 font-medium mb-2">
               {page === 1 && totalPages > 1 ? 'Top Sources' : `Sources (${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, verification.sourcesAnalyzed)})`}
             </h4>
             
@@ -71,10 +71,10 @@ export function SourcesSection({ data, onViewAll }: SourcesSectionProps) {
                     rel="noopener noreferrer"
                     className={`group flex justify-between items-center py-2 px-3 -mx-3 rounded hover:bg-[#1A1A1A] transition-colors ${url === '#' ? 'pointer-events-none' : ''}`}
                   >
-                     <div className="flex items-center gap-3 overflow-hidden">
-                       <span className="text-[#A3A3A3] text-[13px] truncate group-hover:text-white transition-colors">{source.title}</span>
-                     </div>
-                     <span className="text-[#525252] font-mono text-[11px] shrink-0">{source.domain}</span>
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <span className="text-white/60 text-[14px] truncate group-hover:text-white transition-colors">{source.title}</span>
+                      </div>
+                      <span className="text-white/30 font-mono text-[10px] shrink-0">{source.domain}</span>
                   </a>
                 );
               })}

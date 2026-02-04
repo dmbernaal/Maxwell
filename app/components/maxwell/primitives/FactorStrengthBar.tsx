@@ -22,7 +22,7 @@ export function FactorStrengthBar({ strength, className, color = 'text-[#e8e8e8]
   return (
     <div className={cn("font-mono text-[10px] tracking-tight flex items-center", className)}>
       <span className={cn("mr-2 font-medium w-[45px]", color)}>{strength}</span>
-      <div className="flex text-[8px]">
+      <div className="flex text-[10px]">
         {Array.from({ length: total }).map((_, i) => (
           <span key={i} className={i < filled ? color : "text-white/10"}>
             █

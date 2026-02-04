@@ -11,28 +11,28 @@ export function HeaderSection({ data }: HeaderSectionProps) {
   const { verification } = data;
 
   return (
-    <div className="flex h-12 items-center justify-between border-b border-[#2A2A2A] relative overflow-visible">
+    <div className="flex h-14 items-center justify-between border-b border-[#2A2A2A] relative overflow-visible">
       <CornerGridDecoration className="absolute -top-[10px] -right-[11px] z-30" />
       <CornerGridDecoration className="absolute -top-[10px] -left-[11px] z-30" />
       
       <div className="flex h-full items-center gap-4 px-6 border-r border-[#2A2A2A]">
-        <span className="text-[#e8e8e8] font-bold tracking-tight text-[13px]">
+        <span className="text-white/90 font-bold tracking-tight text-[14px]">
           MAXWELL
         </span>
         <AsciiWaveform />
       </div>
       
-      <div className="flex h-full flex-1 justify-end items-center gap-6 px-6 text-[10px] font-mono text-[#525252] tracking-wide uppercase">
+      <div className="flex h-full flex-1 justify-end items-center gap-6 px-6 text-[10px] font-mono text-white/30 tracking-wide uppercase">
         <div className="flex items-center gap-2">
           <span>Sources:</span>
-          <span className="text-[#A3A3A3] tabular-nums">{verification.sourcesAnalyzed}</span>
+          <span className="text-white/60 tabular-nums">{verification.sourcesAnalyzed}</span>
         </div>
         
         <div className="w-px h-3 bg-[#2A2A2A]" />
         
         <div className="flex items-center gap-2">
           <span>Confidence:</span>
-          <span className="text-[#A3A3A3] tabular-nums">{verification.score}%</span>
+          <span className="text-white/60 tabular-nums">{verification.score}%</span>
         </div>
 
         <div className="w-px h-3 bg-[#2A2A2A]" />

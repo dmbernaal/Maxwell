@@ -28,14 +28,14 @@ export function OutcomesSection({ data }: OutcomesSectionProps) {
        <CornerGridDecoration className="absolute -top-[10px] -right-[11px] z-30" />
        <CornerGridDecoration className="absolute -top-[10px] -left-[11px] z-30" />
        
-       <div className="h-14 flex items-center px-6 border-b border-[#2A2A2A] select-none">
-         <div className="flex items-center gap-2">
-           <ChevronDown className="w-3.5 h-3.5 text-[#FA5D19]" />
-           <h2 className="text-[13px] font-medium text-white tracking-tight">
-             Outcomes ({outcomes.length})
-           </h2>
-         </div>
-       </div>
+        <div className="h-12 flex items-center px-6 border-b border-[#2A2A2A] select-none">
+          <div className="flex items-center gap-2">
+            <ChevronDown className="w-3.5 h-3.5 text-[#FA5D19]" />
+            <h2 className="text-[16px] font-semibold text-white tracking-tight uppercase">
+              Outcomes ({outcomes.length})
+            </h2>
+          </div>
+        </div>
 
         <div className="divide-y divide-[#2A2A2A]">
           {paginatedOutcomes.map((outcome, index) => (

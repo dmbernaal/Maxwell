@@ -65,9 +65,9 @@ export function MarketChat({ marketId }: MarketChatProps) {
                     <div className="flex flex-col items-center justify-center h-full relative">
                         <AsciiDecoration />
                         <div className="text-center space-y-2 relative z-10">
-                            <div className="text-[10px] font-mono font-medium uppercase tracking-wider text-[#525252] select-none">Market Chat</div>
-                            <p className="text-[#525252] text-xs font-mono min-h-[1.5em]">{placeholderText || " "}</p>
-                            <p className="text-[#525252] text-[10px] font-mono opacity-50">Try: "What's the main risk factor?"</p>
+                            <div className="text-[10px] font-mono font-medium uppercase tracking-wider text-white/30 select-none">Market Chat</div>
+                            <p className="text-white/30 text-[12px] font-mono min-h-[1.5em]">{placeholderText || " "}</p>
+                            <p className="text-white/30 text-[10px] font-mono opacity-50">Try: "What's the main risk factor?"</p>
                         </div>
                     </div>
                 ) : (

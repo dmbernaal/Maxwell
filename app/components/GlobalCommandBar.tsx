@@ -4,10 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     Search,
-    Bell,
-    Settings,
     ChevronRight,
-    Zap,
     Command
 } from 'lucide-react';
 import { cn } from '@/app/lib/utils';
@@ -98,15 +95,15 @@ export function GlobalCommandBar({ market }: GlobalCommandBarProps) {
                     <div className="w-8 h-8 flex items-center justify-center">
                         <SmallGhostLogo isActive={false} />
                     </div>
-                    <span className="font-semibold text-[15px] tracking-tight text-white">ZapMarket</span>
+                    <span className="font-semibold text-[14px] tracking-tight text-white">ZapMarket</span>
                 </div>
 
-                <div className="flex items-center gap-2 text-[12px] text-[#525252]">
-                    <span className="hover:text-[#737373] transition-colors cursor-pointer font-medium" onClick={() => router.push('/')}>Markets</span>
+                <div className="flex items-center gap-2 text-[12px] text-white/30">
+                    <span className="hover:text-white/60 transition-colors cursor-pointer font-medium" onClick={() => router.push('/')}>Markets</span>
                     {market && (
                         <>
-                            <ChevronRight className="w-4 h-4 text-[#2A2A2A]" />
-                            <span className="text-[#737373] truncate max-w-[300px] font-medium">
+                            <ChevronRight className="w-4 h-4 text-white/20" />
+                            <span className="text-white/60 truncate max-w-[300px] font-medium">
                                 {market.title}
                             </span>
                         </>
@@ -122,7 +119,7 @@ export function GlobalCommandBar({ market }: GlobalCommandBarProps) {
                             ? "bg-[#1F1F1F] border-[#3A3A3A]"
                             : "border-[#2A2A2A] hover:border-[#3A3A3A]"
                     )}>
-                        <Search className={cn("w-4 h-4 mr-3 transition-colors", isFocused ? "text-white" : "text-[#525252]")} />
+                        <Search className={cn("w-4 h-4 mr-3 transition-colors", isFocused ? "text-white" : "text-white/30")} />
 
                         <input
                             ref={searchInputRef}
@@ -163,11 +160,11 @@ export function GlobalCommandBar({ market }: GlobalCommandBarProps) {
                                 }, 200);
                             }}
                             placeholder="Search markets..."
-                            className="flex-1 bg-transparent text-[13px] text-white placeholder-[#525252] focus:outline-none"
+                            className="flex-1 bg-transparent text-[14px] text-white placeholder-white/30 focus:outline-none"
                         />
 
                         <div className="ml-auto flex items-center gap-1.5">
-                            <kbd className="h-6 px-2 bg-[#222222] border border-[#2A2A2A] rounded-md text-[11px] font-mono text-[#525252] flex items-center gap-1">
+                            <kbd className="h-6 px-2 bg-[#222222] border border-[#2A2A2A] rounded-md text-[10px] font-mono text-white/30 flex items-center gap-1">
                                 <Command className="w-3 h-3" />
                                 <span>K</span>
                             </kbd>
@@ -186,17 +183,7 @@ export function GlobalCommandBar({ market }: GlobalCommandBarProps) {
             </div>
 
             <div className="flex items-center h-full">
-                <div className="flex items-center gap-1 pr-4 border-r border-[#2A2A2A] h-full mr-4">
-                    <button className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-[#1A1A1A] text-[#525252] hover:text-[#737373] transition-all">
-                        <Bell className="w-[18px] h-[18px]" />
-                    </button>
-
-                    <button className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-[#1A1A1A] text-[#525252] hover:text-[#737373] transition-all">
-                        <Settings className="w-[18px] h-[18px]" />
-                    </button>
-                </div>
-
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 pl-4 border-l border-[#2A2A2A] h-full">
                     <div className="w-8 h-8 bg-[#1A1A1A] rounded-lg border border-[#2A2A2A] hover:border-[#3A3A3A] hover:bg-[#222222] transition-all cursor-pointer"></div>
                 </div>
             </div>

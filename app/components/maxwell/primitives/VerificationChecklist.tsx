@@ -21,7 +21,7 @@ export function VerificationChecklist({
   className
 }: VerificationChecklistProps) {
   return (
-    <div className={cn("font-mono text-[11px] space-y-1.5 text-white/60", className)}>
+    <div className={cn("font-mono text-[10px] space-y-1.5 text-white/60", className)}>
       <div className="flex items-center gap-2">
         <span className="text-[#4ade80]">├─ ✓</span>
         <span>{sourcesCount} sources analyzed</span>

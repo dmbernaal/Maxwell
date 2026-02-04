@@ -27,7 +27,7 @@ export function OutcomeDataBar({
           {name}
         </span>
         <div className="flex items-center gap-6">
-          <span className="text-[14px] font-mono tabular-nums text-[#A3A3A3]">
+          <span className="text-[14px] font-mono tabular-nums text-white/60">
             {percentage}%
           </span>
           <VerdictPill verdict={verdict} size="sm" />
@@ -54,8 +54,8 @@ export function OutcomeDataBar({
         )}
       </div>
       
-      {maxwellRange && (
-         <div className="flex justify-between mt-2 text-[11px] text-[#666666] font-mono">
+       {maxwellRange && (
+         <div className="flex justify-between mt-2 text-[10px] text-white/40 font-mono">
             <span>Range: {Math.round(maxwellRange.low * 100)}% - {Math.round(maxwellRange.high * 100)}%</span>
             <span>Target: {Math.round(maxwellRange.mid * 100)}%</span>
          </div>

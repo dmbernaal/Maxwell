@@ -70,7 +70,7 @@ function PanelSection({ children, className = '' }: { children: React.ReactNode;
 
 function PanelHeader({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`flex items-center px-6 h-12 shrink-0 bg-[#111111] ${className}`}>
+    <div className={`flex items-center px-6 h-10 shrink-0 bg-[#111111] ${className}`}>
       {children}
     </div>
   );
@@ -89,23 +89,23 @@ function StatsRow({ market }: { market: UnifiedMarket }) {
     <div className="flex items-center justify-between gap-4">
       <div className="flex flex-col items-start">
         <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono mb-1 select-none">Vol</span>
-        <span className="text-[13px] font-mono tabular-nums text-[#EDEDED] tracking-tight">${formatCompact(market.volume)}</span>
+        <span className="text-[14px] font-mono tabular-nums text-white/90 tracking-tight">${formatCompact(market.volume)}</span>
       </div>
       <div className="flex flex-col items-start">
         <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono mb-1 select-none">24h</span>
-        <span className="text-[13px] font-mono tabular-nums text-[#EDEDED] tracking-tight">
+        <span className="text-[14px] font-mono tabular-nums text-white/90 tracking-tight">
           {market.volume24h > 0 ? `$${formatCompact(market.volume24h)}` : '-'}
         </span>
       </div>
       <div className="flex flex-col items-start">
         <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono mb-1 select-none">Liq</span>
-        <span className="text-[13px] font-mono tabular-nums text-[#EDEDED] tracking-tight">
+        <span className="text-[14px] font-mono tabular-nums text-white/90 tracking-tight">
           {market.liquidity && market.liquidity > 0 ? `$${formatCompact(market.liquidity)}` : '-'}
         </span>
       </div>
       <div className="flex flex-col items-start">
         <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono mb-1 select-none">End</span>
-        <span className="text-[13px] font-mono tabular-nums text-[#EDEDED] tracking-tight">
+        <span className="text-[14px] font-mono tabular-nums text-white/90 tracking-tight">
           {formatTimeRemaining(new Date(market.endDate))}
         </span>
       </div>
@@ -119,7 +119,7 @@ function SpreadDisplay({ market }: { market: UnifiedMarket }) {
   const spread = Math.round((market.yesAsk - market.yesBid) * 100);
 
   return (
-    <div className="flex items-center gap-4 text-[11px] font-mono pt-3 mt-3 border-t border-white/[0.08]">
+    <div className="flex items-center gap-4 text-[12px] font-mono pt-3 mt-3 border-t border-white/[0.08]">
       <div className="flex items-center gap-2">
         <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">Bid</span>
         <span className="text-emerald-400 tabular-nums">{Math.round(market.yesBid * 100)}¢</span>
@@ -170,11 +170,11 @@ function OutcomesList({ outcomes, brandColor, outcomeColors }: { outcomes: Marke
                   <span className="text-[10px] font-mono text-white/40 w-4 shrink-0 select-none">
                     {idx + 1}
                   </span>
-                  <span className="text-[13px] font-medium text-white/90 truncate font-sans">
+                  <span className="text-[14px] font-medium text-white/90 truncate font-sans">
                     {outcome.name}
                   </span>
                 </div>
-                <span className="text-[13px] font-mono tabular-nums text-white">
+                <span className="text-[14px] font-mono tabular-nums text-white">
                   {pct}%
                 </span>
               </div>
@@ -706,7 +706,7 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
 
         <PanelSection>
           <PanelHeader>
-            <span className="text-[11px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">Price History</span>
+            <span className="text-[12px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">Price History</span>
           </PanelHeader>
           <PanelContent>
             <CornerGridDecoration className="absolute -top-[5px] -right-[5px] z-30 opacity-30 text-[#2A2A2A] w-3 h-3" />
@@ -720,7 +720,7 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
         {isMultiOption && (
           <PanelSection>
             <PanelHeader>
-              <span className="text-[11px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">Outcomes</span>
+              <span className="text-[12px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">Outcomes</span>
             </PanelHeader>
             <PanelContent>
               <OutcomesList outcomes={market.outcomes} brandColor={brandColor} outcomeColors={outcomeColors} />
@@ -731,7 +731,7 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
         {(hasOrderBook(market) || (market.yesBid && market.yesAsk)) && (
           <PanelSection>
             <PanelHeader>
-              <span className="text-[11px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">Order Book</span>
+              <span className="text-[12px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">Order Book</span>
             </PanelHeader>
             <PanelContent>
                {hasOrderBook(market) && <OrderBookDisplay orderBook={market.orderBook} />}
@@ -742,7 +742,7 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
 
         <PanelSection>
           <PanelHeader>
-            <span className="text-[11px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">Details</span>
+              <span className="text-[12px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">Details</span>
           </PanelHeader>
           <PanelContent noPadding>
             <div className="bg-[#141414]">
@@ -751,7 +751,7 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
                   title={market.rules ? "Description" : "Description & Rules"}
                   defaultOpen
                 >
-                  <p className="text-sm text-white/60 leading-relaxed font-sans">
+                  <p className="text-[14px] text-white/60 leading-relaxed font-sans">
                     {market.description}
                   </p>
                 </CollapsibleSection>
@@ -759,7 +759,7 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
 
               {market.rules && (
                 <CollapsibleSection title="Rules">
-                  <p className="text-xs text-white/40 leading-relaxed whitespace-pre-wrap font-mono">
+                  <p className="text-[12px] text-white/40 leading-relaxed whitespace-pre-wrap font-mono">
                     {market.rules}
                   </p>
                 </CollapsibleSection>
@@ -767,7 +767,7 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
 
               {market.resolutionSource && (
                 <CollapsibleSection title="Source">
-                  <div className="flex items-center gap-2 text-xs text-white/40 font-mono bg-white/[0.02] p-2 rounded border border-white/[0.04]">
+                  <div className="flex items-center gap-2 text-[12px] text-white/40 font-mono bg-white/[0.02] p-2 rounded border border-white/[0.04]">
                     <ExternalLink className="w-3 h-3" />
                     <span className="truncate">{market.resolutionSource}</span>
                   </div>

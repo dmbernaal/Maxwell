@@ -28,7 +28,7 @@ export function VerdictPill({ verdict, className, size = 'md' }: VerdictPillProp
     <div className={cn(
       "inline-flex items-center justify-center font-mono font-medium rounded-sm tracking-wide uppercase tabular-nums",
       getColors(verdict),
-      size === 'sm' ? "text-[10px] px-1.5 py-0.5" : "text-[11px] px-2 py-1",
+      size === 'sm' ? "text-[10px] px-1.5 py-0.5" : "text-[10px] px-2 py-1",
       className
     )}>
       {verdict}

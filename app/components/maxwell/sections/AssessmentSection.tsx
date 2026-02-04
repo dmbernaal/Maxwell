@@ -19,10 +19,10 @@ export function AssessmentSection({ data }: AssessmentSectionProps) {
         <CornerGridDecoration className="absolute -top-[10px] -right-[11px] z-30" />
         <CornerGridDecoration className="absolute -top-[10px] -left-[11px] z-30" />
         <div className="flex h-full flex-col justify-center px-6 flex-1 min-w-0">
-          <h2 className="text-[10px] uppercase tracking-widest text-[#666666] font-medium mb-0.5">
+          <h2 className="text-[10px] uppercase tracking-widest text-white/40 font-medium mb-0.5">
             Assessment
           </h2>
-          <div className="text-[14px] font-medium text-white truncate">
+          <div className="text-[16px] font-semibold text-white truncate">
             {assessment.primaryOutcome}
           </div>
         </div>
@@ -33,15 +33,15 @@ export function AssessmentSection({ data }: AssessmentSectionProps) {
         <CornerGridDecoration className="absolute -bottom-[10px] -left-[11px] z-30" />
       </div>
 
-      <div className="flex h-12 items-center px-6 border-b border-[#2A2A2A] text-[13px] font-mono tabular-nums bg-[#141414] relative overflow-visible">
+      <div className="flex h-12 items-center px-6 border-b border-[#2A2A2A] text-[14px] font-mono tabular-nums bg-[#141414] relative overflow-visible">
         <CornerGridDecoration className="absolute -top-[10px] -right-[11px] z-30" />
         <CornerGridDecoration className="absolute -top-[10px] -left-[11px] z-30" />
         <div className="flex items-center gap-2">
-          <span className="text-[10px] uppercase text-[#666666] tracking-wider font-sans">Market</span>
-          <span className="text-[#A3A3A3] text-[14px]">{Math.round(assessment.marketPrice * 100)}%</span>
+          <span className="text-[10px] uppercase text-white/40 tracking-wider font-sans">Market</span>
+          <span className="text-white/60 text-[14px]">{Math.round(assessment.marketPrice * 100)}%</span>
         </div>
         
-        <div className="flex items-center px-4 text-[#525252]">
+        <div className="flex items-center px-4 text-white/30">
           →
         </div>
         
@@ -49,7 +49,7 @@ export function AssessmentSection({ data }: AssessmentSectionProps) {
           <span className="text-[10px] uppercase text-[#FA5D19] tracking-wider font-sans font-medium">Maxwell</span>
           <div className="flex items-center gap-2">
             <span className="text-white font-medium text-[14px]">{Math.round(assessment.maxwellRange.mid * 100)}%</span>
-            <span className="text-[#525252] text-[12px] tracking-tight">
+            <span className="text-white/30 text-[12px] tracking-tight">
               ({Math.round(assessment.maxwellRange.low * 100)}% - {Math.round(assessment.maxwellRange.high * 100)}%)
             </span>
           </div>
@@ -60,7 +60,7 @@ export function AssessmentSection({ data }: AssessmentSectionProps) {
 
       <div className="p-6 bg-[#141414] relative overflow-visible">
         <p
-          className="text-[14px] text-[#A3A3A3] leading-relaxed font-sans"
+          className="text-[14px] text-white/60 leading-relaxed font-sans"
           title={assessment.headline.length > 200 ? assessment.headline : undefined}
         >
           {assessment.headline}

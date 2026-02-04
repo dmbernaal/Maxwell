@@ -16,31 +16,31 @@ export function ThesisSection({ data }: ThesisSectionProps) {
       <CornerGridDecoration className="absolute -top-[10px] -right-[11px] z-30" />
       <CornerGridDecoration className="absolute -top-[10px] -left-[11px] z-30" />
       
-      <div className="h-14 flex items-center px-4 bg-transparent select-none border-b border-[#2A2A2A]">
+      <div className="h-12 flex items-center px-6 bg-transparent select-none border-b border-[#2A2A2A]">
         <div className="flex items-center gap-2">
           <ChevronDown className="w-3.5 h-3.5 text-[#FA5D19]" />
-          <span className="font-medium text-[13px] text-white tracking-tight">Thesis</span>
+          <span className="font-semibold text-[16px] text-white tracking-tight uppercase">Thesis</span>
         </div>
       </div>
 
-      <div className="p-6 pl-10 bg-[#141414] relative overflow-visible">
+      <div className="p-6 bg-[#141414] relative overflow-visible">
         <CornerGridDecoration className="absolute -top-[10px] -right-[11px] z-30" />
         <CornerGridDecoration className="absolute -top-[10px] -left-[11px] z-30" />
         
         <div className="space-y-8 text-[14px]">
 
           <div className="space-y-4">
-            <h3 className="text-[11px] text-[#4ade80] uppercase tracking-wider font-medium">
+            <h3 className="text-[12px] text-[#4ade80] uppercase tracking-wider font-medium">
               Supporting Factors
             </h3>
             {thesis.factorsFor && thesis.factorsFor.length > 0 ? (
               <ul className="space-y-4">
                 {thesis.factorsFor.map((factor, i) => (
                   <li key={i} className="flex gap-4">
-                    <span className="text-[#4ade80] font-mono text-[11px] pt-1">+{i + 1}</span>
+                    <span className="text-[#4ade80] font-mono text-[10px] pt-1">+{i + 1}</span>
                     <div className="space-y-2">
                       <p
-                        className="text-[#e8e8e8] cursor-help leading-relaxed"
+                        className="text-white/90 cursor-help leading-relaxed"
                         title={factor.point.length > 200 ? factor.point : undefined}
                       >
                         {factor.point}
@@ -51,24 +51,24 @@ export function ThesisSection({ data }: ThesisSectionProps) {
                 ))}
               </ul>
             ) : (
-              <div className="text-sm text-[#525252] font-mono py-6">
+              <div className="text-[14px] text-white/30 font-mono py-6">
                 └─ No factors identified for this outcome
               </div>
             )}
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-[11px] text-[#f87171] uppercase tracking-wider font-medium">
+            <h3 className="text-[12px] text-[#f87171] uppercase tracking-wider font-medium">
               Risk Factors
             </h3>
             {thesis.factorsAgainst && thesis.factorsAgainst.length > 0 ? (
               <ul className="space-y-4">
                 {thesis.factorsAgainst.map((factor, i) => (
                   <li key={i} className="flex gap-4">
-                    <span className="text-[#f87171] font-mono text-[11px] pt-1">-{i + 1}</span>
+                    <span className="text-[#f87171] font-mono text-[10px] pt-1">-{i + 1}</span>
                     <div className="space-y-2">
                       <p
-                        className="text-[#e8e8e8] cursor-help leading-relaxed"
+                        className="text-white/90 cursor-help leading-relaxed"
                         title={factor.point.length > 200 ? factor.point : undefined}
                       >
                         {factor.point}
@@ -79,7 +79,7 @@ export function ThesisSection({ data }: ThesisSectionProps) {
                 ))}
               </ul>
             ) : (
-              <div className="text-sm text-[#525252] font-mono py-6">
+              <div className="text-[14px] text-white/30 font-mono py-6">
                 └─ No risk factors identified
               </div>
             )}
