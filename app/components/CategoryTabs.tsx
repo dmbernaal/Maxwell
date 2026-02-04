@@ -70,10 +70,10 @@ export default function CategoryTabs({ categories, selected, onSelect }: Categor
       >
         <button
           onClick={() => onSelect(null)}
-          className={`shrink-0 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+          className={`shrink-0 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider rounded-md transition-all ${
             selected === null
               ? 'bg-[#1A1A1A] text-white'
-              : 'text-[#525252] hover:text-[#737373]'
+              : 'text-white/30 hover:text-white/60'
           }`}
         >
           All
@@ -83,10 +83,10 @@ export default function CategoryTabs({ categories, selected, onSelect }: Categor
           <button
             key={cat}
             onClick={() => onSelect(cat)}
-            className={`shrink-0 px-3 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap ${
+            className={`shrink-0 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider rounded-md transition-all whitespace-nowrap ${
               selected === cat
                 ? 'bg-[#1A1A1A] text-white'
-                : 'text-[#525252] hover:text-[#737373]'
+                : 'text-white/30 hover:text-white/60'
             }`}
           >
             {cat}

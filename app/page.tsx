@@ -107,10 +107,10 @@ export default function Home() {
                 <button
                   key={p}
                   onClick={() => setPlatform(p)}
-                  className={`px-3 py-1.5 rounded-md text-[11px] font-medium transition-all ${
+                  className={`px-3 py-1.5 rounded-md text-[10px] font-medium uppercase tracking-wider transition-all ${
                     platform === p 
                       ? 'bg-[#FA5D19] text-white' 
-                      : 'text-[#525252] hover:text-[#737373]'
+                      : 'text-white/30 hover:text-white/60'
                   }`}
                 >
                   {p === 'all' ? 'All' : p.charAt(0).toUpperCase() + p.slice(1)}
@@ -131,10 +131,10 @@ export default function Home() {
                   <button
                     key={item.id}
                     onClick={() => setSort(item.id as Sort)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium transition-all ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-medium uppercase tracking-wider transition-all ${
                       sort === item.id 
                         ? 'bg-[#FA5D19] text-white' 
-                        : 'text-[#525252] hover:text-[#737373]'
+                        : 'text-white/30 hover:text-white/60'
                     }`}
                   >
                     <Icon className="w-3 h-3" />
@@ -161,7 +161,7 @@ export default function Home() {
                   <button
                     onClick={loadMore}
                     disabled={isLoadingMore}
-                    className="group flex items-center gap-2 px-6 py-2.5 rounded-md bg-surface hover:bg-surface-hover text-text-secondary hover:text-text-primary transition-all border border-border-base text-[13px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="group flex items-center gap-2 px-6 py-2.5 rounded-md bg-surface hover:bg-surface-hover text-text-secondary hover:text-text-primary transition-all border border-border-base text-[12px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isLoadingMore ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
