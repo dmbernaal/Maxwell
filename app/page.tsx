@@ -87,105 +87,95 @@ export default function Home() {
   };
 
   return (
-    <main className="relative min-h-screen w-full bg-[var(--bg-primary)] overflow-y-auto overflow-x-hidden selection:bg-brand-accent/30 font-sans">
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="pt-24 px-6 lg:px-10 pb-16"
-      >
-        <div className="max-w-[1350px] mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="flex flex-col gap-6"
-          >
-            {availableCategories.length > 0 && (
+    <main className="relative min-h-screen w-full bg-app font-sans">
+      <div className="max-w-[1600px] mx-auto border-x border-border-base min-h-[calc(100vh-3.5rem)] bg-app">
+        
+        <div className="sticky top-16 z-40 bg-[#111111] border-b border-[#2A2A2A] px-6 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 w-full">
+          <div className="flex items-center gap-4 overflow-x-auto no-scrollbar">
+             {availableCategories.length > 0 && (
               <CategoryTabs
                 categories={availableCategories}
                 selected={category}
                 onSelect={setCategory}
               />
             )}
+          </div>
 
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <h2 className="text-xs font-mono uppercase tracking-widest text-white/40">
-                {category || 'All Markets'}
-              </h2>
-              
-              <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1 md:pb-0">
-                <div className="flex p-0.5 bg-white/5 rounded-lg border border-white/5 backdrop-blur-sm shrink-0">
-                  {(['all', 'polymarket', 'kalshi'] as Platform[]).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setPlatform(p)}
-                      className={`px-3 py-1 rounded-md text-[10px] uppercase font-mono tracking-wider transition-all ${
-                        platform === p 
-                          ? 'bg-white/10 text-white shadow-sm' 
-                          : 'text-zinc-500 hover:text-zinc-300'
-                      }`}
-                    >
-                      {p === 'all' ? 'All' : p}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex p-0.5 bg-white/5 rounded-lg border border-white/5 backdrop-blur-sm shrink-0">
-                  {[
-                    { id: 'volume', icon: BarChart2, label: 'Vol' },
-                    { id: 'trending', icon: TrendingUp, label: 'Trend' },
-                    { id: 'newest', icon: Clock, label: 'New' }
-                  ].map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => setSort(item.id as Sort)}
-                        className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-[10px] uppercase font-mono tracking-wider transition-all ${
-                          sort === item.id 
-                            ? 'bg-white/10 text-white shadow-sm' 
-                            : 'text-zinc-500 hover:text-zinc-300'
-                        }`}
-                      >
-                        <Icon className="w-3 h-3" />
-                        <span>{item.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center bg-[#1A1A1A] rounded-lg border border-[#2A2A2A] p-0.5">
+              {(['all', 'polymarket', 'kalshi'] as Platform[]).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPlatform(p)}
+                  className={`px-3 py-1.5 rounded-md text-[11px] font-medium transition-all ${
+                    platform === p 
+                      ? 'bg-[#FA5D19] text-white' 
+                      : 'text-[#525252] hover:text-[#737373]'
+                  }`}
+                >
+                  {p === 'all' ? 'All' : p.charAt(0).toUpperCase() + p.slice(1)}
+                </button>
+              ))}
             </div>
 
-            {isMarketsLoading ? (
-              <MarketGridSkeleton />
-            ) : (
-              <>
-                <MarketGrid 
-                  markets={marketResults} 
-                  onSelectMarket={(market) => router.push(`/markets/${market.id}`)}
-                />
-                
-                {nextCursor && (
-                  <div className="flex justify-center pt-8 pb-4">
-                    <button
-                      onClick={loadMore}
-                      disabled={isLoadingMore}
-                      className="group flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white/90 transition-all border border-white/5 hover:border-white/10 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isLoadingMore ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4 group-hover:translate-y-0.5 transition-transform" />
-                      )}
-                      <span>{isLoadingMore ? 'Loading...' : 'Load More'}</span>
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-          </motion.div>
+            <div className="w-px h-5 bg-[#2A2A2A]" />
+
+            <div className="flex items-center bg-[#1A1A1A] rounded-lg border border-[#2A2A2A] p-0.5">
+              {[
+                { id: 'volume', icon: BarChart2, label: 'Vol' },
+                { id: 'trending', icon: TrendingUp, label: 'Trend' },
+                { id: 'newest', icon: Clock, label: 'New' }
+              ].map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setSort(item.id as Sort)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium transition-all ${
+                      sort === item.id 
+                        ? 'bg-[#FA5D19] text-white' 
+                        : 'text-[#525252] hover:text-[#737373]'
+                    }`}
+                  >
+                    <Icon className="w-3 h-3" />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
-      </motion.div>
+
+        <div>
+          {isMarketsLoading ? (
+            <MarketGridSkeleton />
+          ) : (
+            <>
+              <MarketGrid 
+                markets={marketResults} 
+                onSelectMarket={(market) => router.push(`/markets/${market.id}`)}
+              />
+              
+              {nextCursor && (
+                <div className="flex justify-center pt-12 pb-8">
+                  <button
+                    onClick={loadMore}
+                    disabled={isLoadingMore}
+                    className="group flex items-center gap-2 px-6 py-2.5 rounded-md bg-surface hover:bg-surface-hover text-text-secondary hover:text-text-primary transition-all border border-border-base text-[13px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoadingMore ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5 group-hover:translate-y-0.5 transition-transform" />
+                    )}
+                    <span>{isLoadingMore ? 'Loading...' : 'Load More'}</span>
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
     </main>
   );
 }

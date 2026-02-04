@@ -1,13 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/app/lib/utils';
 import type { MaxwellIntelligence, ThesisFactor, ResolutionRiskLevel } from '@/app/lib/maxwell/types';
 
-import { StatusBadge, StatusColor } from './primitives/StatusBadge';
-
-type EvidenceType = 'pro' | 'con' | 'risk';
+type EvidenceType = 'pro' | 'con' | 'risk' | 'sources';
 
 interface UnifiedFactor {
     id: string;
@@ -17,18 +15,13 @@ interface UnifiedFactor {
     sourceIndex?: number;
     confidence?: 'HIGH' | 'MEDIUM' | 'LOW';
     impact?: 'HIGH' | 'MEDIUM' | 'LOW' | ResolutionRiskLevel;
+    url?: string;
 }
 
 interface EvidenceGridProps {
     intelligence: MaxwellIntelligence | null;
     className?: string;
 }
-
-const IMPACT_COLORS: Record<string, StatusColor> = {
-    HIGH: 'emerald',
-    MEDIUM: 'amber',
-    LOW: 'zinc',
-};
 
 const mapThesisFactor = (f: ThesisFactor, type: EvidenceType, index: number): UnifiedFactor => ({
     id: `${type}-${index}`,
@@ -40,70 +33,8 @@ const mapThesisFactor = (f: ThesisFactor, type: EvidenceType, index: number): Un
     impact: f.confidence,
 });
 
-function EvidenceCard({ factor, onClick }: { factor: UnifiedFactor; onClick?: () => void }) {
-    return (
-        <motion.div
-            layout
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className={cn(
-                "group relative flex flex-col gap-3 p-4",
-                "bg-[#121214] hover:bg-white/[0.04]",
-                "rounded-md border border-white/[0.08] transition-colors duration-200 cursor-pointer"
-            )}
-            onClick={onClick}
-        >
-            <div className="flex items-center justify-between">
-                <StatusBadge 
-                    label={`${factor.impact || 'MED'} IMPACT`}
-                    color={IMPACT_COLORS[factor.impact || 'MEDIUM']}
-                />
-                {factor.sourceIndex && (
-                    <div className="flex items-center gap-1.5 opacity-40 group-hover:opacity-60 transition-opacity">
-                        <span className="text-[10px] font-mono text-white/40">SOURCE [{factor.sourceIndex}]</span>
-                    </div>
-                )}
-            </div>
-
-            <div className="space-y-2">
-                <h3 className="font-medium text-sm text-white/90 leading-snug line-clamp-2 group-hover:text-emerald-400 transition-colors">
-                    {factor.headline}
-                </h3>
-                {factor.description && (
-                    <p className="text-xs text-white/50 italic line-clamp-3 leading-relaxed">
-                        "{factor.description}"
-                    </p>
-                )}
-            </div>
-
-            <div className="mt-auto pt-2 flex items-center gap-2 border-t border-white/5">
-                <div className="flex gap-0.5">
-                    {[1, 2, 3].map((i) => (
-                        <div 
-                            key={i}
-                            className={cn(
-                                "w-1 h-1 rounded-full",
-                                factor.confidence === 'HIGH' ? "bg-emerald-500" :
-                                factor.confidence === 'MEDIUM' ? (i <= 2 ? "bg-amber-500" : "bg-white/10") :
-                                (i === 1 ? "bg-zinc-500" : "bg-white/10")
-                            )} 
-                        />
-                    ))}
-                </div>
-                <span className="text-[10px] text-white/40 font-mono ml-auto uppercase tracking-wider">
-                    {factor.type} FACTOR
-                </span>
-            </div>
-        </motion.div>
-    );
-}
-
 export function EvidenceGrid({ intelligence, className }: EvidenceGridProps) {
     const [activeTab, setActiveTab] = useState<EvidenceType>('pro');
-    const [expanded, setExpanded] = useState(false);
-    
-    const VISIBLE_COUNT = 6;
 
     const allFactors = useMemo(() => {
         if (!intelligence) return [];
@@ -111,13 +42,13 @@ export function EvidenceGrid({ intelligence, className }: EvidenceGridProps) {
         const factors: UnifiedFactor[] = [];
 
         if (intelligence.thesis?.factorsFor) {
-            factors.push(...intelligence.thesis.factorsFor.map((f, i) => 
+            factors.push(...intelligence.thesis.factorsFor.map((f, i) =>
                 mapThesisFactor(f, 'pro', i)
             ));
         }
 
         if (intelligence.thesis?.factorsAgainst) {
-            factors.push(...intelligence.thesis.factorsAgainst.map((f, i) => 
+            factors.push(...intelligence.thesis.factorsAgainst.map((f, i) =>
                 mapThesisFactor(f, 'con', i)
             ));
         }
@@ -132,15 +63,24 @@ export function EvidenceGrid({ intelligence, className }: EvidenceGridProps) {
             })));
         }
 
+        if (intelligence.raw?.allSources) {
+            factors.push(...intelligence.raw.allSources.map((s) => ({
+                id: `source-${s.index}`,
+                type: 'sources' as const,
+                headline: s.title,
+                description: new URL(s.url).hostname.replace('www.', ''),
+                sourceIndex: s.index,
+                url: s.url,
+                impact: 'LOW' as const
+            })));
+        }
+
         return factors;
     }, [intelligence]);
 
-    const filteredFactors = useMemo(() => 
+    const filteredFactors = useMemo(() =>
         allFactors.filter(f => f.type === activeTab),
-    [allFactors, activeTab]);
-
-    const visibleFactors = expanded ? filteredFactors : filteredFactors.slice(0, VISIBLE_COUNT);
-    const hasMore = filteredFactors.length > VISIBLE_COUNT;
+        [allFactors, activeTab]);
 
     if (!intelligence) return null;
 
@@ -148,76 +88,122 @@ export function EvidenceGrid({ intelligence, className }: EvidenceGridProps) {
         { id: 'pro', label: 'Primary Factors', count: allFactors.filter(f => f.type === 'pro').length },
         { id: 'con', label: 'Contra', count: allFactors.filter(f => f.type === 'con').length },
         { id: 'risk', label: 'Risk Analysis', count: allFactors.filter(f => f.type === 'risk').length },
+        { id: 'sources', label: 'Sources', count: allFactors.filter(f => f.type === 'sources').length },
     ];
 
     return (
-        <div className={cn("space-y-6", className)}>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4">
-                <div className="flex items-center gap-3">
-                    <h2 className="text-sm font-medium tracking-wider text-white">EVIDENCE</h2>
-                    <span className="px-1.5 py-0.5 rounded bg-white/10 text-[10px] font-mono text-white/40">
-                        {allFactors.length}
+        <div className={cn("w-full border-t border-[#2A2A2A]", className)}>
+            <div className="h-10 flex items-center bg-transparent">
+                {tabs.map((tab) => {
+                    const isActive = activeTab === tab.id;
+                    return (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={cn(
+                                "h-full flex-1 flex items-center justify-center gap-2 text-[11px] font-medium transition-all select-none border-b border-[#2A2A2A] relative",
+                                isActive 
+                                    ? "text-white" 
+                                    : "text-[#666666] hover:text-[#A3A3A3] hover:bg-[#1A1A1A]"
+                            )}
+                        >
+                            {tab.label}
+                            <span className={cn(
+                                "font-mono text-[9px]",
+                                isActive ? "text-[#737373]" : "text-[#3A3A3A]"
+                            )}>
+                                {tab.count}
+                            </span>
+                            {isActive && (
+                                <motion.div
+                                    layoutId="activeTab"
+                                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#FA5D19]"
+                                />
+                            )}
+                        </button>
+                    );
+                })}
+            </div>
+
+            <div className="divide-y divide-[#2A2A2A] min-h-[120px]">
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={activeTab}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.1 }}
+                    >
+                        {filteredFactors.length > 0 ? (
+                            filteredFactors.map((factor) => (
+                                <EvidenceItem key={factor.id} factor={factor} />
+                            ))
+                        ) : (
+                            <div className="flex items-center justify-center h-32">
+                                <span className="text-xs text-[#3A3A3A] font-mono">No factors identified</span>
+                            </div>
+                        )}
+                    </motion.div>
+                </AnimatePresence>
+            </div>
+        </div>
+    );
+}
+
+function EvidenceItem({ factor }: { factor: UnifiedFactor }) {
+    if (factor.type === 'sources') {
+        return (
+            <a 
+                href={factor.url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="group p-4 hover:bg-[#1A1A1A] transition-colors block border-b border-[#2A2A2A] last:border-0"
+            >
+                <div className="flex items-baseline justify-between gap-4 mb-1">
+                    <h4 className="text-xs font-medium text-white leading-snug group-hover:text-[#FA5D19] transition-colors truncate">
+                        {factor.headline}
+                    </h4>
+                    
+                    <span className="text-[9px] font-mono text-[#3A3A3A] shrink-0">
+                        SRC_{factor.sourceIndex}
                     </span>
                 </div>
 
-                <div className="flex items-center gap-1 bg-white/5 p-1 rounded-md overflow-x-auto">
-                    {tabs.map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => {
-                                setActiveTab(tab.id);
-                                setExpanded(false);
-                            }}
-                            className={cn(
-                                "px-3 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap",
-                                activeTab === tab.id 
-                                    ? "bg-white/[0.08] text-white" 
-                                    : "text-white/40 hover:text-white hover:bg-white/[0.04]"
-                            )}
-                        >
-                            {tab.label} <span className="opacity-50 ml-1">[{tab.count}]</span>
-                        </button>
-                    ))}
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono text-[#525252]">
+                        {factor.description}
+                    </span>
+                </div>
+            </a>
+        );
+    }
+
+    return (
+        <div className="group p-4 hover:bg-[#1A1A1A] transition-colors border-b border-[#2A2A2A] last:border-0">
+            <div className="flex items-baseline justify-between gap-4 mb-1">
+                <h4 className="text-xs font-medium text-white leading-snug">
+                    {factor.headline}
+                </h4>
+                
+                <div className="flex items-center gap-3 shrink-0">
+                    <span className={cn(
+                        "text-[9px] font-mono tracking-wide uppercase",
+                        factor.impact === 'HIGH' ? "text-[#A3A3A3]" : "text-[#525252]"
+                    )}>
+                        {factor.impact} IMPACT
+                    </span>
+                    {factor.sourceIndex && (
+                        <span className="text-[9px] font-mono text-[#3A3A3A] group-hover:text-[#525252] transition-colors">
+                            SRC_{factor.sourceIndex}
+                        </span>
+                    )}
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 min-h-[200px]">
-                <AnimatePresence mode="popLayout">
-                    {visibleFactors.length > 0 ? (
-                        visibleFactors.map((factor) => (
-                            <EvidenceCard key={factor.id} factor={factor} />
-                        ))
-                    ) : (
-                        <motion.div 
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="col-span-full flex items-center justify-center h-32 border border-dashed border-white/10 rounded-md"
-                        >
-                            <span className="text-sm text-white/20">No factors found for this category</span>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
-
-            {hasMore && (
-                <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex justify-center pt-2"
-                >
-                    <button
-                        onClick={() => setExpanded(!expanded)}
-                        className="group flex items-center gap-2 text-xs text-white/40 hover:text-white transition-colors px-4 py-2 hover:bg-white/5 rounded-md"
-                    >
-                        <span>{expanded ? 'Show Less' : `View ${filteredFactors.length - VISIBLE_COUNT} More Factors`}</span>
-                        <svg 
-                            className={cn("w-3 h-3 transition-transform duration-200", expanded ? "rotate-180" : "")} 
-                            fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                        >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-                </motion.div>
+            {factor.description && (
+                <p className="text-[11px] text-[#666666] leading-relaxed line-clamp-2 font-sans pr-8">
+                    {factor.description}
+                </p>
             )}
         </div>
     );

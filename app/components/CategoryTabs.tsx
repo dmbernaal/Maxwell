@@ -61,7 +61,7 @@ export default function CategoryTabs({ categories, selected, onSelect }: Categor
   return (
     <div className="relative">
       {showLeftFade && (
-        <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[var(--bg-primary)] to-transparent z-10 pointer-events-none" />
+        <div className="absolute left-0 top-0 bottom-0 w-8 z-10 pointer-events-none" style={{ background: 'linear-gradient(to right, #111111, transparent)' }} />
       )}
       
       <div
@@ -70,10 +70,10 @@ export default function CategoryTabs({ categories, selected, onSelect }: Categor
       >
         <button
           onClick={() => onSelect(null)}
-          className={`shrink-0 px-2.5 py-1 text-xs font-medium transition-colors ${
+          className={`shrink-0 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
             selected === null
-              ? 'text-white'
-              : 'text-white/40 hover:text-white/60'
+              ? 'bg-[#1A1A1A] text-white'
+              : 'text-[#525252] hover:text-[#737373]'
           }`}
         >
           All
@@ -83,10 +83,10 @@ export default function CategoryTabs({ categories, selected, onSelect }: Categor
           <button
             key={cat}
             onClick={() => onSelect(cat)}
-            className={`shrink-0 px-2.5 py-1 text-xs font-medium transition-colors whitespace-nowrap ${
+            className={`shrink-0 px-3 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap ${
               selected === cat
-                ? 'text-white'
-                : 'text-white/40 hover:text-white/60'
+                ? 'bg-[#1A1A1A] text-white'
+                : 'text-[#525252] hover:text-[#737373]'
             }`}
           >
             {cat}
@@ -95,7 +95,7 @@ export default function CategoryTabs({ categories, selected, onSelect }: Categor
       </div>
       
       {showRightFade && (
-        <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[var(--bg-primary)] to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-8 z-10 pointer-events-none" style={{ background: 'linear-gradient(to left, #111111, transparent)' }} />
       )}
     </div>
   );

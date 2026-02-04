@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowUpRight, ArrowDownRight, Minus } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Minus, ChevronDown, ChevronUp } from 'lucide-react';
 import { OutcomeAnalysis } from '@/app/lib/maxwell/types';
 import { cn } from '@/app/lib/utils';
 import { StatusBadge } from './primitives/StatusBadge';
+import { ConfidenceRangeCompact } from './primitives/ConfidenceRangeBar';
 
 interface OutcomesAnalysisTableProps {
   outcomes: OutcomeAnalysis[];
@@ -12,89 +13,110 @@ interface OutcomesAnalysisTableProps {
 function getEdgeColor(edge: number) {
   if (edge > 2) return 'text-emerald-400';
   if (edge < -2) return 'text-rose-400';
-  return 'text-white/40';
+  return 'text-[#666666]';
 }
 
-function getVerdictProps(verdict: string): { label: string; color: 'emerald' | 'rose' | 'amber' | 'zinc' } {
+function formatVerdict(verdict: string): string {
   switch (verdict) {
     case 'UNDERPRICED':
-      return { label: 'Underpriced', color: 'emerald' };
+      return 'Underpriced';
     case 'OVERPRICED':
-      return { label: 'Overpriced', color: 'rose' };
+      return 'Overpriced';
     case 'FAIR':
-      return { label: 'Fair Value', color: 'zinc' };
+      return 'Fair Value';
     default:
-      return { label: verdict, color: 'zinc' };
+      return verdict;
   }
 }
 
 export function OutcomesAnalysisTable({ outcomes }: OutcomesAnalysisTableProps) {
-  const [expandedRow, setExpandedRow] = useState<string | null>(null);
-
-  if (!outcomes || outcomes.length === 0) return null;
-
   const sortedOutcomes = [...outcomes].sort((a, b) => {
     const edgeA = Math.abs(a.maxwellRange.mid - a.marketPrice);
     const edgeB = Math.abs(b.maxwellRange.mid - b.marketPrice);
     return edgeB - edgeA;
   });
 
+  const [expandedRow, setExpandedRow] = useState<string | null>(
+    sortedOutcomes[0]?.name || null
+  );
+
+  if (!outcomes || outcomes.length === 0) return null;
+
   return (
-    <div className="w-full overflow-hidden rounded-md border border-white/[0.08] bg-[#121214]">
-      <div className="h-10 border-b border-white/[0.08] flex items-center px-4 bg-[#121214]">
-        <div className="flex-1 text-[10px] font-medium uppercase tracking-wider text-white/40">Outcome</div>
-        <div className="w-24 text-right text-[10px] font-medium uppercase tracking-wider text-white/40">Mkt</div>
-        <div className="w-24 text-right text-[10px] font-medium uppercase tracking-wider text-white/40">Maxwell</div>
-        <div className="w-24 text-right text-[10px] font-medium uppercase tracking-wider text-white/40">Edge</div>
-        <div className="w-32 text-center text-[10px] font-medium uppercase tracking-wider text-white/40">Verdict</div>
+    <div className="w-full">
+      <div className="h-12 border-b border-[#2A2A2A] flex items-center bg-transparent">
+        <div className="flex-1 text-[11px] font-medium uppercase tracking-wider text-[#666666] select-none pl-4 border-r border-[#2A2A2A] h-full flex items-center">Outcome</div>
+        <div className="w-20 text-right text-[11px] font-medium uppercase tracking-wider text-[#666666] select-none border-r border-[#2A2A2A] h-full flex items-center justify-end pr-3">Market</div>
+        <div className="w-20 text-right text-[11px] font-medium uppercase tracking-wider text-[#666666] select-none border-r border-[#2A2A2A] h-full flex items-center justify-end pr-3">AI Est.</div>
+        <div className="w-20 text-right text-[11px] font-medium uppercase tracking-wider text-[#666666] select-none border-r border-[#2A2A2A] h-full flex items-center justify-end pr-3">Diff</div>
+        <div className="w-28 text-center text-[11px] font-medium uppercase tracking-wider text-[#666666] select-none h-full flex items-center justify-center">Signal</div>
       </div>
 
-      <div className="divide-y divide-white/[0.08]">
+      <div className="divide-y divide-[#2A2A2A]">
         {sortedOutcomes.map((outcome) => {
-          const edge = outcome.maxwellRange.mid - outcome.marketPrice;
+          const marketProb = outcome.marketPrice * 100;
+          const maxwellProb = outcome.maxwellRange.mid * 100;
+          const edge = maxwellProb - marketProb;
+          
           const isExpanded = expandedRow === outcome.name;
 
+          const isActionable = outcome.view === 'UNDERPRICED';
+          
           return (
-            <div key={outcome.name} className="group flex flex-col bg-[#121214]">
-              <div 
+            <div key={outcome.name} className="group flex flex-col bg-transparent">
+              <div
                 className={cn(
-                  "h-12 flex items-center px-4 cursor-pointer transition-colors duration-150 relative",
-                  isExpanded ? "bg-white/[0.02]" : "hover:bg-white/[0.03]"
+                  "h-14 flex items-center cursor-pointer transition-colors duration-150 relative",
+                  isExpanded ? "bg-[#1F1F1F]" : "hover:bg-[#1A1A1A]"
                 )}
                 onClick={() => setExpandedRow(isExpanded ? null : outcome.name)}
               >
-                {isExpanded && (
-                  <motion.div 
+                {isExpanded ? (
+                  <motion.div
                     layoutId="activeRow"
-                    className="absolute left-0 top-0 bottom-0 w-[2px] bg-blue-500" 
+                    className="absolute left-0 top-0 bottom-0 w-[2px] bg-[#FA5D19] z-10"
                   />
+                ) : isActionable && (
+                  <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[#3A3A3A] z-10" />
                 )}
 
-                <div className="flex-1 text-sm font-medium text-white/90 truncate pr-4">
-                  {outcome.name}
+                <div className="flex-1 flex items-center gap-2 border-r border-[#2A2A2A] h-full pl-4 pr-2">
+                  <span className="text-[14px] font-medium text-white truncate">
+                    {outcome.name}
+                  </span>
+                  <div className="text-[#525252]">
+                    {isExpanded ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
+                  </div>
                 </div>
-                
-                <div className="w-24 text-right text-xs font-mono text-white/70">
-                  {Math.round(outcome.marketPrice)}%
+
+                <div className="w-20 text-right text-[13px] font-mono text-[#A3A3A3] border-r border-[#2A2A2A] h-full flex items-center justify-end pr-3">
+                  {Math.round(marketProb)}%
                 </div>
-                
-                <div className="w-24 text-right text-xs font-mono text-white/70">
-                  {Math.round(outcome.maxwellRange.mid)}%
+
+                <div className="w-20 text-right text-[13px] font-mono text-[#A3A3A3] border-r border-[#2A2A2A] h-full flex items-center justify-end pr-3">
+                  {Math.round(maxwellProb)}%
                 </div>
-                
-                <div className={cn("w-24 text-right text-xs font-mono font-medium flex justify-end items-center gap-1", getEdgeColor(edge))}>
+
+                <div className={cn("w-20 text-right text-[13px] font-mono font-medium flex justify-end items-center gap-1 border-r border-[#2A2A2A] h-full pr-3", getEdgeColor(edge))}>
                   {edge > 0 ? (
-                    <ArrowUpRight className="w-3 h-3" />
+                    <ArrowUpRight className="w-3.5 h-3.5" />
                   ) : edge < 0 ? (
-                    <ArrowDownRight className="w-3 h-3" />
+                    <ArrowDownRight className="w-3.5 h-3.5" />
                   ) : (
-                    <Minus className="w-3 h-3" />
+                    <Minus className="w-3.5 h-3.5" />
                   )}
                   {Math.abs(Math.round(edge))}%
                 </div>
-                
-                <div className="w-32 flex justify-center">
-                  <StatusBadge {...getVerdictProps(outcome.view)} />
+
+                <div className="w-28 flex justify-center h-full items-center">
+                  <StatusBadge 
+                    label={formatVerdict(outcome.view)} 
+                    color="zinc" 
+                  />
                 </div>
               </div>
 
@@ -106,32 +128,43 @@ export function OutcomesAnalysisTable({ outcomes }: OutcomesAnalysisTableProps) 
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
-                    className="overflow-hidden bg-[#121214]"
+                    className="overflow-hidden bg-[#141414]"
                   >
-                    <div className="p-4 pl-6 border-b border-white/[0.08] flex gap-8">
-                      <div className="flex-1">
-                        <div className="text-[10px] uppercase tracking-wider text-white/30 font-semibold mb-2">Analysis</div>
-                        <p className="text-sm text-white/70 leading-relaxed font-light">
+                    <div className="p-6 pl-8 border-b border-[#2A2A2A]">
+                      <div className="mb-5">
+                        <p className="text-[14px] text-[#A3A3A3] leading-relaxed">
                           {outcome.oneLiner}
                         </p>
                       </div>
-                      
-                      <div className="w-64 space-y-3 pt-1 border-l border-white/[0.08] pl-6">
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-white/40">Confidence Range</span>
-                          <span className="font-mono text-white/80">
-                            {Math.round(outcome.maxwellRange.low)}% - {Math.round(outcome.maxwellRange.high)}%
+
+                      <div className="flex items-center gap-4 text-[12px] text-[#525252] mb-4">
+                        <span className="font-mono text-[#737373]">{Math.round(outcome.maxwellRange.low * 100)}-{Math.round(outcome.maxwellRange.high * 100)}%</span>
+                        <span className="text-[#3A3A3A]">|</span>
+                        <span>{outcome.confidence.toLowerCase()}</span>
+                      </div>
+
+                      <div className="relative">
+                        <div className="flex items-center justify-between mb-2 text-[12px]">
+                          <span className="text-[#525252]">Market {Math.round(marketProb)}%</span>
+                          <span className={cn(
+                            "font-mono",
+                            edge > 0 ? 'text-emerald-400/80' : edge < 0 ? 'text-rose-400/80' : 'text-[#737373]'
+                          )}>
+                            {edge > 0 ? '+' : ''}{Math.round(edge)}%
                           </span>
                         </div>
-                        <div className="flex justify-between items-center text-xs">
-                          <span className="text-white/40">Confidence Level</span>
-                          <span className={cn(
-                            "font-medium",
-                            outcome.confidence === 'HIGH' ? "text-emerald-400" :
-                            outcome.confidence === 'MEDIUM' ? "text-amber-400" : "text-rose-400"
-                          )}>
-                            {outcome.confidence}
-                          </span>
+                        <div className="h-2.5 bg-[#2A2A2A] rounded-full overflow-hidden flex">
+                          <div 
+                            className="h-full bg-[#3A3A3A]"
+                            style={{ width: `${Math.min(marketProb, maxwellProb)}%` }}
+                          />
+                          <div 
+                            className={cn(
+                              "h-full",
+                              edge > 0 ? 'bg-emerald-400/50' : edge < 0 ? 'bg-rose-400/50' : 'bg-[#525252]'
+                            )}
+                            style={{ width: `${Math.abs(edge)}%` }}
+                          />
                         </div>
                       </div>
                     </div>

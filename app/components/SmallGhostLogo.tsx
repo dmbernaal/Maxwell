@@ -82,13 +82,12 @@ export function SmallGhostLogo({ isActive = false }: SmallGhostLogoProps) {
             <path d="M47.5 23V49.5C47.5 56 42.5 60 36 60C32 60 28.5 58 26 55C24 52.5 20.5 52.5 18 55C15.5 57 12.5 58 9 58C3.5 58 0 54 0 49V23C0 10.5 10.5 0 23 0C35.5 0 47.5 10.5 47.5 23Z" />
           </clipPath>
 
-          {/* THE FALLBACK (Safari) */}
           <linearGradient id="fallbackGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#60a5fa" />
-            <stop offset="25%" stopColor="#3b82f6" />
-            <stop offset="50%" stopColor="#2563eb" />
-            <stop offset="75%" stopColor="#1d4ed8" />
-            <stop offset="100%" stopColor="#1e40af" />
+            <stop offset="0%" stopColor="#fb923c" />
+            <stop offset="25%" stopColor="#f97316" />
+            <stop offset="50%" stopColor="#ea580c" />
+            <stop offset="75%" stopColor="#c2410c" />
+            <stop offset="100%" stopColor="#9a3412" />
           </linearGradient>
         </defs>
 

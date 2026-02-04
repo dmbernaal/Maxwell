@@ -3,15 +3,14 @@
 import React, { use, useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react';
+import { ResizablePanels } from '../../components/ui/resizable';
 
-import { IntelligenceHero } from '../../components/maxwell/IntelligenceHero';
-import { IntelligenceSummary } from '../../components/maxwell/IntelligenceSummary';
-import { OutcomesAnalysisTable } from '../../components/maxwell/OutcomesAnalysisTable';
-import { EvidenceGrid } from '../../components/maxwell/EvidenceGrid';
-import { ResearchProgress } from '../../components/maxwell/ResearchProgress';
+import { IntelligencePanel } from '../../components/maxwell/IntelligencePanel';
+import { MarketChat } from '../../components/maxwell/MarketChat';
 import MarketDataPanel from '../../components/MarketDataPanel';
 import { useMaxwell } from '../../hooks/use-maxwell';
 import type { UnifiedMarket } from '../../lib/markets/types';
+import { GlobalCommandBar } from '../../components/GlobalCommandBar';
 import type { MarketContext, MarketOutcomeContext, IntelligenceMarketType } from '../../lib/maxwell/types';
 import { getCachedAnalysis, setCachedAnalysis, type CachedAnalysis } from '../../lib/markets/analysis-cache';
 
@@ -122,23 +121,40 @@ export default function MarketDetailPage(props: { params: Params }) {
   useEffect(() => {
     const fetchMarket = async () => {
       try {
+        console.log('[MarketPage] Fetching market:', params.id);
         setIsLoading(true);
         setError(null);
-        const res = await fetch(`/api/markets/${encodeURIComponent(params.id)}`);
+
+        // Add timeout to prevent infinite loading
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+        const res = await fetch(`/api/markets/${encodeURIComponent(params.id)}`, {
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        console.log('[MarketPage] Fetch response:', res.status);
 
         if (!res.ok) {
           if (res.status === 404) {
             setError('Market not found');
           } else {
-            setError('Failed to load market');
+            setError(`Failed to load market (${res.status})`);
           }
           return;
         }
 
         const data = await res.json();
+        console.log('[MarketPage] Market data loaded');
         setMarket(data.market);
-      } catch (e) {
-        setError('Failed to load market');
+      } catch (e: any) {
+        if (e.name === 'AbortError') {
+          setError('Request timed out');
+        } else {
+          setError('Failed to load market');
+        }
         console.error('Error fetching market:', e);
       } finally {
         setIsLoading(false);
@@ -217,56 +233,45 @@ export default function MarketDetailPage(props: { params: Params }) {
   }
 
   return (
-    <main className="min-h-screen bg-[#09090b] text-white pt-20 pb-6 px-6 lg:px-10">
-      <div className="max-w-[1350px] mx-auto space-y-6">
-        <div className="flex justify-end mb-4">
-          <button
-            onClick={() => router.push('/')}
-            className="text-xs text-white/40 hover:text-white transition-colors"
-          >
-            ← Back to markets
-          </button>
+    <main className="h-screen bg-app text-white flex flex-col overflow-hidden">
+      {/* Top Bar / Header Area */}
+      {/* Top Bar / Header Area */}
+      <GlobalCommandBar market={market || undefined} />
+
+      <ResizablePanels
+        defaultSizes={[25, 50, 25]}
+        minSizes={[15, 30, 15]}
+        className="flex-1"
+      >
+        <div className="h-full border-r border-border-base bg-panel overflow-y-auto">
+          {market && <MarketChat marketId={market.id} />}
         </div>
 
-        <IntelligenceHero 
-          market={market}
-          intelligence={maxwell.intelligence}
-          isLoading={false}
-          isAnalyzing={isAnalyzing}
-          onAnalyze={() => handleRunAnalysis(!!cachedAnalysis)}
-        />
-
-        {maxwell.intelligence && (
-          <IntelligenceSummary intelligence={maxwell.intelligence} />
-        )}
-
-        {maxwell.intelligence?.outcomes && maxwell.intelligence.outcomes.length > 0 && (
-          <OutcomesAnalysisTable outcomes={maxwell.intelligence.outcomes} />
-        )}
-
-        {isAnalyzing ? (
-          <ResearchProgress
+        <div className="h-full bg-app overflow-y-auto no-scrollbar">
+          <IntelligencePanel
+            data={maxwell.intelligence}
+            isLoading={isAnalyzing}
             phase={maxwell.phase}
             phaseDurations={maxwell.phaseDurations}
             phaseStartTimes={maxwell.phaseStartTimes}
             sourceCount={maxwell.sources.length}
             verificationProgress={maxwell.verificationProgress}
+            onRetry={() => handleRunAnalysis(true)}
+            className="min-h-full"
           />
-        ) : maxwell.intelligence ? (
-          <EvidenceGrid 
-            intelligence={maxwell.intelligence} 
-          />
-        ) : null}
+        </div>
 
-        {market && (
-          <>
-            <div className="pt-8">
-              <span className="text-xs font-mono text-white/40 uppercase tracking-widest mb-4 block">Market Data</span>
+        <div className="h-full border-l border-border-base bg-app overflow-y-auto">
+          {market && (
+            <div className="p-6 space-y-6">
+              <div className="space-y-2">
+                <div className="text-[10px] font-mono font-medium uppercase tracking-wider text-white/40 select-none mb-2">Market Context</div>
+                <MarketDataPanel market={market} />
+              </div>
             </div>
-            <MarketDataPanel market={market} />
-          </>
-        )}
-      </div>
+          )}
+        </div>
+      </ResizablePanels>
     </main>
   );
 }

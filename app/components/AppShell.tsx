@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import Header from './Header';
+import { usePathname } from 'next/navigation';
+import { GlobalCommandBar } from './GlobalCommandBar';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -9,9 +10,13 @@ interface AppShellProps {
 }
 
 export default function AppShell({ children, showHeader = true }: AppShellProps) {
+  const pathname = usePathname();
+  const isMarketDetail = pathname?.startsWith('/markets/');
+  const shouldShowHeader = showHeader && !isMarketDetail;
+
   return (
     <>
-      {showHeader && <Header />}
+      {shouldShowHeader && <GlobalCommandBar />}
       {children}
     </>
   );

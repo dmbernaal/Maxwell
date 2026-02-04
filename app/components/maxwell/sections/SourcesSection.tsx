@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { MaxwellIntelligence } from '@/app/lib/maxwell/types';
-import { DisclosureRow } from '../primitives/DisclosureRow';
 import { VerificationChecklist } from '../primitives/VerificationChecklist';
 import { PaginationControls } from '../PaginationControls';
+import { ChevronDown } from 'lucide-react';
+import { CornerGridDecoration } from '../primitives/CornerGridDecoration';
 
 interface SourcesSectionProps {
   data: MaxwellIntelligence;
@@ -21,12 +22,31 @@ export function SourcesSection({ data, onViewAll }: SourcesSectionProps) {
     page * pageSize
   );
 
+  const getSourceUrl = (title: string) => {
+    if (!data.raw?.allSources) return '#';
+    const match = data.raw.allSources.find(s => s.title === title);
+    return match?.url || '#';
+  };
+
   return (
-    <div className="py-2">
-      <DisclosureRow
-        label={`Sources (${verification.sourcesAnalyzed})`}
-      >
-        <div className="space-y-4">
+    <div className="border-b border-[#2A2A2A] relative overflow-visible">
+      <CornerGridDecoration className="absolute -top-[10px] -right-[11px] z-30" />
+      <CornerGridDecoration className="absolute -top-[10px] -left-[11px] z-30" />
+      
+      <div className="h-14 flex items-center px-6 bg-transparent select-none border-b border-[#2A2A2A]">
+        <div className="flex items-center gap-2">
+          <ChevronDown className="w-3.5 h-3.5 text-[#FA5D19]" />
+          <span className="font-medium text-[13px] text-white tracking-tight">
+            Sources ({verification.sourcesAnalyzed})
+          </span>
+        </div>
+      </div>
+
+      <div className="p-6 pl-10 bg-[#141414] relative overflow-visible">
+        <CornerGridDecoration className="absolute -top-[10px] -right-[11px] z-30" />
+        <CornerGridDecoration className="absolute -top-[10px] -left-[11px] z-30" />
+        
+        <div className="space-y-6">
           <VerificationChecklist
             level={verification.level}
             score={verification.score}
@@ -35,16 +55,30 @@ export function SourcesSection({ data, onViewAll }: SourcesSectionProps) {
             claimsDisputed={verification.claimsDisputed}
           />
 
-          <div className="space-y-2 pt-2">
-            <h4 className="text-[10px] uppercase tracking-wider text-white/40 font-medium">
+          <div className="space-y-4 pt-4">
+            <h4 className="text-[11px] uppercase tracking-wider text-[#666666] font-medium mb-2">
               {page === 1 && totalPages > 1 ? 'Top Sources' : `Sources (${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, verification.sourcesAnalyzed)})`}
             </h4>
-            {paginatedSources.map((source, i) => (
-              <div key={i} className="flex justify-between items-start text-[11px]">
-                 <span className="text-white/70 truncate pr-4 max-w-[200px]">{source.title}</span>
-                 <span className="text-white/30 font-mono">{source.domain}</span>
-              </div>
-            ))}
+            
+            <div className="grid grid-cols-1 gap-1">
+              {paginatedSources.map((source, i) => {
+                const url = getSourceUrl(source.title);
+                return (
+                  <a 
+                    key={i} 
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`group flex justify-between items-center py-2 px-3 -mx-3 rounded hover:bg-[#1A1A1A] transition-colors ${url === '#' ? 'pointer-events-none' : ''}`}
+                  >
+                     <div className="flex items-center gap-3 overflow-hidden">
+                       <span className="text-[#A3A3A3] text-[13px] truncate group-hover:text-white transition-colors">{source.title}</span>
+                     </div>
+                     <span className="text-[#525252] font-mono text-[11px] shrink-0">{source.domain}</span>
+                  </a>
+                );
+              })}
+            </div>
           </div>
 
           {totalPages > 1 && (
@@ -56,7 +90,10 @@ export function SourcesSection({ data, onViewAll }: SourcesSectionProps) {
             />
           )}
         </div>
-      </DisclosureRow>
+      </div>
+      
+      <CornerGridDecoration className="absolute -bottom-[10px] -right-[11px] z-30" />
+      <CornerGridDecoration className="absolute -bottom-[10px] -left-[11px] z-30" />
     </div>
   );
 }

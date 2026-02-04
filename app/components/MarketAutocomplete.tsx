@@ -4,7 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Activity, Search, TrendingUp } from 'lucide-react';
 import type { UnifiedMarket } from '@/app/lib/markets/types';
-import { PolymarketLogo, KalshiLogo } from './icons/PlatformIcons';
+import { PolymarketLogo, KalshiLogo, PLATFORM_COLORS } from './icons/PlatformIcons';
 
 interface MarketAutocompleteProps {
   query: string;
@@ -37,85 +37,91 @@ export default function MarketAutocomplete({
   const showCount = query && results.length > 0;
 
   return (
-    <div className="absolute top-full left-0 w-[480px] mt-2 z-50">
+    <div className="absolute top-full left-0 w-[520px] mt-2 z-50">
       <motion.div
-        initial={{ opacity: 0, y: -10, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: -10, scale: 0.98 }}
-        transition={{ duration: 0.2, ease: "easeOut" }}
-        className="w-full bg-[#141414]/95 backdrop-blur-xl rounded-xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.6)]"
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
+        className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg overflow-hidden shadow-2xl"
       >
         {displayMarkets.length > 0 && (
           <div className="p-2">
-            <div className="px-3 py-2 text-[11px] font-medium text-white/30 uppercase tracking-widest flex justify-between items-center">
-              <span className="flex items-center gap-2">
+            <div className="px-3 py-2 text-[10px] font-medium text-[#525252] uppercase tracking-wider flex justify-between items-center">
+              <span className="flex items-center gap-1.5">
                 {!query && <TrendingUp size={10} />}
                 {sectionLabel}
               </span>
               {showCount && (
-                <span className="text-[10px] bg-white/5 px-1.5 rounded text-white/20">
-                  {results.length} found
+                <span className="text-[10px] text-[#525252]">
+                  {results.length}
                 </span>
               )}
             </div>
-            <div className="flex flex-col gap-1">
-              {displayMarkets.map((market, index) => (
-                <button
-                  key={market.id}
-                  onClick={() => onSelectMarket(market)}
-                  className={`flex items-center gap-3 w-full px-3 py-3 rounded-md group transition-all text-left ${
-                    index === selectedIndex 
-                      ? 'bg-white/10' 
-                      : 'hover:bg-[#1a1a1a]'
-                  }`}
-                >
-                  <div className="shrink-0">
-                    {market.platform === 'polymarket' ? (
-                      <div className="w-8 h-8 rounded-md bg-[#1a1a1a] flex items-center justify-center">
-                        <PolymarketLogo className="w-4 h-4 text-[#2E5CFF]" />
+            <div className="flex flex-col gap-0.5">
+              {displayMarkets.map((market, index) => {
+                const isPoly = market.platform === 'polymarket';
+                const brandColor = isPoly ? PLATFORM_COLORS.polymarket : PLATFORM_COLORS.kalshi;
+                
+                return (
+                  <button
+                    key={market.id}
+                    onClick={() => onSelectMarket(market)}
+                    className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-md transition-all text-left ${
+                      index === selectedIndex 
+                        ? 'bg-[#252525]' 
+                        : 'hover:bg-[#222222]'
+                    }`}
+                  >
+                    <div className="shrink-0">
+                      <div 
+                        className="w-7 h-7 rounded-md flex items-center justify-center"
+                        style={{ backgroundColor: isPoly ? '#0F1A3D' : '#0A1F1A' }}
+                      >
+                        {market.platform === 'polymarket' ? (
+                          <div style={{ color: brandColor }}>
+                            <PolymarketLogo className="w-4 h-4" />
+                          </div>
+                        ) : (
+                          <div style={{ color: brandColor }}>
+                            <KalshiLogo className="w-4 h-4" />
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div className="w-8 h-8 rounded-md bg-[#1a1a1a] flex items-center justify-center">
-                        <KalshiLogo className="w-4 h-4 text-[#09C285]" />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-[13px] truncate transition-colors ${index === selectedIndex ? 'text-white' : 'text-[#A3A3A3] hover:text-white'}`}>
+                          {market.title}
+                        </span>
                       </div>
-                    )}
-                  </div>
+                      <div className="flex items-center gap-2 text-[10px] text-[#525252]">
+                        <span className="capitalize">{market.platform}</span>
+                        <span className="text-[#2A2A2A]">|</span>
+                        <span className="font-mono">{formatVolume(market.volume)}</span>
+                      </div>
+                    </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-sm font-medium text-white/90 truncate group-hover:text-white transition-colors">
-                        {market.title}
-                      </span>
+                    <div className="shrink-0 text-right">
+                      <div className="text-[13px] font-mono text-white">
+                        {Math.round(market.yesPrice * 100)}%
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-white/40">
-                      <span className="capitalize">{market.platform}</span>
-                      <span className="w-0.5 h-0.5 rounded-full bg-white/20" />
-                      <span className="flex items-center gap-1">
-                        <Activity size={10} />
-                        {formatVolume(market.volume)} Vol
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="shrink-0 flex flex-col items-end gap-1">
-                    <div className={`text-sm font-bold ${market.platform === 'polymarket' ? 'text-[#2E5CFF]' : 'text-[#09C285]'}`}>
-                      {Math.round(market.yesPrice * 100)}%
-                    </div>
-                    <div className="text-[10px] text-white/30 uppercase tracking-wide">Prob</div>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
 
         {query && results.length === 0 && (
-          <div className="p-8 text-center">
-            <div className="w-12 h-12 rounded-md bg-[#1a1a1a] flex items-center justify-center mx-auto mb-3">
-              <Search size={20} className="text-white/20" />
+          <div className="p-6 text-center">
+            <div className="w-10 h-10 rounded-lg bg-[#141414] flex items-center justify-center mx-auto mb-3">
+              <Search size={18} className="text-[#525252]" />
             </div>
-            <p className="text-sm text-white/40">
-              No active markets found for <span className="text-white/60">"{query}"</span>
+            <p className="text-[13px] text-[#525252]">
+              No markets found for <span className="text-[#737373]">"{query}"</span>
             </p>
           </div>
         )}

@@ -24,9 +24,9 @@ export function DisclosureRow({
     <div className={cn("w-full group", className)}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between py-2 px-1 hover:bg-white/[0.03] transition-colors duration-200 rounded-sm group-hover:text-white"
+        className="w-full flex items-center justify-between py-3 px-4 hover:bg-[#1A1A1A] transition-colors duration-200 group-hover:text-white"
       >
-        <div className="flex items-center gap-2 text-[13px] text-white/60 group-hover:text-white/90 transition-colors">
+        <div className="flex items-center gap-2 text-[13px] text-[#A3A3A3] group-hover:text-white transition-colors">
           <motion.div
             animate={{ rotate: isOpen ? 90 : 0 }}
             transition={{ duration: 0.2 }}
@@ -36,7 +36,7 @@ export function DisclosureRow({
           <span className="font-medium tracking-tight">{label}</span>
         </div>
         {rightElement && (
-          <div className="text-[11px] text-white/40">{rightElement}</div>
+          <div className="text-[11px] text-[#525252]">{rightElement}</div>
         )}
       </button>
 
@@ -49,7 +49,7 @@ export function DisclosureRow({
             transition={{ duration: 0.2, ease: "easeInOut" }}
             className="overflow-hidden"
           >
-            <div className="pt-2 pb-4 pl-6 pr-1">
+            <div className="pt-2 pb-6 px-4 pl-9">
               {children}
             </div>
           </motion.div>

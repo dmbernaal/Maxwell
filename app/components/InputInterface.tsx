@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, ArrowRight, Search, Zap, Globe, FileText, Plus, Paperclip, X } from 'lucide-react';
+import { Mic, ArrowRight, Search, Zap, Globe, FileText, Plus, Paperclip, X, Terminal } from 'lucide-react';
 import { AgentState, SearchMode, Attachment, ATTACHMENT_LIMITS } from '../types';
 import { convertToBase64, validateAttachment, generateAttachmentId } from '../lib/file-utils';
 import ModeDropdown from './ModeDropdown';
@@ -238,7 +238,11 @@ export default function InputInterface({
 
             <div className="p-3 flex items-start gap-3">
               <div className="mt-2.5 pl-1">
-                 <Search size={16} className={`transition-colors ${isFocused ? 'text-white/80' : 'text-white/30'}`} />
+                 {isMarketSearch ? (
+                   <Search size={16} className={`transition-colors ${isFocused ? 'text-white/80' : 'text-white/30'}`} />
+                 ) : (
+                   <Terminal size={16} className={`transition-colors ${isFocused ? 'text-brand-accent' : 'text-white/30'}`} />
+                 )}
               </div>
               
               <textarea
@@ -273,7 +277,7 @@ export default function InputInterface({
                 }}
                 placeholder={isMarketSearch ? "Search markets (e.g. Fed Rates, Election)..." : "Ask anything..."}
                 rows={1}
-                className="flex-1 bg-transparent text-[15px] font-mono text-white placeholder-white/20 focus:outline-none py-2 resize-none max-h-[200px] overflow-y-auto leading-relaxed"
+                className="flex-1 bg-transparent text-[13px] font-mono text-white placeholder-white/20 focus:outline-none py-2 resize-none max-h-[200px] overflow-y-auto leading-5"
               />
 
               <div className="flex items-center gap-2 pt-1">

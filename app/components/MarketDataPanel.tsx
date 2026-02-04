@@ -5,6 +5,7 @@ import { createChart, IChartApi, ISeriesApi, AreaSeries, LineSeries, ColorType, 
 import { ExternalLink, ChevronDown, Clock, BarChart3, Activity, Layers, ArrowUpRight } from 'lucide-react';
 import type { UnifiedMarket, UnifiedMarketDetail, PricePoint, MarketOutcome, OrderBook, OutcomePriceHistory } from '@/app/lib/markets/types';
 import { PolymarketLogo, KalshiLogo, PLATFORM_COLORS } from './icons/PlatformIcons';
+import { CornerGridDecoration } from './maxwell/primitives/CornerGridDecoration';
 
 interface MarketDataPanelProps {
   market: UnifiedMarket | UnifiedMarketDetail;
@@ -17,8 +18,8 @@ function hasRealPriceHistory(market: UnifiedMarket | UnifiedMarketDetail): marke
 }
 
 function hasMultiOutcomePriceHistory(market: UnifiedMarket | UnifiedMarketDetail): market is UnifiedMarketDetail & { outcomePriceHistories: OutcomePriceHistory[] } {
-  return 'outcomePriceHistories' in market && 
-    Array.isArray((market as UnifiedMarketDetail).outcomePriceHistories) && 
+  return 'outcomePriceHistories' in market &&
+    Array.isArray((market as UnifiedMarketDetail).outcomePriceHistories) &&
     ((market as UnifiedMarketDetail).outcomePriceHistories?.length ?? 0) > 0;
 }
 
@@ -30,7 +31,7 @@ function filterByTimeRange(priceHistory: PricePoint[], range: TimeRange): PriceP
     '1M': 30 * 24 * 60 * 60 * 1000,
     'ALL': Infinity,
   };
-  
+
   const cutoff = now - ranges[range];
   return priceHistory.filter(p => p.timestamp >= cutoff);
 }
@@ -45,12 +46,12 @@ function formatCompact(num: number): string {
 function formatTimeRemaining(endDate: Date): string {
   const now = new Date();
   const diff = endDate.getTime() - now.getTime();
-  
+
   if (diff <= 0) return 'Closed';
-  
+
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  
+
   if (days > 30) {
     return endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   }
@@ -60,18 +61,18 @@ function formatTimeRemaining(endDate: Date): string {
 
 function CollapsibleSection({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
-  
+
   return (
-    <div className="border-t border-white/[0.04]">
+    <div className="border-t border-border-base">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between py-3 text-left group hover:bg-white/[0.02] transition-colors px-4"
       >
-        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono group-hover:text-white/40 transition-colors">
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono group-hover:text-white/40 transition-colors select-none">
           {title}
         </span>
-        <ChevronDown 
-          className={`w-3.5 h-3.5 text-white/40 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} 
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-white/40 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
       {isOpen && (
@@ -85,26 +86,26 @@ function CollapsibleSection({ title, children, defaultOpen = false }: { title: s
 
 function StatsRow({ market }: { market: UnifiedMarket }) {
   return (
-    <div className="flex items-center justify-start gap-8 px-4 py-3 border-b border-white/[0.04]">
+    <div className="flex items-center justify-start gap-8 px-4 py-3 border-b border-border-base">
       <div className="flex flex-col items-start">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono mb-1">Vol</span>
-        <span className="text-[11px] font-mono tabular-nums text-white/70">${formatCompact(market.volume)}</span>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono mb-1 select-none">Vol</span>
+        <span className="text-[13px] font-mono tabular-nums text-[#EDEDED] tracking-tight">${formatCompact(market.volume)}</span>
       </div>
       <div className="flex flex-col items-start">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono mb-1">24h</span>
-        <span className="text-[11px] font-mono tabular-nums text-white/70">
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono mb-1 select-none">24h</span>
+        <span className="text-[13px] font-mono tabular-nums text-[#EDEDED] tracking-tight">
           {market.volume24h > 0 ? `$${formatCompact(market.volume24h)}` : '-'}
         </span>
       </div>
       <div className="flex flex-col items-start">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono mb-1">Liq</span>
-        <span className="text-[11px] font-mono tabular-nums text-white/70">
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono mb-1 select-none">Liq</span>
+        <span className="text-[13px] font-mono tabular-nums text-[#EDEDED] tracking-tight">
           {market.liquidity && market.liquidity > 0 ? `$${formatCompact(market.liquidity)}` : '-'}
         </span>
       </div>
       <div className="flex flex-col items-start">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono mb-1">End</span>
-        <span className="text-[11px] font-mono tabular-nums text-white/70">
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono mb-1 select-none">End</span>
+        <span className="text-[13px] font-mono tabular-nums text-[#EDEDED] tracking-tight">
           {formatTimeRemaining(new Date(market.endDate))}
         </span>
       </div>
@@ -114,23 +115,23 @@ function StatsRow({ market }: { market: UnifiedMarket }) {
 
 function SpreadDisplay({ market }: { market: UnifiedMarket }) {
   if (!market.yesBid || !market.yesAsk) return null;
-  
+
   const spread = Math.round((market.yesAsk - market.yesBid) * 100);
-  
+
   return (
-    <div className="flex items-center gap-4 text-[11px] font-mono py-2 px-4 border-t border-white/[0.04]">
+    <div className="flex items-center gap-4 text-[11px] font-mono py-2 px-4 border-t border-border-base">
       <div className="flex items-center gap-2">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono">Bid</span>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">Bid</span>
         <span className="text-emerald-400 tabular-nums">{Math.round(market.yesBid * 100)}¢</span>
       </div>
-      <div className="w-px h-3 bg-white/[0.04]" />
+      <div className="w-px h-3 bg-white/[0.08]" />
       <div className="flex items-center gap-2">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono">Ask</span>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">Ask</span>
         <span className="text-rose-400 tabular-nums">{Math.round(market.yesAsk * 100)}¢</span>
       </div>
-      <div className="w-px h-3 bg-white/[0.04]" />
+      <div className="w-px h-3 bg-white/[0.08]" />
       <div className="flex items-center gap-2 ml-auto">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono">Spread</span>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">Spread</span>
         <span className="text-white/40 tabular-nums">{spread}¢</span>
       </div>
     </div>
@@ -140,61 +141,52 @@ function SpreadDisplay({ market }: { market: UnifiedMarket }) {
 function OutcomesList({ outcomes, brandColor, outcomeColors }: { outcomes: MarketOutcome[]; brandColor: string; outcomeColors?: Map<string, string> }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const sortedOutcomes = [...outcomes].sort((a, b) => b.price - a.price);
-  const topPrice = sortedOutcomes[0]?.price || 0;
-  
+
   const INITIAL_SHOW = 4;
   const hasMore = sortedOutcomes.length > INITIAL_SHOW;
   const displayedOutcomes = isExpanded ? sortedOutcomes : sortedOutcomes.slice(0, INITIAL_SHOW);
   const hiddenCount = sortedOutcomes.length - INITIAL_SHOW;
-  
+
   return (
-    <div className="py-3 px-4 border-t border-white/[0.04]">
+    <div className="py-3 px-4 border-t border-border-base">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono">
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">
           Outcomes
         </span>
-        <span className="text-[10px] font-mono text-white/40">
+        <span className="text-[10px] font-mono text-white/40 select-none">
           {sortedOutcomes.length} Total
         </span>
       </div>
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         {displayedOutcomes.map((outcome, idx) => {
           const pct = Math.round(outcome.price * 100);
-          const isLeading = outcome.price === topPrice && idx === 0;
           const barWidth = outcome.price * 100;
           const outcomeColor = outcomeColors?.get(outcome.name) || brandColor;
-          const hasChartColor = !!outcomeColors?.get(outcome.name);
-          
+
           return (
-            <div key={outcome.name} className="group relative rounded-sm overflow-hidden bg-white/[0.04]">
-              <div 
-                className="absolute inset-y-0 left-0"
-                style={{ 
-                  width: `${barWidth}%`, 
-                  backgroundColor: outcomeColor,
-                  opacity: 0.2
-                }}
-              />
-              
-              <div className="relative flex items-center justify-between gap-3 px-2 py-1.5">
+            <div key={outcome.name} className="group flex flex-col p-2 rounded-md hover:bg-white/[0.08] transition-colors">
+              <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                  {hasChartColor ? (
-                    <div 
-                      className="w-1.5 h-1.5 rounded-full shrink-0"
-                      style={{ backgroundColor: outcomeColor }}
-                    />
-                  ) : (
-                    <span className={`text-[10px] font-mono w-4 shrink-0 ${isLeading ? 'text-white/40' : 'text-white/40'}`}>
-                      {idx + 1}
-                    </span>
-                  )}
-                  <span className={`text-[11px] truncate font-sans ${isLeading ? 'text-white/90' : 'text-white/60'}`}>
+                  <span className="text-[10px] font-mono text-white/40 w-4 shrink-0 select-none">
+                    {idx + 1}
+                  </span>
+                  <span className="text-[13px] font-medium text-white/90 truncate font-sans">
                     {outcome.name}
                   </span>
                 </div>
-                <span className={`text-[11px] font-mono tabular-nums ${isLeading ? 'text-white' : 'text-white/40'}`}>
+                <span className="text-[13px] font-mono tabular-nums text-white">
                   {pct}%
                 </span>
+              </div>
+
+              <div className="h-1.5 w-full bg-white/[0.08] rounded-full overflow-hidden mt-1.5">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${barWidth}%`,
+                    backgroundColor: outcomeColor
+                  }}
+                />
               </div>
             </div>
           );
@@ -213,9 +205,9 @@ function OutcomesList({ outcomes, brandColor, outcomeColors }: { outcomes: Marke
 }
 
 function hasOrderBook(market: UnifiedMarket | UnifiedMarketDetail): market is UnifiedMarketDetail & { orderBook: OrderBook } {
-  return 'orderBook' in market && 
-    market.orderBook !== undefined && 
-    market.orderBook.bids.length > 0 && 
+  return 'orderBook' in market &&
+    market.orderBook !== undefined &&
+    market.orderBook.bids.length > 0 &&
     market.orderBook.asks.length > 0;
 }
 
@@ -223,31 +215,31 @@ function OrderBookDisplay({ orderBook }: { orderBook: OrderBook }) {
   const maxLevels = 5;
   const bids = orderBook.bids.slice(0, maxLevels);
   const asks = orderBook.asks.slice(0, maxLevels);
-  
+
   const maxBidSize = Math.max(...bids.map(([, size]) => size), 1);
   const maxAskSize = Math.max(...asks.map(([, size]) => size), 1);
   const maxSize = Math.max(maxBidSize, maxAskSize);
-  
+
   if (bids.length === 0 && asks.length === 0) return null;
-  
+
   return (
-    <div className="border-t border-white/[0.04] py-3 px-4">
+    <div className="border-t border-border-base py-3 px-4">
       <div className="flex items-center gap-2 mb-3">
         <Layers className="w-3 h-3 text-white/40" />
-        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono">
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">
           Order Book
         </span>
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-0.5">
-          <div className="flex justify-between text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono px-1 mb-1.5">
+          <div className="flex justify-between text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono px-1 mb-1.5 select-none">
             <span>Bid</span>
             <span>Size</span>
           </div>
           {bids.map(([price, size], i) => (
-            <div key={`bid-${i}`} className="relative group hover:bg-white/[0.04] transition-colors rounded-sm overflow-hidden">
-              <div 
+            <div key={`bid-${i}`} className="relative group hover:bg-white/[0.08] transition-colors rounded-sm overflow-hidden">
+              <div
                 className="absolute inset-y-0 right-0 bg-emerald-500/[0.06]"
                 style={{ width: `${(size / maxSize) * 100}%` }}
               />
@@ -261,15 +253,15 @@ function OrderBookDisplay({ orderBook }: { orderBook: OrderBook }) {
             <div className="text-[10px] text-white/40 text-center py-2 italic">Empty</div>
           )}
         </div>
-        
+
         <div className="space-y-0.5">
-          <div className="flex justify-between text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono px-1 mb-1.5">
+          <div className="flex justify-between text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono px-1 mb-1.5 select-none">
             <span>Ask</span>
             <span>Size</span>
           </div>
           {asks.map(([price, size], i) => (
-            <div key={`ask-${i}`} className="relative group hover:bg-white/[0.04] transition-colors rounded-sm overflow-hidden">
-              <div 
+            <div key={`ask-${i}`} className="relative group hover:bg-white/[0.08] transition-colors rounded-sm overflow-hidden">
+              <div
                 className="absolute inset-y-0 left-0 bg-rose-500/[0.06]"
                 style={{ width: `${(size / maxSize) * 100}%` }}
               />
@@ -307,10 +299,10 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
   const tooltipContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRefs = useRef<SeriesInfo[]>([]);
-  
+
   const hasHistory = hasRealPriceHistory(market);
   const hasMultiHistory = hasMultiOutcomePriceHistory(market);
-  
+
   const multiOutcomeData = useMemo(() => {
     if (!hasMultiHistory) return [];
     return market.outcomePriceHistories.map(outcome => {
@@ -318,7 +310,7 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
       const maxPoints = 150;
       const step = Math.max(1, Math.floor(filtered.length / maxPoints));
       const sampled = filtered.filter((_, i, arr) => i % step === 0 || i === arr.length - 1);
-      
+
       return {
         ...outcome,
         data: sampled.map(point => ({
@@ -328,14 +320,14 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
       };
     });
   }, [market, timeRange, hasMultiHistory]);
-  
+
   const singleOutcomeData = useMemo(() => {
     if (!hasHistory || hasMultiHistory) return [];
     const filtered = filterByTimeRange(market.priceHistory, timeRange);
     const maxPoints = 150;
     const step = Math.max(1, Math.floor(filtered.length / maxPoints));
     const sampled = filtered.filter((_, i, arr) => i % step === 0 || i === arr.length - 1);
-    
+
     return sampled.map(point => ({
       time: Math.floor(point.timestamp / 1000) as Time,
       value: point.price * 100,
@@ -345,12 +337,12 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
   useEffect(() => {
     if (!chartContainerRef.current) return;
     if (!hasHistory && !hasMultiHistory) return;
-    
+
     if (chartRef.current) {
       chartRef.current.remove();
       chartRef.current = null;
     }
-    
+
     const chart = createChart(chartContainerRef.current, {
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
@@ -380,9 +372,9 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
       handleScale: false,
       handleScroll: false,
     });
-    
+
     seriesRefs.current = [];
-    
+
     if (hasMultiHistory && multiOutcomeData.length > 0) {
       multiOutcomeData.forEach(outcome => {
         if (outcome.data.length === 0) return;
@@ -402,26 +394,26 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
           },
         });
         series.setData(outcome.data);
-        
+
         seriesRefs.current.push({
           series: series as ISeriesApi<'Line'>,
           name: outcome.outcomeName,
           color: seriesColor,
         });
       });
-      
-       chart.subscribeCrosshairMove((param: MouseEventParams<Time>) => {
+
+      chart.subscribeCrosshairMove((param: MouseEventParams<Time>) => {
         const container = tooltipContainerRef.current;
         if (!container) return;
-        
+
         if (!param.point || param.logical === undefined || param.point.x < 0) {
           container.style.display = 'none';
           return;
         }
-        
+
         const tooltipData: TooltipData[] = [];
         const logicalIndex = param.logical;
-        
+
         seriesRefs.current.forEach(({ series, name, color }) => {
           const data = series.dataByIndex(logicalIndex, MismatchDirection.NearestLeft);
           if (data && 'value' in data) {
@@ -432,31 +424,31 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
             }
           }
         });
-        
+
         if (tooltipData.length === 0) {
           container.style.display = 'none';
           return;
         }
-        
+
         tooltipData.sort((a, b) => a.y - b.y);
-        
+
         const time = param.time as number;
         const date = new Date(time * 1000);
-        const timeStr = date.toLocaleDateString('en-US', { 
-          month: 'short', 
+        const timeStr = date.toLocaleDateString('en-US', {
+          month: 'short',
           day: 'numeric',
           hour: 'numeric',
           minute: '2-digit',
         });
-        
+
         container.style.display = 'block';
         const pointX = param.point.x;
         const chartWidth = chartContainerRef.current?.clientWidth || 0;
         const isRightHalf = pointX > chartWidth * 0.5;
         const tooltipOffset = isRightHalf ? -12 : 12;
-        
+
         container.innerHTML = `
-          <div style="position:absolute;top:0;left:${pointX}px;transform:translateX(-50%);margin-top:-20px;font-size:10px;font-family:ui-monospace,monospace;color:rgba(255,255,255,0.4);white-space:nowrap;background:#121214;padding:2px 4px;border-radius:2px;">
+          <div style="position:absolute;top:0;left:${pointX}px;transform:translateX(-50%);margin-top:-20px;font-size:10px;font-family:ui-monospace,monospace;color:rgba(255,255,255,0.4);white-space:nowrap;background:#0A0A0A;padding:2px 4px;border-radius:2px;border:1px solid rgba(255,255,255,0.08);">
             ${timeStr}
           </div>
           ${tooltipData.map(t => `
@@ -478,7 +470,7 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
         crosshairMarkerVisible: true,
         crosshairMarkerRadius: 3,
         crosshairMarkerBackgroundColor: brandColor,
-        crosshairMarkerBorderColor: '#121214',
+        crosshairMarkerBorderColor: '#0A0A0A',
         lastValueVisible: false,
         priceLineVisible: false,
         priceFormat: {
@@ -487,7 +479,7 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
         },
       });
       areaSeries.setData(singleOutcomeData);
-      
+
       seriesRefs.current.push({
         series: areaSeries as unknown as ISeriesApi<'Line'>,
         name: market.outcomes[0]?.name || 'Yes',
@@ -497,16 +489,16 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
       chart.subscribeCrosshairMove((param: MouseEventParams<Time>) => {
         const container = tooltipContainerRef.current;
         if (!container) return;
-        
+
         if (!param.point || param.logical === undefined || param.point.x < 0) {
           container.style.display = 'none';
           return;
         }
-        
+
         const logicalIndex = param.logical;
         const series = seriesRefs.current[0].series;
         const data = series.dataByIndex(logicalIndex, MismatchDirection.NearestLeft);
-        
+
         if (!data || !('value' in data)) {
           container.style.display = 'none';
           return;
@@ -515,21 +507,21 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
         const value = data.value as number;
         const y = series.priceToCoordinate(value);
         if (y === null) return;
-        
+
         const time = param.time as number;
         const date = new Date(time * 1000);
-        const timeStr = date.toLocaleDateString('en-US', { 
-          month: 'short', 
+        const timeStr = date.toLocaleDateString('en-US', {
+          month: 'short',
           day: 'numeric',
           hour: 'numeric',
           minute: '2-digit',
         });
-        
+
         container.style.display = 'block';
         const pointX = param.point.x;
-        
+
         container.innerHTML = `
-          <div style="position:absolute;top:0;left:${pointX}px;transform:translateX(-50%);margin-top:-20px;font-size:10px;font-family:ui-monospace,monospace;color:rgba(255,255,255,0.4);white-space:nowrap;background:#121214;padding:2px 4px;border-radius:2px;">
+          <div style="position:absolute;top:0;left:${pointX}px;transform:translateX(-50%);margin-top:-20px;font-size:10px;font-family:ui-monospace,monospace;color:rgba(255,255,255,0.4);white-space:nowrap;background:#0A0A0A;padding:2px 4px;border-radius:2px;border:1px solid rgba(255,255,255,0.08);">
             ${timeStr}
           </div>
           <div style="position:absolute;left:${pointX}px;top:${y}px;transform:translate(-50%, -150%);z-index:10;display:flex;flex-col;align-items:center;pointer-events:none;">
@@ -541,10 +533,10 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
         `;
       });
     }
-    
+
     chart.timeScale().fitContent();
     chartRef.current = chart;
-    
+
     const handleResize = () => {
       if (chartContainerRef.current && chartRef.current) {
         chartRef.current.applyOptions({
@@ -552,10 +544,10 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
         });
       }
     };
-    
+
     const resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(chartContainerRef.current);
-    
+
     return () => {
       resizeObserver.disconnect();
       if (chartRef.current) {
@@ -578,19 +570,19 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
     <div className="py-4 px-4">
       <div className="flex items-center justify-between mb-4">
         {hasMultiHistory && multiOutcomeData.length > 0 ? (
-           <div className="flex flex-wrap gap-3">
-             {multiOutcomeData.map(outcome => (
-               <div key={outcome.outcomeName} className="flex items-center gap-1.5">
-                 <div 
-                   className="w-1.5 h-1.5 rounded-full" 
-                   style={{ backgroundColor: outcome.color }}
-                 />
-                 <span className="text-[10px] text-white/50 font-medium">
-                   {outcome.outcomeName}
-                 </span>
-               </div>
-             ))}
-           </div>
+          <div className="flex flex-wrap gap-3">
+            {multiOutcomeData.map(outcome => (
+              <div key={outcome.outcomeName} className="flex items-center gap-1.5">
+                <div
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ backgroundColor: outcome.color }}
+                />
+                <span className="text-[10px] text-white/50 font-medium">
+                  {outcome.outcomeName}
+                </span>
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="flex items-center gap-2">
             <Activity className="w-3.5 h-3.5 text-white/40" />
@@ -605,22 +597,21 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
             <button
               key={range}
               onClick={() => setTimeRange(range)}
-              className={`px-2 py-0.5 rounded-[3px] text-[10px] font-mono transition-all ${
-                timeRange === range 
-                  ? 'bg-white/10 text-white shadow-sm' 
-                  : 'text-white/30 hover:text-white/50'
-              }`}
+              className={`px-2 py-0.5 rounded-[3px] text-[10px] font-mono transition-all ${timeRange === range
+                ? 'bg-white/10 text-white shadow-sm'
+                : 'text-white/30 hover:text-white/50'
+                }`}
             >
               {range}
             </button>
           ))}
         </div>
       </div>
-      
+
       <div className="relative h-[240px] w-full group cursor-crosshair">
         <div ref={chartContainerRef} className="h-full w-full" />
-        <div 
-          ref={tooltipContainerRef} 
+        <div
+          ref={tooltipContainerRef}
           className="absolute inset-0 pointer-events-none"
           style={{ display: 'none' }}
         />
@@ -633,9 +624,9 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
   const isPoly = market.platform === 'polymarket';
   const brandColor = isPoly ? PLATFORM_COLORS.polymarket : PLATFORM_COLORS.kalshi;
   const platformName = isPoly ? 'Polymarket' : 'Kalshi';
-  
+
   const isMultiOption = market.marketType === 'multi-option' && market.outcomes.length > 2;
-  
+
   const outcomeColors = useMemo(() => {
     if (!hasMultiOutcomePriceHistory(market)) return undefined;
     const colorMap = new Map<string, string>();
@@ -648,23 +639,26 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
   }, [market]);
 
   return (
-    <div className="relative w-full bg-[#121214] border border-white/[0.04] rounded-md overflow-hidden flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 py-3 bg-white/[0.02] border-b border-white/[0.04]">
+    <div className="relative w-full bg-white/[0.02] border border-border-base rounded-md overflow-hidden flex flex-col h-full shadow-[0_0_0_1px_rgba(0,0,0,1)]">
+      <CornerGridDecoration className="absolute -top-[10px] -right-[11px] z-30 opacity-30" />
+      <CornerGridDecoration className="absolute -top-[10px] -left-[11px] z-30 opacity-30" />
+      
+      <div className="flex items-center justify-between px-3 py-3 bg-transparent border-b border-border-base">
         <div className="flex items-center gap-2">
-          <div 
+          <div
             className="p-1 rounded bg-white/5"
             style={{ color: brandColor }}
           >
             {isPoly ? <PolymarketLogo className="w-3 h-3" /> : <KalshiLogo className="w-3 h-3" />}
           </div>
-          <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono">
+          <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">
             {platformName} Terminal
           </span>
         </div>
-        
-        <a 
-          href={market.url} 
-          target="_blank" 
+
+        <a
+          href={market.url}
+          target="_blank"
           rel="noopener noreferrer"
           className="text-white/40 hover:text-white/40 transition-colors"
         >
@@ -674,8 +668,8 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
 
       <div className="overflow-y-auto overflow-x-hidden flex-1 scrollbar-none">
         <div className="px-4 py-4">
-           {market.category && market.category !== 'Uncategorized' && (
-            <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono mb-2 block">
+          {market.category && market.category !== 'Uncategorized' && (
+            <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono mb-2 block select-none">
               {market.category}
             </span>
           )}
@@ -691,17 +685,17 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
         {isMultiOption && (
           <OutcomesList outcomes={market.outcomes} brandColor={brandColor} outcomeColors={outcomeColors} />
         )}
-        
+
         <SpreadDisplay market={market} />
 
         {hasOrderBook(market) && (
           <OrderBookDisplay orderBook={market.orderBook} />
         )}
 
-        <div className="border-t border-white/[0.04] bg-white/[0.01]">
+        <div className="border-t border-border-base">
           {market.description && (
-            <CollapsibleSection 
-              title={market.rules ? "Description" : "Description & Rules"} 
+            <CollapsibleSection
+              title={market.rules ? "Description" : "Description & Rules"}
               defaultOpen
             >
               <p className="text-sm text-white/60 leading-relaxed font-sans">
@@ -721,13 +715,16 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
           {market.resolutionSource && (
             <CollapsibleSection title="Source">
               <div className="flex items-center gap-2 text-xs text-white/40 font-mono bg-white/[0.02] p-2 rounded">
-                 <ExternalLink className="w-3 h-3" />
-                 <span className="truncate">{market.resolutionSource}</span>
+                <ExternalLink className="w-3 h-3" />
+                <span className="truncate">{market.resolutionSource}</span>
               </div>
             </CollapsibleSection>
           )}
         </div>
       </div>
+      
+      <CornerGridDecoration className="absolute -bottom-[10px] -right-[11px] z-30 opacity-30" />
+      <CornerGridDecoration className="absolute -bottom-[10px] -left-[11px] z-30 opacity-30" />
     </div>
   );
 }

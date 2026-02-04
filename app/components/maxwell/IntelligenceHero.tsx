@@ -1,20 +1,9 @@
-import React from 'react';
-import { PanelFrame } from './primitives/PanelFrame';
-import { SkeletonBlock } from './primitives/SkeletonBlock';
+import { motion, AnimatePresence } from 'framer-motion';
 import { StatusBadge } from './primitives/StatusBadge';
 import { UnifiedMarket } from '@/app/lib/markets/types';
-import { 
-  Clock, 
-  Layers, 
-  Bot, 
-  Share2, 
-  Activity,
-  Copy,
-  Play,
-  Loader2
-} from 'lucide-react';
+import { Zap, Clock } from 'lucide-react';
 import { cn } from '@/app/lib/utils';
-
+import { ResearchProgress, ResearchProgressProps } from './ResearchProgress';
 import { MaxwellIntelligence } from '@/app/lib/maxwell/types';
 
 interface IntelligenceHeroProps {
@@ -23,119 +12,29 @@ interface IntelligenceHeroProps {
   isLoading?: boolean;
   isAnalyzing?: boolean;
   onAnalyze?: () => void;
+  researchProgressProps?: ResearchProgressProps;
 }
 
 function getMaxwellProbability(intelligence: MaxwellIntelligence): number {
   return intelligence.assessment.maxwellRange.mid;
 }
 
-function getVerdictColor(verdict: string) {
-  switch (verdict) {
-    case 'UNDERPRICED':
-    case 'YES':
-    case 'LIKELY':
-      return 'text-emerald-400';
-    case 'OVERPRICED':
-    case 'NO':
-    case 'UNLIKELY':
-      return 'text-rose-400';
-    case 'FAIR':
-    case 'UNCERTAIN':
-    default:
-      return 'text-amber-400';
-  }
-}
-
-function getConfidenceColor(confidence: number) {
-  if (confidence >= 80) return 'bg-emerald-400';
-  if (confidence >= 60) return 'bg-emerald-400/80';
-  if (confidence >= 40) return 'bg-amber-400';
-  return 'bg-rose-400';
-}
-
-function formatRelativeTime(date: Date) {
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  
-  if (diffInSeconds < 60) return 'Just now';
-  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-  return `${Math.floor(diffInSeconds / 86400)}d ago`;
-}
-
-const ConfidenceGauge = ({ value, colorClass }: { value: number, colorClass: string }) => {
-  return (
-    <div className="flex gap-0.5 h-1.5 w-full max-w-[120px]">
-      {[...Array(10)].map((_, i) => (
-        <div
-          key={i}
-          className={cn(
-            "flex-1 rounded-[1px] transition-all duration-500",
-            i < Math.floor(value / 10) ? colorClass : "bg-white/5"
-          )}
-        />
-      ))}
-    </div>
-  );
-};
-
-const MarketMetaItem = ({ icon: Icon, label, value }: { icon: any, label: string, value: React.ReactNode }) => (
-  <div className="flex items-center justify-between group">
-    <div className="flex items-center gap-2 text-white/50 group-hover:text-white/70 transition-colors">
-      <Icon className="w-3.5 h-3.5" />
-      <span className="text-[10px] uppercase tracking-wider font-medium font-mono text-white/40">{label}</span>
-    </div>
-    <span className="font-mono text-[11px] text-white/70">{value}</span>
-  </div>
-);
-
-export function IntelligenceHero({ 
-  market, 
-  intelligence, 
-  isLoading = false,
+export function IntelligenceHero({
+  market,
+  intelligence,
   isAnalyzing = false,
-  onAnalyze 
+  onAnalyze,
+  researchProgressProps
 }: IntelligenceHeroProps) {
   const isBinary = market.marketType === 'binary' || (!market.marketType && market.outcomes.length === 2);
   const isMultiOption = market.marketType === 'multi-option' || (!isBinary && market.outcomes.length > 2);
-  
-    if (isLoading) {
-    return (
-      <PanelFrame className="h-[240px] p-0 overflow-hidden relative rounded-md border border-white/[0.08]">
-        <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
-        <div className="h-full grid grid-cols-1 lg:grid-cols-[1fr_1.5fr_1fr] divide-y lg:divide-y-0 lg:divide-x divide-white/5">
-          <div className="p-8 flex flex-col justify-between">
-            <div className="space-y-4">
-              <SkeletonBlock width={80} height={20} className="rounded-full" />
-              <SkeletonBlock width="80%" height={32} />
-              <SkeletonBlock width="60%" height={24} />
-            </div>
-            <SkeletonBlock width={120} height={16} />
-          </div>
-          
-          <div className="p-8 flex flex-col items-center justify-center space-y-6">
-            <SkeletonBlock width={160} height={64} />
-            <SkeletonBlock width={200} height={8} />
-            <SkeletonBlock width={140} height={24} />
-          </div>
-          
-          <div className="p-8 flex flex-col justify-center space-y-6">
-            <SkeletonBlock width="100%" height={20} />
-            <SkeletonBlock width="100%" height={20} />
-            <SkeletonBlock width="100%" height={20} />
-          </div>
-        </div>
-      </PanelFrame>
-    );
-  }
 
-  const marketProb = market.yesPrice * 100;
-  const maxwellProb = intelligence ? getMaxwellProbability(intelligence) : 0;
-  
-  let topOutcomeName = '';
-  let topOutcomeStatus = '';
-  let topOutcomeEdge = 0;
-  let isFairlyValued = false;
+  let tickerData = {
+    outcomeName: '',
+    marketProb: market.yesPrice * 100,
+    maxwellProb: 0,
+    verdict: ''
+  };
 
   if (intelligence) {
     if (isMultiOption && intelligence.outcomes && intelligence.outcomes.length > 0) {
@@ -146,208 +45,162 @@ export function IntelligenceHero({
       })[0];
 
       if (bestOutcome) {
-        topOutcomeName = bestOutcome.name;
-        topOutcomeEdge = bestOutcome.maxwellRange.mid - bestOutcome.marketPrice;
-        topOutcomeStatus = bestOutcome.view;
-      } else {
-        isFairlyValued = true;
+        tickerData = {
+          outcomeName: bestOutcome.name,
+          marketProb: bestOutcome.marketPrice * 100,
+          maxwellProb: bestOutcome.maxwellRange.mid * 100,
+          verdict: bestOutcome.view
+        };
       }
     } else {
-      topOutcomeEdge = maxwellProb - marketProb;
-      topOutcomeStatus = intelligence.assessment.verdict;
-      topOutcomeName = "Yes"; 
-      
-      if (Math.abs(topOutcomeEdge) < 2) {
-      }
+      tickerData = {
+        outcomeName: '',
+        marketProb: market.yesPrice * 100,
+        maxwellProb: getMaxwellProbability(intelligence) * 100,
+        verdict: intelligence.assessment.verdict
+      };
     }
   }
-  
-  const platformColor = market.platform === 'polymarket' ? 'bg-blue-500' : 'bg-emerald-500';
+
+  const platformDotColor = market.platform === 'polymarket' ? 'bg-blue-500' : 'bg-white/40';
+  const mode = intelligence ? 'ticker' : isAnalyzing ? 'analyzing' : 'initial';
 
   return (
-    <PanelFrame className="min-h-[220px] p-0 overflow-hidden relative group/hero bg-[#121214] border border-white/[0.08] rounded-md">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white/[0.03] via-transparent to-transparent pointer-events-none" />
-      
-      <div className="absolute top-3 right-3 opacity-0 group-hover/hero:opacity-100 transition-opacity duration-300">
-        <span className="text-[9px] font-mono text-white/20 border border-white/10 rounded px-1.5 py-0.5">V</span>
-      </div>
-
-      <div className="h-full grid grid-cols-1 lg:grid-cols-[1fr_1.5fr_1fr] divide-y lg:divide-y-0 lg:divide-x divide-white/5">
-        
-        <div className="p-6 lg:p-8 flex flex-col justify-between relative">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className={cn("px-2 py-0.5 rounded text-[10px] font-medium tracking-wider uppercase flex items-center gap-1.5 text-white/40 font-mono bg-white/5 border border-white/5")}>
-                <span className={cn("w-1.5 h-1.5 rounded-full", platformColor)} />
-                {market.platform}
-              </div>
-              <span className="font-mono text-[10px] text-white/40 tracking-wider">ID: {market.id.split(':')[1] || market.id}</span>
-            </div>
-            
-            <h1 className="text-xl lg:text-2xl font-medium text-white leading-tight tracking-tight line-clamp-3">
-              {market.title}
-            </h1>
-          </div>
-
-          <div className="mt-6 flex items-center gap-3">
-            <button className="p-2 rounded-md hover:bg-white/5 text-white/40 hover:text-white transition-colors border border-transparent hover:border-white/5">
-              <Share2 className="w-4 h-4" />
-            </button>
-            <button className="p-2 rounded-md hover:bg-white/5 text-white/40 hover:text-white transition-colors border border-transparent hover:border-white/5">
-              <Copy className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        <div className="p-6 lg:p-8 flex flex-col items-center justify-center relative">
-            {!intelligence ? (
-            <div className="flex flex-col items-center text-center space-y-4 max-w-xs relative z-10">
-              <h3 className="text-lg font-medium text-white">Verification Ready</h3>
-              <p className="text-sm text-white/60 leading-relaxed">
-                Run Maxwell to audit this market against live data sources and calculate true probability.
-              </p>
-              
-              {onAnalyze && (
-                <button
-                  onClick={onAnalyze}
-                  disabled={isAnalyzing}
-                  className={cn(
-                    "mt-4 px-6 py-2.5 rounded-md font-medium text-sm transition-all duration-200",
-                    "bg-white text-black hover:bg-white/90 hover:scale-105 active:scale-95",
-                    "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100",
-                    "flex items-center gap-2 ring-1 ring-white/20"
-                  )}
+    <div className="w-full flex flex-col gap-4">
+      <AnimatePresence mode="wait">
+        {(mode === 'initial' || mode === 'analyzing') && (
+          <motion.div
+            key="analysis-container"
+            layout
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ 
+              opacity: { duration: 0.2 },
+              layout: { duration: 0.4, ease: [0.32, 0.72, 0, 1] }
+            }}
+            className={cn(
+              "w-full border-b border-[#2A2A2A]",
+              mode === 'initial' ? "px-6 py-5" : "min-h-[240px]"
+            )}
+          >
+            <AnimatePresence mode="wait">
+              {mode === 'initial' ? (
+                <motion.div
+                  key="initial-content"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.1 }}
+                  className="flex items-center justify-between"
                 >
-                  {isAnalyzing ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Running Audit...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-4 h-4 fill-current" />
-                      <span>Start Analysis</span>
-                    </>
+                  <span className="text-[13px] text-[#525252] font-mono">No analysis yet</span>
+                  {onAnalyze && (
+                    <button
+                      onClick={onAnalyze}
+                      className="px-5 py-2.5 bg-[#FA5D19] text-white font-semibold text-[12px] rounded-[4px] hover:bg-[#EA580C] transition-colors flex items-center gap-2"
+                    >
+                      <Zap className="w-3.5 h-3.5 fill-white" />
+                      Run Analysis
+                    </button>
                   )}
-                </button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="analyzing-content"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2, delay: 0.15 }}
+                  className="h-full flex flex-col"
+                >
+                  {researchProgressProps && <ResearchProgress {...researchProgressProps} />}
+                </motion.div>
               )}
-            </div>
-          ) : (
-              <div className="flex flex-col items-center w-full text-center">
-                <div className="mb-3">
-                  <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">
-                    TOP OPPORTUNITY
+            </AnimatePresence>
+          </motion.div>
+        )}
+
+        {mode === 'ticker' && intelligence && (
+          <motion.div
+            key="active-ticker"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+            className="w-full border-b border-[#2A2A2A]"
+          >
+            <div className="p-6 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2.5 text-white">
+                  <span className={cn("w-2 h-2 rounded-full", platformDotColor)} />
+                  <span className="text-[14px] font-medium font-sans tracking-tight">
+                    {market.platform === 'polymarket' ? 'Polymarket' : 'Kalshi'}
                   </span>
                 </div>
+                
+                <div className="h-4 w-px bg-[#2A2A2A]" />
+                
+                <span className="font-mono text-[11px] text-[#525252] tracking-wider select-none uppercase">
+                  {market.id.split(':')[1] || market.id}
+                </span>
+              </div>
 
-                {isFairlyValued ? (
-                   <h2 className="text-3xl lg:text-4xl font-semibold text-white tracking-tight mb-2">
-                     Market Fairly Valued
-                   </h2>
-                ) : (
+              <div className="flex items-center gap-5">
+                {tickerData.outcomeName && (
                   <>
-                    <h2 className="text-3xl lg:text-4xl font-semibold text-white tracking-tight mb-3">
-                      {topOutcomeName}
-                    </h2>
-                    
-                    <div className={cn(
-                      "inline-flex items-center gap-3 mt-1"
-                    )}>
-                      <StatusBadge 
-                        label={topOutcomeStatus}
-                        color={
-                          ['UNDERPRICED', 'YES', 'LIKELY'].includes(topOutcomeStatus) ? 'emerald' :
-                          ['OVERPRICED', 'NO', 'UNLIKELY'].includes(topOutcomeStatus) ? 'rose' : 'amber'
-                        }
-                      />
-                      <span className="text-white/20 text-xs">|</span>
-                      <span className={cn(
-                        "text-sm font-mono font-medium",
-                        topOutcomeEdge > 0 ? "text-emerald-400" : "text-rose-400"
-                      )}>
-                        {topOutcomeEdge > 0 ? '+' : ''}{Math.round(topOutcomeEdge)}% Edge
-                      </span>
-                    </div>
+                    <span className="text-[14px] text-white font-medium truncate max-w-[200px]">
+                      {tickerData.outcomeName}
+                    </span>
+                    <div className="h-4 w-px bg-[#2A2A2A]" />
                   </>
                 )}
+                <div className="flex items-center gap-3 font-mono text-[14px] tabular-nums tracking-tight">
+                  <span className="text-[#666666]">{tickerData.marketProb.toFixed(0)}%</span>
+                  <span className="text-[#3A3A3A]">→</span>
+                  <span className="text-white">{tickerData.maxwellProb.toFixed(0)}%</span>
+                </div>
+                
+                <StatusBadge
+                  label={tickerData.verdict}
+                  color="zinc"
+                />
+              </div>
+            </div>
 
-                {intelligence.assessment.headline && (
-                  <p className="text-white/60 text-sm font-medium mt-6 max-w-lg leading-relaxed border-t border-white/5 pt-4">
-                    {intelligence.assessment.headline}
-                  </p>
-                )}
-
-                <div className="mt-6 flex flex-col items-center gap-2 opacity-50 hover:opacity-100 transition-opacity">
-                  <div className="flex justify-between w-full max-w-[100px] text-[9px] text-white/50 font-mono">
-                    <span>CONFIDENCE</span>
-                    <span>{intelligence.verification.score}%</span>
-                  </div>
-                  <ConfidenceGauge 
-                    value={intelligence.verification.score} 
-                    colorClass={getConfidenceColor(intelligence.verification.score)} 
-                  />
+            <div className="px-6 py-3 border-t border-[#2A2A2A] flex items-center justify-between bg-[#1A1A1A]">
+              <div className="flex items-center gap-5">
+                <div className="flex items-baseline gap-2.5">
+                  <span className="text-[12px] text-[#666666]">Range</span>
+                  <span className="text-[12px] font-mono text-[#A3A3A3]">
+                    {Math.round((isMultiOption && intelligence.outcomes?.[0] 
+                      ? intelligence.outcomes[0].maxwellRange.low 
+                      : intelligence.assessment.maxwellRange.low) * 100)}%
+                    <span className="text-[#525252] mx-1.5">-</span>
+                    {Math.round((isMultiOption && intelligence.outcomes?.[0]
+                      ? intelligence.outcomes[0].maxwellRange.high
+                      : intelligence.assessment.maxwellRange.high) * 100)}%
+                  </span>
+                </div>
+                
+                <div className="h-4 w-px bg-[#2A2A2A]" />
+                
+                <div className="flex items-baseline gap-2.5">
+                  <span className="text-[12px] text-[#666666]">Confidence</span>
+                  <span className="text-[12px] font-mono text-[#A3A3A3]">
+                    {intelligence.verification.score}%
+                  </span>
                 </div>
               </div>
-          )}
-        </div>
-
-        <div className="p-6 lg:p-8 flex flex-col justify-center space-y-6 bg-white/[0.01]">
-          <div className="flex items-center justify-between group">
-            <div className="flex items-center gap-2 text-white/30 group-hover:text-white/40 transition-colors">
-              <Clock className="w-3.5 h-3.5" />
-              <span className="text-[10px] uppercase tracking-widest font-medium font-mono text-white/40">Updated</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <span className="font-mono text-[11px] text-white/70">
-                {formatRelativeTime(new Date())}
-              </span>
-            </div>
-          </div>
-
-          <MarketMetaItem 
-            icon={Layers} 
-            label="Sources" 
-            value={
-              intelligence ? (
-                <span className="flex items-center gap-1.5">
-                  <span className="text-white">{intelligence.verification.sourcesAnalyzed}</span>
-                  <span className="text-white/30">Total</span>
-                </span>
-              ) : <span className="text-white/20">-</span>
-            } 
-          />
-
-          <MarketMetaItem 
-            icon={Activity} 
-            label="Verified" 
-            value={
-              intelligence ? (
-                <span className="flex items-center gap-1.5">
-                  <span className="text-emerald-400">{intelligence.verification.claimsVerified}</span>
-                  <span className="text-white/30">Claims</span>
-                </span>
-              ) : <span className="text-white/20">-</span>
-            } 
-          />
-
-          <div className="h-px w-full bg-white/5 my-2" />
-
-          <MarketMetaItem 
-            icon={Bot} 
-            label="Model" 
-            value={
-              <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-white/5 border border-white/5">
-                <span className="w-1 h-1 rounded-full bg-[#D97757]" />
-                <span className="text-[10px] text-white/70">Claude 3.5 Sonnet</span>
+              
+              <div className="flex items-center gap-4 text-[11px] text-[#666666] font-mono">
+                <span>{intelligence.verification.sourcesAnalyzed} sources</span>
+                <span className="text-[#2A2A2A]">|</span>
+                <span>{Math.round(intelligence.pipelineDurationMs / 1000)}s</span>
               </div>
-            } 
-          />
-        </div>
-      </div>
-    </PanelFrame>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

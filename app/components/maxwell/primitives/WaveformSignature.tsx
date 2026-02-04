@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { cn } from '@/app/lib/utils';
 import { motion, useReducedMotion } from 'framer-motion';
@@ -15,20 +17,15 @@ export function WaveformSignature({ active = true, className }: WaveformSignatur
   // Static waveform for reduced motion
   if (shouldReduceMotion || !active) {
     return (
-      <div className={cn("font-mono text-[10px] tracking-tighter text-white/60 flex select-none", className)}>
-        {WAVEFORM_CHARS.map((char, i) => (
-          <span key={i} className="inline-block">
-            {char}
-          </span>
-        ))}
-        {' ▁▂▃▄▅▆▇█'}
+      <div className={cn("font-mono text-[10px] tracking-tighter text-white/60 flex select-none whitespace-nowrap overflow-hidden", className)}>
+        {WAVEFORM_CHARS.join('')}▁▂▃▄▅▆▇█
       </div>
     );
   }
 
   // Animated waveform with CSS pulse + Motion staggered entrance
   return (
-    <div className={cn("font-mono text-[10px] tracking-tighter text-white/60 flex select-none", className)}>
+    <div className={cn("font-mono text-[10px] tracking-tighter text-white/60 flex select-none whitespace-nowrap overflow-hidden", className)}>
       {WAVEFORM_CHARS.map((char, i) => (
         <motion.span
           key={i}
@@ -52,7 +49,7 @@ export function WaveformSignature({ active = true, className }: WaveformSignatur
         animate={{ opacity: 0.4 }}
         transition={{ duration: 0.5, delay: 0.4 }}
       >
-        {' ▁▂▃▄▅▆▇█'}
+        {'▁▂▃▄▅▆▇█'}
       </motion.span>
     </div>
   );

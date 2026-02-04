@@ -1,7 +1,7 @@
 import React from 'react';
 import { cn } from '@/app/lib/utils';
 
-export type StatusColor = 'emerald' | 'rose' | 'amber' | 'zinc' | 'blue';
+export type StatusColor = 'emerald' | 'rose' | 'amber' | 'zinc' | 'blue' | 'orange';
 
 interface StatusBadgeProps {
   label: string;
@@ -15,6 +15,7 @@ const DOT_COLORS: Record<StatusColor, string> = {
   amber: 'bg-amber-400',
   zinc: 'bg-zinc-400',
   blue: 'bg-blue-400',
+  orange: 'bg-orange-400',
 };
 
 const TEXT_COLORS: Record<StatusColor, string> = {
@@ -23,6 +24,7 @@ const TEXT_COLORS: Record<StatusColor, string> = {
   amber: 'text-amber-400',
   zinc: 'text-zinc-400',
   blue: 'text-blue-400',
+  orange: 'text-orange-400',
 };
 
 export function StatusBadge({ label, color, className }: StatusBadgeProps) {

@@ -31,7 +31,7 @@ export function PlanningCard({ config }: PlanningCardProps) {
                     icon: Layers,
                     label: 'Standard Mode',
                     desc: 'Balanced analysis',
-                    color: 'text-blue-400' // Subtle accent
+                    color: 'text-orange-400'
                 };
         }
     };

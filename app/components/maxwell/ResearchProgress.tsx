@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Circle, Loader2, Clock } from 'lucide-react';
 import { cn } from '@/app/lib/utils';
 import { ExecutionPhase, PhaseDurations } from '@/app/lib/maxwell/types';
-import { PanelFrame } from './primitives/PanelFrame';
+import { ContinuousProgress } from './primitives/ContinuousProgress';
 
-interface ResearchProgressProps {
+export interface ResearchProgressProps {
   phase: ExecutionPhase;
   phaseDurations: PhaseDurations;
   phaseStartTimes: Record<string, number>;
@@ -14,24 +13,85 @@ interface ResearchProgressProps {
   className?: string;
 }
 
-const PHASES: { id: keyof Omit<PhaseDurations, 'total'>; label: string }[] = [
-  { id: 'decomposition', label: 'Planning research' },
-  { id: 'search', label: 'Searching sources' },
-  { id: 'synthesis', label: 'Analyzing findings' },
-  { id: 'verification', label: 'Verifying claims' },
-  { id: 'adjudication', label: 'Forming verdict' },
-  { id: 'presenter', label: 'Preparing report' },
+const VERBS_WHIMSICAL = [
+  'Brewing', 'Cooking', 'Noodling', 'Sketching', 'Tinkering',
+  'Weaving', 'Mixing', 'Gathering', 'Polishing', 'Sparkling',
+  'Spinning', 'Sifting', 'Baking', 'Gardening', 'Painting',
 ];
+
+const VERBS_CLASSIC = [
+  'Pondering', 'Synthesizing', 'Cogitating', 'Discovering', 'Exploring',
+  'Reticulating', 'Marinating', 'Crunching', 'Composing', 'Sculpting',
+  'Harvesting', 'Hacking', 'Scheming',
+];
+
+const VERBS_DEEP = [
+  'Contemplating', 'Deliberating', 'Ruminating', 'Reasoning', 'Analyzing',
+  'Calculating', 'Orchestrating', 'Formulating', 'Deciphering', 'Unraveling',
+  'Meditating', 'Envisioning', 'Deconstructing', 'Mapping', 'Navigating',
+];
+
+const VERBS_TECHNICAL = [
+  'Triangulating', 'Parsing', 'Indexing', 'Traversing', 'Scrutinizing',
+  'Grokking', 'Iterating', 'Compiling', 'Modulating', 'Oscillating',
+  'Permutating', 'Quantizing',
+];
+
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+function getVerbPoolForTime(elapsedSeconds: number): string[] {
+  if (elapsedSeconds < 20) {
+    return [...VERBS_WHIMSICAL, ...VERBS_CLASSIC];
+  } else if (elapsedSeconds < 60) {
+    return [...VERBS_CLASSIC, ...VERBS_DEEP];
+  } else if (elapsedSeconds < 120) {
+    return [...VERBS_DEEP, ...VERBS_TECHNICAL];
+  } else {
+    return [...VERBS_DEEP, ...VERBS_TECHNICAL, ...VERBS_CLASSIC];
+  }
+}
 
 export function ResearchProgress({
   phase,
-  phaseDurations,
   phaseStartTimes,
   sourceCount = 0,
   verificationProgress,
   className,
 }: ResearchProgressProps) {
   const [elapsedMs, setElapsedMs] = useState(0);
+  const [currentVerb, setCurrentVerb] = useState('Thinking');
+  const usedVerbsRef = useRef<Set<string>>(new Set());
+  const lastMoodRef = useRef<number>(0);
+
+  const getNextVerb = useCallback((elapsedSeconds: number) => {
+    const currentMood = elapsedSeconds < 20 ? 0 : elapsedSeconds < 60 ? 1 : elapsedSeconds < 120 ? 2 : 3;
+    
+    if (currentMood !== lastMoodRef.current) {
+      usedVerbsRef.current.clear();
+      lastMoodRef.current = currentMood;
+    }
+
+    const pool = getVerbPoolForTime(elapsedSeconds);
+    const available = pool.filter(v => !usedVerbsRef.current.has(v));
+    
+    if (available.length === 0) {
+      usedVerbsRef.current.clear();
+      const shuffled = shuffleArray(pool);
+      usedVerbsRef.current.add(shuffled[0]);
+      return shuffled[0];
+    }
+    
+    const shuffled = shuffleArray(available);
+    usedVerbsRef.current.add(shuffled[0]);
+    return shuffled[0];
+  }, []);
 
   useEffect(() => {
     const startTime = phaseStartTimes['decomposition'];
@@ -39,116 +99,83 @@ export function ResearchProgress({
 
     const interval = setInterval(() => {
       setElapsedMs(Date.now() - startTime);
-    }, 100);
+    }, 30);
 
     return () => clearInterval(interval);
   }, [phaseStartTimes, phase]);
+
+  const elapsedMsRef = useRef(0);
+  
+  useEffect(() => {
+    elapsedMsRef.current = elapsedMs;
+  }, [elapsedMs]);
+
+  useEffect(() => {
+    if (phase === 'complete' || phase === 'idle' || phase === 'error') return;
+
+    setCurrentVerb(getNextVerb(0));
+
+    const interval = setInterval(() => {
+      const elapsed = elapsedMsRef.current / 1000;
+      setCurrentVerb(getNextVerb(elapsed));
+    }, 2500 + Math.random() * 1000);
+
+    return () => clearInterval(interval);
+  }, [phase, getNextVerb]);
 
   const formatTime = (ms: number) => {
     const seconds = Math.floor(ms / 1000);
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
-    if (m === 0) return `${s}s`;
-    return `${m}m ${s}s`;
+    const h = Math.floor((ms % 1000) / 10);
+    return `${m}:${s.toString().padStart(2, '0')}.${h.toString().padStart(2, '0')}`;
   };
 
-  const formatDuration = (ms?: number) => {
-    if (!ms) return '';
-    return `${(ms / 1000).toFixed(1)}s`;
-  };
-
-  const getPhaseStatus = (stepId: ExecutionPhase) => {
-    const phaseOrder = PHASES.map((p) => p.id as ExecutionPhase);
-    const currentIndex = phaseOrder.indexOf(phase);
-    const stepIndex = phaseOrder.indexOf(stepId);
-
-    if (stepIndex < currentIndex) return 'completed';
-    if (stepIndex === currentIndex) return 'active';
-    return 'pending';
-  };
-
-  const getStepDetail = (stepId: ExecutionPhase) => {
-    if (stepId === 'search' && sourceCount > 0) {
-      return `(${sourceCount} found)`;
+  const getDetail = () => {
+    if (phase === 'search' && sourceCount > 0) {
+      return `${sourceCount} sources`;
     }
-    if (stepId === 'verification' && verificationProgress && verificationProgress.total > 0) {
-      return `(${verificationProgress.current}/${verificationProgress.total})`;
+    if (phase === 'verification' && verificationProgress && verificationProgress.total > 0) {
+      return `${verificationProgress.current}/${verificationProgress.total} claims`;
     }
-    return '';
+    return null;
   };
+
+  const detail = getDetail();
 
   return (
-    <PanelFrame className={cn("min-h-[300px] flex flex-col justify-between", className)}>
-      <div>
-        <div className="flex items-center gap-2 mb-6">
-          <div className="text-amber-500 font-bold tracking-tight flex items-center gap-2">
-            <span className="animate-pulse">⚡</span> MAXWELL
-          </div>
-          <div className="h-px bg-white/10 flex-1" />
-          <div className="text-[10px] font-mono text-white/40 uppercase tracking-wider">
-            Intelligence Pipeline
-          </div>
-        </div>
+    <div className={cn("flex flex-col h-full w-full min-h-[240px] relative", className)}>
+      <ContinuousProgress phase={phase} />
 
-        <div className="space-y-4 font-mono text-sm">
-          {PHASES.map((step) => {
-            const status = getPhaseStatus(step.id);
-            const isCompleted = status === 'completed';
-            const isActive = status === 'active';
-            const detail = getStepDetail(step.id);
-            const duration = phaseDurations[step.id];
-
-            return (
-              <div
-                key={step.id}
-                className={cn(
-                  "flex items-center justify-between transition-all duration-300",
-                  isActive ? "text-amber-500" : isCompleted ? "text-emerald-500" : "text-white/20"
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-4 flex justify-center">
-                    {isCompleted ? (
-                      <motion.div
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                      </motion.div>
-                    ) : isActive ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Circle className="w-2 h-2 fill-current opacity-40" />
-                    )}
-                  </div>
-                  <span className={cn("tracking-tight", isActive && "font-medium")}>
-                    {step.label} <span className="opacity-60 text-xs ml-1 font-normal">{detail}</span>
-                  </span>
-                </div>
-
-                <div className="text-xs opacity-50 tabular-nums">
-                  {isCompleted && duration && formatDuration(duration)}
-                  {isActive && (
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                  )}
-                </div>
-              </div>
-            );
-          })}
+      <div className="flex-1 flex items-center justify-center py-12">
+        <div className="flex flex-col items-center gap-3">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentVerb}
+              initial={{ opacity: 0, y: 12, filter: 'blur(4px)' }}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, y: -12, filter: 'blur(4px)' }}
+              transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+              className="flex flex-col items-center gap-2"
+            >
+              <span className="text-[14px] font-medium tracking-tight text-shimmer">
+                {currentVerb}...
+              </span>
+              {detail && (
+                <span className="text-[11px] text-white/40 font-mono">
+                  {detail}
+                </span>
+              )}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
 
-      <div className="mt-8 pt-4 border-t border-white/10">
-        <div className="flex items-center justify-between text-xs font-mono text-white/40">
-          <div className="flex items-center gap-2">
-            <Clock className="w-3 h-3" />
-            <span>Elapsed time</span>
-          </div>
-          <span className="tabular-nums text-white/60">
-            {formatTime(elapsedMs)}
-          </span>
-        </div>
+      <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+        <span className="text-[11px] font-mono text-white/25 tabular-nums tracking-wide">
+          {formatTime(elapsedMs)}
+        </span>
       </div>
-    </PanelFrame>
+    </div>
   );
 }

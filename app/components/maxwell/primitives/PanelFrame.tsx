@@ -23,7 +23,7 @@ export function PanelFrame({
         className
       )}
       >
-      <div className="p-6 relative z-10">
+      <div className="relative z-10 overflow-visible">
         {children}
       </div>
     </div>
