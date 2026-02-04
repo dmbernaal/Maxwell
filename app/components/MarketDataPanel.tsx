@@ -59,34 +59,34 @@ function formatTimeRemaining(endDate: Date): string {
   return `${hours}h`;
 }
 
-function CollapsibleSection({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
 
+function PanelSection({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className="border-t border-border-base">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between py-3 text-left group hover:bg-white/[0.02] transition-colors px-4"
-      >
-        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono group-hover:text-white/40 transition-colors select-none">
-          {title}
-        </span>
-        <ChevronDown
-          className={`w-3.5 h-3.5 text-white/40 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
-        />
-      </button>
-      {isOpen && (
-        <div className="pb-4 px-4 animate-in slide-in-from-top-2 duration-200">
-          {children}
-        </div>
-      )}
+    <div className={`flex flex-col border-b border-[#2A2A2A] last:border-0 ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+function PanelHeader({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`flex items-center px-6 h-12 shrink-0 bg-[#111111] ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+function PanelContent({ children, className = '', noPadding = false }: { children: React.ReactNode; className?: string; noPadding?: boolean }) {
+  return (
+    <div className={`bg-[#141414] relative ${!noPadding ? 'px-6 py-4' : ''} ${className}`}>
+      {children}
     </div>
   );
 }
 
 function StatsRow({ market }: { market: UnifiedMarket }) {
   return (
-    <div className="flex items-center justify-start gap-8 px-4 py-3 border-b border-border-base">
+    <div className="flex items-center justify-between gap-4">
       <div className="flex flex-col items-start">
         <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono mb-1 select-none">Vol</span>
         <span className="text-[13px] font-mono tabular-nums text-[#EDEDED] tracking-tight">${formatCompact(market.volume)}</span>
@@ -119,7 +119,7 @@ function SpreadDisplay({ market }: { market: UnifiedMarket }) {
   const spread = Math.round((market.yesAsk - market.yesBid) * 100);
 
   return (
-    <div className="flex items-center gap-4 text-[11px] font-mono py-2 px-4 border-t border-border-base">
+    <div className="flex items-center gap-4 text-[11px] font-mono pt-3 mt-3 border-t border-white/[0.08]">
       <div className="flex items-center gap-2">
         <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">Bid</span>
         <span className="text-emerald-400 tabular-nums">{Math.round(market.yesBid * 100)}¢</span>
@@ -148,10 +148,10 @@ function OutcomesList({ outcomes, brandColor, outcomeColors }: { outcomes: Marke
   const hiddenCount = sortedOutcomes.length - INITIAL_SHOW;
 
   return (
-    <div className="py-3 px-4 border-t border-border-base">
+    <div className="flex flex-col">
       <div className="flex items-center justify-between mb-3">
         <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">
-          Outcomes
+          Top Outcomes
         </span>
         <span className="text-[10px] font-mono text-white/40 select-none">
           {sortedOutcomes.length} Total
@@ -223,59 +223,75 @@ function OrderBookDisplay({ orderBook }: { orderBook: OrderBook }) {
   if (bids.length === 0 && asks.length === 0) return null;
 
   return (
-    <div className="border-t border-border-base py-3 px-4">
-      <div className="flex items-center gap-2 mb-3">
-        <Layers className="w-3 h-3 text-white/40" />
-        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">
-          Order Book
+    <div className="grid grid-cols-2 gap-4">
+      <div className="space-y-0.5">
+        <div className="flex justify-between text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono px-1 mb-1.5 select-none">
+          <span>Bid</span>
+          <span>Size</span>
+        </div>
+        {bids.map(([price, size], i) => (
+          <div key={`bid-${i}`} className="relative group hover:bg-white/[0.08] transition-colors rounded-sm overflow-hidden">
+            <div
+              className="absolute inset-y-0 right-0 bg-emerald-500/[0.06]"
+              style={{ width: `${(size / maxSize) * 100}%` }}
+            />
+            <div className="relative flex justify-between items-center px-1.5 py-0.5 text-[10px] font-mono">
+              <span className="text-emerald-400/90 tabular-nums">{Math.round(price * 100)}¢</span>
+              <span className="text-white/40 tabular-nums">{formatCompact(size)}</span>
+            </div>
+          </div>
+        ))}
+        {bids.length === 0 && (
+          <div className="text-[10px] text-white/40 text-center py-2 italic">Empty</div>
+        )}
+      </div>
+
+      <div className="space-y-0.5">
+        <div className="flex justify-between text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono px-1 mb-1.5 select-none">
+          <span>Ask</span>
+          <span>Size</span>
+        </div>
+        {asks.map(([price, size], i) => (
+          <div key={`ask-${i}`} className="relative group hover:bg-white/[0.08] transition-colors rounded-sm overflow-hidden">
+            <div
+              className="absolute inset-y-0 left-0 bg-rose-500/[0.06]"
+              style={{ width: `${(size / maxSize) * 100}%` }}
+            />
+            <div className="relative flex justify-between items-center px-1.5 py-0.5 text-[10px] font-mono">
+              <span className="text-rose-400/90 tabular-nums">{Math.round(price * 100)}¢</span>
+              <span className="text-white/40 tabular-nums">{formatCompact(size)}</span>
+            </div>
+          </div>
+        ))}
+        {asks.length === 0 && (
+          <div className="text-[10px] text-white/40 text-center py-2 italic">Empty</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CollapsibleSection({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className="border-t border-[#2A2A2A] first:border-0">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-6 py-3 text-left group hover:bg-white/[0.02] transition-colors"
+      >
+        <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono group-hover:text-white/40 transition-colors select-none">
+          {title}
         </span>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-0.5">
-          <div className="flex justify-between text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono px-1 mb-1.5 select-none">
-            <span>Bid</span>
-            <span>Size</span>
-          </div>
-          {bids.map(([price, size], i) => (
-            <div key={`bid-${i}`} className="relative group hover:bg-white/[0.08] transition-colors rounded-sm overflow-hidden">
-              <div
-                className="absolute inset-y-0 right-0 bg-emerald-500/[0.06]"
-                style={{ width: `${(size / maxSize) * 100}%` }}
-              />
-              <div className="relative flex justify-between items-center px-1.5 py-0.5 text-[10px] font-mono">
-                <span className="text-emerald-400/90 tabular-nums">{Math.round(price * 100)}¢</span>
-                <span className="text-white/40 tabular-nums">{formatCompact(size)}</span>
-              </div>
-            </div>
-          ))}
-          {bids.length === 0 && (
-            <div className="text-[10px] text-white/40 text-center py-2 italic">Empty</div>
-          )}
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-white/40 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {isOpen && (
+        <div className="px-6 pb-4 animate-in slide-in-from-top-2 duration-200">
+          {children}
         </div>
-
-        <div className="space-y-0.5">
-          <div className="flex justify-between text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono px-1 mb-1.5 select-none">
-            <span>Ask</span>
-            <span>Size</span>
-          </div>
-          {asks.map(([price, size], i) => (
-            <div key={`ask-${i}`} className="relative group hover:bg-white/[0.08] transition-colors rounded-sm overflow-hidden">
-              <div
-                className="absolute inset-y-0 left-0 bg-rose-500/[0.06]"
-                style={{ width: `${(size / maxSize) * 100}%` }}
-              />
-              <div className="relative flex justify-between items-center px-1.5 py-0.5 text-[10px] font-mono">
-                <span className="text-rose-400/90 tabular-nums">{Math.round(price * 100)}¢</span>
-                <span className="text-white/40 tabular-nums">{formatCompact(size)}</span>
-              </div>
-            </div>
-          ))}
-          {asks.length === 0 && (
-            <div className="text-[10px] text-white/40 text-center py-2 italic">Empty</div>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -567,7 +583,7 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
   }
 
   return (
-    <div className="py-4 px-4">
+    <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-4">
         {hasMultiHistory && multiOutcomeData.length > 0 ? (
           <div className="flex flex-wrap gap-3">
@@ -620,6 +636,7 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
   );
 }
 
+
 export default function MarketDataPanel({ market }: MarketDataPanelProps) {
   const isPoly = market.platform === 'polymarket';
   const brandColor = isPoly ? PLATFORM_COLORS.polymarket : PLATFORM_COLORS.kalshi;
@@ -639,92 +656,127 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
   }, [market]);
 
   return (
-    <div className="relative w-full bg-white/[0.02] border border-border-base rounded-md overflow-hidden flex flex-col h-full shadow-[0_0_0_1px_rgba(0,0,0,1)]">
-      <CornerGridDecoration className="absolute -top-[10px] -right-[11px] z-30 opacity-30" />
-      <CornerGridDecoration className="absolute -top-[10px] -left-[11px] z-30 opacity-30" />
+    <div className="relative w-full h-full bg-[#111111] flex flex-col overflow-hidden">
+      <CornerGridDecoration className="absolute -top-[10px] -right-[11px] z-30 opacity-50 text-[#2A2A2A]" />
+      <CornerGridDecoration className="absolute -top-[10px] -left-[11px] z-30 opacity-50 text-[#2A2A2A]" />
+      <CornerGridDecoration className="absolute -bottom-[10px] -right-[11px] z-30 opacity-50 text-[#2A2A2A]" />
+      <CornerGridDecoration className="absolute -bottom-[10px] -left-[11px] z-30 opacity-50 text-[#2A2A2A]" />
       
-      <div className="flex items-center justify-between px-3 py-3 bg-transparent border-b border-border-base">
-        <div className="flex items-center gap-2">
-          <div
-            className="p-1 rounded bg-white/5"
-            style={{ color: brandColor }}
-          >
-            {isPoly ? <PolymarketLogo className="w-3 h-3" /> : <KalshiLogo className="w-3 h-3" />}
-          </div>
-          <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">
-            {platformName} Terminal
-          </span>
-        </div>
+      <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+        <PanelSection>
+          <PanelHeader>
+            <div className="flex items-center justify-between w-full gap-4">
+              <span className="text-[11px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">Market Context</span>
+              <div className="flex items-center gap-4">
+                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-white/[0.03] border border-white/[0.06]">
+                    {isPoly ? <PolymarketLogo className="w-4 h-4 text-white/70" /> : <KalshiLogo className="w-4 h-4 text-white/70" />}
+                    <span className="text-[11px] font-medium uppercase tracking-wider text-white/70 font-mono">{platformName}</span>
+                 </div>
+                 <a
+                  href={market.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center w-8 h-8 rounded-md hover:bg-white/[0.05] transition-colors"
+                >
+                  <ExternalLink className="w-4 h-4 text-white/40 hover:text-white/60" />
+                </a>
+              </div>
+            </div>
+          </PanelHeader>
+          <PanelContent>
+            {market.category && market.category !== 'Uncategorized' && (
+              <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono mb-2 block select-none">
+                {market.category}
+              </span>
+            )}
+            <h2 className="text-base font-medium text-white/90 leading-relaxed font-sans">
+              {market.title}
+            </h2>
+          </PanelContent>
+        </PanelSection>
 
-        <a
-          href={market.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-white/40 hover:text-white/40 transition-colors"
-        >
-          <ExternalLink className="w-3 h-3" />
-        </a>
-      </div>
+        <PanelSection>
+          <PanelHeader>
+            <span className="text-[11px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">Market Activity</span>
+          </PanelHeader>
+          <PanelContent>
+            <StatsRow market={market} />
+          </PanelContent>
+        </PanelSection>
 
-      <div className="overflow-y-auto overflow-x-hidden flex-1 scrollbar-none">
-        <div className="px-4 py-4">
-          {market.category && market.category !== 'Uncategorized' && (
-            <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono mb-2 block select-none">
-              {market.category}
-            </span>
-          )}
-          <h2 className="text-sm font-medium text-white/90 leading-relaxed font-sans">
-            {market.title}
-          </h2>
-        </div>
-
-        <StatsRow market={market} />
-
-        <PriceChart market={market} brandColor={brandColor} />
+        <PanelSection>
+          <PanelHeader>
+            <span className="text-[11px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">Price History</span>
+          </PanelHeader>
+          <PanelContent>
+            <CornerGridDecoration className="absolute -top-[5px] -right-[5px] z-30 opacity-30 text-[#2A2A2A] w-3 h-3" />
+            <CornerGridDecoration className="absolute -top-[5px] -left-[5px] z-30 opacity-30 text-[#2A2A2A] w-3 h-3" />
+            <CornerGridDecoration className="absolute -bottom-[5px] -right-[5px] z-30 opacity-30 text-[#2A2A2A] w-3 h-3" />
+            <CornerGridDecoration className="absolute -bottom-[5px] -left-[5px] z-30 opacity-30 text-[#2A2A2A] w-3 h-3" />
+            <PriceChart market={market} brandColor={brandColor} />
+          </PanelContent>
+        </PanelSection>
 
         {isMultiOption && (
-          <OutcomesList outcomes={market.outcomes} brandColor={brandColor} outcomeColors={outcomeColors} />
+          <PanelSection>
+            <PanelHeader>
+              <span className="text-[11px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">Outcomes</span>
+            </PanelHeader>
+            <PanelContent>
+              <OutcomesList outcomes={market.outcomes} brandColor={brandColor} outcomeColors={outcomeColors} />
+            </PanelContent>
+          </PanelSection>
         )}
 
-        <SpreadDisplay market={market} />
-
-        {hasOrderBook(market) && (
-          <OrderBookDisplay orderBook={market.orderBook} />
+        {(hasOrderBook(market) || (market.yesBid && market.yesAsk)) && (
+          <PanelSection>
+            <PanelHeader>
+              <span className="text-[11px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">Order Book</span>
+            </PanelHeader>
+            <PanelContent>
+               {hasOrderBook(market) && <OrderBookDisplay orderBook={market.orderBook} />}
+               <SpreadDisplay market={market} />
+            </PanelContent>
+          </PanelSection>
         )}
 
-        <div className="border-t border-border-base">
-          {market.description && (
-            <CollapsibleSection
-              title={market.rules ? "Description" : "Description & Rules"}
-              defaultOpen
-            >
-              <p className="text-sm text-white/60 leading-relaxed font-sans">
-                {market.description}
-              </p>
-            </CollapsibleSection>
-          )}
+        <PanelSection>
+          <PanelHeader>
+            <span className="text-[11px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">Details</span>
+          </PanelHeader>
+          <PanelContent noPadding>
+            <div className="bg-[#141414]">
+              {market.description && (
+                <CollapsibleSection
+                  title={market.rules ? "Description" : "Description & Rules"}
+                  defaultOpen
+                >
+                  <p className="text-sm text-white/60 leading-relaxed font-sans">
+                    {market.description}
+                  </p>
+                </CollapsibleSection>
+              )}
 
-          {market.rules && (
-            <CollapsibleSection title="Rules">
-              <p className="text-xs text-white/40 leading-relaxed whitespace-pre-wrap font-mono">
-                {market.rules}
-              </p>
-            </CollapsibleSection>
-          )}
+              {market.rules && (
+                <CollapsibleSection title="Rules">
+                  <p className="text-xs text-white/40 leading-relaxed whitespace-pre-wrap font-mono">
+                    {market.rules}
+                  </p>
+                </CollapsibleSection>
+              )}
 
-          {market.resolutionSource && (
-            <CollapsibleSection title="Source">
-              <div className="flex items-center gap-2 text-xs text-white/40 font-mono bg-white/[0.02] p-2 rounded">
-                <ExternalLink className="w-3 h-3" />
-                <span className="truncate">{market.resolutionSource}</span>
-              </div>
-            </CollapsibleSection>
-          )}
-        </div>
+              {market.resolutionSource && (
+                <CollapsibleSection title="Source">
+                  <div className="flex items-center gap-2 text-xs text-white/40 font-mono bg-white/[0.02] p-2 rounded border border-white/[0.04]">
+                    <ExternalLink className="w-3 h-3" />
+                    <span className="truncate">{market.resolutionSource}</span>
+                  </div>
+                </CollapsibleSection>
+              )}
+            </div>
+          </PanelContent>
+        </PanelSection>
       </div>
-      
-      <CornerGridDecoration className="absolute -bottom-[10px] -right-[11px] z-30 opacity-30" />
-      <CornerGridDecoration className="absolute -bottom-[10px] -left-[11px] z-30 opacity-30" />
     </div>
   );
 }

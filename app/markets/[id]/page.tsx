@@ -262,14 +262,7 @@ export default function MarketDetailPage(props: { params: Params }) {
         </div>
 
         <div className="h-full border-l border-border-base bg-app overflow-y-auto">
-          {market && (
-            <div className="p-6 space-y-6">
-              <div className="space-y-2">
-                <div className="text-[10px] font-mono font-medium uppercase tracking-wider text-white/40 select-none mb-2">Market Context</div>
-                <MarketDataPanel market={market} />
-              </div>
-            </div>
-          )}
+          {market && <MarketDataPanel market={market} />}
         </div>
       </ResizablePanels>
     </main>
