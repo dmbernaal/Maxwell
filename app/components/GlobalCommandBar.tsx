@@ -91,11 +91,11 @@ export function GlobalCommandBar({ market }: GlobalCommandBarProps) {
         <header className="h-16 bg-[#111111] border-b border-[#2A2A2A] flex items-center justify-between px-6 sticky top-0 z-50 shrink-0 w-full">
 
             <div className="flex items-center h-full">
-                <div className="flex items-center gap-3 pr-5 border-r border-[#2A2A2A] h-full mr-5 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => router.push('/')}> 
-                    <div className="w-8 h-8 flex items-center justify-center">
+                <div className="flex items-center gap-3.5 pr-5 border-r border-[#2A2A2A] h-full mr-5 cursor-pointer hover:opacity-90 transition-opacity" onClick={() => router.push('/')}> 
+                    <div className="w-9 h-9 flex items-center justify-center">
                         <SmallGhostLogo isActive={false} />
                     </div>
-                    <span className="font-semibold text-[14px] tracking-tight text-white">ZapMarket</span>
+                    <span className="font-bold text-[16px] tracking-[0.02em] text-white">ZapMarket</span>
                 </div>
 
                 <div className="flex items-center gap-2 text-[12px] text-white/30">

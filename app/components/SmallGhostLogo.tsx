@@ -61,9 +61,8 @@ export function SmallGhostLogo({ isActive = false }: SmallGhostLogoProps) {
       ref={containerRef}
       id="small-ghost-logo"
       className="relative w-full h-full mx-auto"
-      // Floating Animation - faster when active
-      animate={{ y: [0, -4, 0], scale: [1, 1.02, 1] }}
-      transition={{ duration: isActive ? 1.5 : 3, repeat: Infinity, ease: "easeInOut" }}
+      animate={{ y: [0, -3, 0] }}
+      transition={{ duration: isActive ? 2 : 4, repeat: Infinity, ease: "easeInOut" }}
     >
 
 
@@ -83,11 +82,10 @@ export function SmallGhostLogo({ isActive = false }: SmallGhostLogoProps) {
           </clipPath>
 
           <linearGradient id="fallbackGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#fb923c" />
-            <stop offset="25%" stopColor="#f97316" />
-            <stop offset="50%" stopColor="#ea580c" />
-            <stop offset="75%" stopColor="#c2410c" />
-            <stop offset="100%" stopColor="#9a3412" />
+            <stop offset="0%" stopColor="#FA5D19" />
+            <stop offset="33%" stopColor="#F97316" />
+            <stop offset="66%" stopColor="#EA580C" />
+            <stop offset="100%" stopColor="#C2410C" />
           </linearGradient>
         </defs>
 
