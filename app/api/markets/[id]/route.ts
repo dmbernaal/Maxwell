@@ -26,7 +26,7 @@ export async function GET(_request: Request, context: RouteParams) {
       );
     }
 
-    const isMultiOutcome = market.marketType === 'multi-option' && market.outcomes.length > 2;
+    const isMultiOutcome = market.marketType === 'multi-option' && market.outcomes.length >= 2;
 
     const [priceHistory, orderBook, outcomePriceHistories] = await Promise.all([
       fetchPriceHistory(market),

@@ -642,7 +642,7 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
   const brandColor = isPoly ? PLATFORM_COLORS.polymarket : PLATFORM_COLORS.kalshi;
   const platformName = isPoly ? 'Polymarket' : 'Kalshi';
 
-  const isMultiOption = market.marketType === 'multi-option' && market.outcomes.length > 2;
+  const isMultiOption = market.marketType === 'multi-option' && market.outcomes.length >= 2;
 
   const outcomeColors = useMemo(() => {
     if (!hasMultiOutcomePriceHistory(market)) return undefined;

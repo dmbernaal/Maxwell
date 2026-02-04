@@ -27,7 +27,7 @@ export function IntelligenceHero({
   researchProgressProps
 }: IntelligenceHeroProps) {
   const isBinary = market.marketType === 'binary' || (!market.marketType && market.outcomes.length === 2);
-  const isMultiOption = market.marketType === 'multi-option' || (!isBinary && market.outcomes.length > 2);
+  const isMultiOption = market.marketType === 'multi-option' || (!isBinary && market.outcomes.length >= 2);
 
   let tickerData = {
     outcomeName: '',
