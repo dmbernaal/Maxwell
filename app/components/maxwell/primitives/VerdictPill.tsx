@@ -9,29 +9,29 @@ interface VerdictPillProps {
 }
 
 export function VerdictPill({ verdict, className, size = 'md' }: VerdictPillProps) {
-  const getColors = (v: IntelligenceVerdict) => {
+  const getStyles = (v: IntelligenceVerdict) => {
     switch (v) {
       case 'UNDERPRICED':
-        return 'bg-[#4ade80]/10 text-[#4ade80]';
+        return 'text-[#4ade80]';
       case 'OVERPRICED':
-        return 'bg-[#f87171]/10 text-[#f87171]';
+        return 'text-[#f87171]';
       case 'FAIR':
-        return 'bg-white/5 text-[#8f8f8f]';
+        return 'text-white/40';
       case 'UNCERTAIN':
-        return 'bg-[#fbbf24]/10 text-[#fbbf24]';
+        return 'text-[#fbbf24]';
       default:
-        return 'bg-white/5 text-[#8f8f8f]';
+        return 'text-white/40';
     }
   };
 
   return (
-    <div className={cn(
-      "inline-flex items-center justify-center font-mono font-medium rounded-sm tracking-wide uppercase tabular-nums",
-      getColors(verdict),
-      size === 'sm' ? "text-[10px] px-1.5 py-0.5" : "text-[10px] px-2 py-1",
+    <span className={cn(
+      "font-[family-name:var(--font-geist-mono)] font-medium tracking-wide uppercase tabular-nums",
+      getStyles(verdict),
+      size === 'sm' ? "text-[10px]" : "text-[10px]",
       className
     )}>
       {verdict}
-    </div>
+    </span>
   );
 }
