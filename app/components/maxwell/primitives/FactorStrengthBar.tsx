@@ -4,10 +4,9 @@ import { cn } from '@/app/lib/utils';
 interface FactorStrengthBarProps {
   strength: 'HIGH' | 'MEDIUM' | 'LOW';
   className?: string;
-  color?: string; // Hex or tailwind class
 }
 
-export function FactorStrengthBar({ strength, className, color = 'text-[#e8e8e8]' }: FactorStrengthBarProps) {
+export function FactorStrengthBar({ strength, className }: FactorStrengthBarProps) {
   const getBlocks = () => {
     switch (strength) {
       case 'HIGH': return { filled: 8, total: 10 };
@@ -21,10 +20,10 @@ export function FactorStrengthBar({ strength, className, color = 'text-[#e8e8e8]
 
   return (
     <div className={cn("font-mono text-[10px] tracking-tight flex items-center", className)}>
-      <span className={cn("mr-2 font-medium w-[45px]", color)}>{strength}</span>
+      <span className="mr-2 font-medium w-[45px] text-white/40">{strength}</span>
       <div className="flex text-[10px]">
         {Array.from({ length: total }).map((_, i) => (
-          <span key={i} className={i < filled ? color : "text-white/10"}>
+          <span key={i} className={i < filled ? "text-white/60" : "text-white/10"}>
             █
           </span>
         ))}

@@ -12,13 +12,13 @@ export function VerdictPill({ verdict, className, size = 'md' }: VerdictPillProp
   const getStyles = (v: IntelligenceVerdict) => {
     switch (v) {
       case 'UNDERPRICED':
-        return 'text-[#4ade80]';
+        return 'text-white';
       case 'OVERPRICED':
-        return 'text-[#f87171]';
+        return 'text-white/60';
       case 'FAIR':
         return 'text-white/40';
       case 'UNCERTAIN':
-        return 'text-[#fbbf24]';
+        return 'text-white/30';
       default:
         return 'text-white/40';
     }

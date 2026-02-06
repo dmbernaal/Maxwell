@@ -23,16 +23,16 @@ export function VerificationChecklist({
   return (
     <div className={cn("font-mono text-[10px] space-y-1.5 text-white/60", className)}>
       <div className="flex items-center gap-2">
-        <span className="text-[#4ade80]">├─ ✓</span>
+        <span className="text-white/40">├─ ✓</span>
         <span>{sourcesCount} sources analyzed</span>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-[#4ade80]">├─ ✓</span>
+        <span className="text-white/40">├─ ✓</span>
         <span>{claimsVerified} claims verified</span>
       </div>
       {claimsDisputed > 0 ? (
-        <div className="flex items-center gap-2 text-[#f87171]">
-          <span>├─ ✗</span>
+        <div className="flex items-center gap-2 text-white/60">
+          <span className="text-white/30">├─ ✗</span>
           <span>{claimsDisputed} claims disputed</span>
         </div>
       ) : (
@@ -42,9 +42,7 @@ export function VerificationChecklist({
         </div>
       )}
       <div className="flex items-center gap-2">
-        <span className={cn(
-          level === 'VERIFIED' ? "text-[#4ade80]" : level === 'PARTIAL' ? "text-[#fbbf24]" : "text-[#f87171]"
-        )}>└─ ●</span>
+        <span className="text-[#FA5D19]">└─ ●</span>
         <span className="tabular-nums">{Math.round(score * 100)}% confidence</span>
       </div>
     </div>

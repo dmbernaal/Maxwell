@@ -45,7 +45,7 @@ export function OutcomeDataBar({
         {/* Maxwell Range (if available) */}
         {maxwellRange && (
           <div 
-            className="absolute top-0 bottom-0 bg-[#4ade80]/40 rounded-full z-10"
+            className="absolute top-0 bottom-0 bg-[#FA5D19]/20 rounded-full z-10"
             style={{ 
               left: `${maxwellRange.low * 100}%`, 
               right: `${100 - (maxwellRange.high * 100)}%` 

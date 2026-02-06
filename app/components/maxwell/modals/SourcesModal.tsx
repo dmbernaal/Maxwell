@@ -50,7 +50,7 @@ export function SourcesModal({ isOpen, onClose, data }: SourcesModalProps) {
                     href={source.url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-[13px] text-[#4ade80] hover:underline flex items-center gap-2 w-fit"
+                    className="text-[13px] text-[#FA5D19] hover:underline flex items-center gap-2 w-fit"
                   >
                     {source.title}
                     <ExternalLink className="w-3 h-3 opacity-50" />

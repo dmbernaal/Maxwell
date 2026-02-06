@@ -41,8 +41,8 @@ export function ResolutionRiskSection({ data }: ResolutionRiskSectionProps) {
               </ul>
 
               {resolutionRisk.historicalDisputes && (
-                <div className="bg-[#fbbf24]/5 border border-[#fbbf24]/20 p-4 rounded-md mt-4">
-                  <p className="text-[#fbbf24] text-[12px] uppercase tracking-wide mb-2 font-medium">Historical Precedent</p>
+                <div className="bg-white/[0.03] border border-white/[0.06] p-4 rounded-md mt-4">
+                  <p className="text-white/60 text-[12px] uppercase tracking-wide mb-2 font-medium">Historical Precedent</p>
                   <p className="text-white/60 text-[14px] leading-relaxed">{resolutionRisk.historicalDisputes}</p>
                 </div>
               )}

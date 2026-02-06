@@ -30,14 +30,14 @@ export function ThesisSection({ data }: ThesisSectionProps) {
         <div className="space-y-8 text-[14px]">
 
           <div className="space-y-4">
-            <h3 className="text-[12px] text-[#4ade80] uppercase tracking-wider font-medium">
+            <h3 className="text-[12px] text-white/60 uppercase tracking-wider font-medium">
               Supporting Factors
             </h3>
             {thesis.factorsFor && thesis.factorsFor.length > 0 ? (
               <ul className="space-y-4">
                 {thesis.factorsFor.map((factor, i) => (
                   <li key={i} className="flex gap-4">
-                    <span className="text-[#4ade80] font-mono text-[10px] pt-1">+{i + 1}</span>
+                    <span className="text-white/40 font-mono text-[10px] pt-1">+{i + 1}</span>
                     <div className="space-y-2">
                       <p
                         className="text-white/90 cursor-help leading-relaxed"
@@ -45,7 +45,7 @@ export function ThesisSection({ data }: ThesisSectionProps) {
                       >
                         {factor.point}
                       </p>
-                      <FactorStrengthBar strength={factor.confidence} color="text-[#4ade80]" />
+                      <FactorStrengthBar strength={factor.confidence} />
                     </div>
                   </li>
                 ))}
@@ -58,14 +58,14 @@ export function ThesisSection({ data }: ThesisSectionProps) {
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-[12px] text-[#f87171] uppercase tracking-wider font-medium">
+            <h3 className="text-[12px] text-white/60 uppercase tracking-wider font-medium">
               Risk Factors
             </h3>
             {thesis.factorsAgainst && thesis.factorsAgainst.length > 0 ? (
               <ul className="space-y-4">
                 {thesis.factorsAgainst.map((factor, i) => (
                   <li key={i} className="flex gap-4">
-                    <span className="text-[#f87171] font-mono text-[10px] pt-1">-{i + 1}</span>
+                    <span className="text-white/40 font-mono text-[10px] pt-1">-{i + 1}</span>
                     <div className="space-y-2">
                       <p
                         className="text-white/90 cursor-help leading-relaxed"
@@ -73,7 +73,7 @@ export function ThesisSection({ data }: ThesisSectionProps) {
                       >
                         {factor.point}
                       </p>
-                      <FactorStrengthBar strength={factor.confidence} color="text-[#f87171]" />
+                      <FactorStrengthBar strength={factor.confidence} />
                     </div>
                   </li>
                 ))}

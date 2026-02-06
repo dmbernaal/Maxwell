@@ -45,7 +45,7 @@ export function RawAnalysisModal({ isOpen, onClose, data }: RawAnalysisModalProp
               className={cn(
                 "text-[13px] font-medium transition-colors pb-1 border-b-2",
                 activeTab === 'synthesis' 
-                  ? "text-white border-[#4ade80]" 
+                  ? "text-white border-[#FA5D19]" 
                   : "text-white/40 border-transparent hover:text-white/80"
               )}
             >
@@ -56,7 +56,7 @@ export function RawAnalysisModal({ isOpen, onClose, data }: RawAnalysisModalProp
               className={cn(
                 "text-[13px] font-medium transition-colors pb-1 border-b-2",
                 activeTab === 'adjudication' 
-                  ? "text-white border-[#4ade80]" 
+                  ? "text-white border-[#FA5D19]" 
                   : "text-white/40 border-transparent hover:text-white/80"
               )}
             >
@@ -69,7 +69,7 @@ export function RawAnalysisModal({ isOpen, onClose, data }: RawAnalysisModalProp
               onClick={handleCopy}
               className="p-1.5 hover:bg-white/10 rounded-sm transition-colors text-white/60 hover:text-white flex items-center gap-2 text-[11px]"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-[#4ade80]" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-[#FA5D19]" /> : <Copy className="w-3.5 h-3.5" />}
               {copied ? "Copied" : "Copy"}
             </button>
             <div className="w-[1px] h-4 bg-white/10 mx-1" />

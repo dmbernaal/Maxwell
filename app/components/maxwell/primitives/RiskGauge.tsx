@@ -9,19 +9,11 @@ interface RiskGaugeProps {
 }
 
 export function RiskGauge({ level, score, className }: RiskGaugeProps) {
-  const getRiskColor = () => {
-    switch (level) {
-      case 'LOW': return 'text-[#4ade80]';
-      case 'MEDIUM': return 'text-[#fbbf24]';
-      case 'HIGH': return 'text-[#f87171]';
-    }
-  };
-
-  const blocks = Math.round(score / 20); // 0-5 blocks
+  const blocks = Math.round(score / 20);
 
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      <span className={cn("text-[11px] font-mono font-medium", getRiskColor())}>
+      <span className="text-[11px] font-mono font-medium text-white/60">
         {level} RISK
       </span>
       <div className="flex gap-[2px]">
@@ -30,7 +22,7 @@ export function RiskGauge({ level, score, className }: RiskGaugeProps) {
             key={i} 
             className={cn(
               "w-2 h-3 rounded-[1px]",
-              i < blocks ? getRiskColor().replace('text-', 'bg-') : "bg-white/10"
+              i < blocks ? "bg-white/40" : "bg-white/10"
             )}
           />
         ))}
