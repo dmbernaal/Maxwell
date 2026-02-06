@@ -97,25 +97,44 @@ export function AssessmentSection({ data }: AssessmentSectionProps) {
         </div>
         
         <div className="mt-8">
-          <div className="h-[5px] flex" style={{ backgroundColor: `rgba(${signal.rgb}, 0.10)` }}>
+          <div className="relative h-[5px]" style={{ backgroundColor: `rgba(${signal.rgb}, 0.10)` }}>
             <div 
-              className="h-full"
-              style={{ width: `${marketPrice}%`, backgroundColor: `rgba(${signal.rgb}, 0.25)` }}
+              className="absolute top-0 left-0 h-full"
+              style={{ width: `${maxwellMid}%`, backgroundColor: `rgba(${signal.rgb}, 0.20)` }}
             />
             <div 
-              className="h-full"
-              style={{ width: `${Math.abs(edge)}%`, backgroundColor: signal.cssVar }}
+              className="absolute top-0 h-full w-[2px] bg-white/40"
+              style={{ left: `${marketPrice}%` }}
+            />
+            <div 
+              className="absolute top-0 h-full w-[2px]"
+              style={{ left: `${maxwellMid}%`, backgroundColor: signal.cssVar }}
             />
           </div>
           
-          <div className="mt-3 flex justify-between text-[11px] font-mono">
-            <span className="text-white/20">Range</span>
-            <span className="text-white/30">{maxwellLow}% — {maxwellHigh}%</span>
+          <div className="relative mt-2 text-[10px] font-mono">
+            <span 
+              className="absolute text-white/40"
+              style={{ left: `${marketPrice}%`, transform: 'translateX(-50%)' }}
+            >
+              {marketPrice}%
+            </span>
+            <span 
+              className="absolute font-medium"
+              style={{ left: `${maxwellMid}%`, transform: 'translateX(-50%)', color: signal.cssVar }}
+            >
+              {maxwellMid}%
+            </span>
           </div>
         </div>
         
         <div className="mt-6">
-          <p className="text-[14px] text-white/60 leading-relaxed max-w-[85%]">
+          <p className="text-[13px] text-white/40 leading-relaxed">
+            Market is priced at <span className="text-white/70 font-medium">{marketPrice}%</span>
+            {' · '}
+            AI target is <span className="font-medium" style={{ color: signal.cssVar }}>{maxwellMid}%</span>
+          </p>
+          <p className="mt-2 text-[14px] text-white/60 leading-relaxed max-w-[95%]">
             {assessment.headline}
           </p>
         </div>
