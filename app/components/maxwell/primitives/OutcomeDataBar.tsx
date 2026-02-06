@@ -43,14 +43,14 @@ export function OutcomeDataBar({
         {maxwellRange && (
           <>
             <div 
-              className="absolute top-0 bottom-0 bg-[#FA5D19]/15 z-10"
+              className="absolute top-0 bottom-0 bg-brand-accent/15 z-10"
               style={{ 
                 left: `${maxwellRange.low * 100}%`, 
                 right: `${100 - (maxwellRange.high * 100)}%` 
               }}
             />
             <div 
-              className="absolute -top-0.5 -bottom-0.5 w-[2px] bg-[#FA5D19]/60 z-10" 
+              className="absolute -top-0.5 -bottom-0.5 w-[2px] bg-brand-accent/60 z-10" 
               style={{ left: `${maxwellRange.mid * 100}%` }}
             />
           </>

@@ -198,11 +198,11 @@ export default function MarketCard({ market, onClick, index = 0 }: MarketCardPro
       onKeyDown={handleKeyDown}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className="group relative flex flex-col h-[180px] p-5 cursor-pointer overflow-hidden transition-all duration-200 focus:outline-none bg-surface hover:bg-[#1F1F1F] hover:z-10 focus-visible:z-10 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#FA5D19]"
+      className="group relative flex flex-col h-[180px] p-5 cursor-pointer overflow-hidden transition-all duration-200 focus:outline-none bg-surface hover:bg-[#1F1F1F] hover:z-10 focus-visible:z-10 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-brand-accent"
     >
       <div 
         className="absolute left-0 top-0 bottom-0 w-[2px] transition-all duration-200 scale-y-0 group-hover:scale-y-100"
-        style={{ backgroundColor: '#FA5D19' }}
+        style={{ backgroundColor: 'var(--brand-accent)' }}
       />
       
       <div className="flex flex-col h-full justify-between z-10">

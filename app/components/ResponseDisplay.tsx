@@ -89,7 +89,7 @@ const CitationBadge = ({ href, number, source }: { href?: string, number: string
             inline-flex items-center justify-center min-w-[14px] h-[14px] 
             rounded-full border text-[9px] font-mono no-underline transition-all duration-200
             ${isHovered
-            ? 'bg-brand-accent text-white border-brand-accent scale-110 shadow-[0_0_10px_rgba(111,59,245,0.4)]'
+            ? 'bg-brand-accent text-white border-brand-accent scale-110'
             : 'bg-white/5 text-white/30 border-white/5 hover:bg-white/10 hover:text-white/70'
           }
         `}
@@ -200,7 +200,7 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
               transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut" }}
             />
             <motion.div
-              className="relative w-2 h-2 rounded-full bg-brand-accent shadow-[0_0_12px_rgba(111,59,245,0.8)]"
+              className="relative w-2 h-2 rounded-full bg-brand-accent"
               animate={{ scale: [1, 1.1, 1] }}
               transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
             />
@@ -452,7 +452,7 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
         >
           <div className="relative flex items-center justify-center w-3 h-3">
             <span className="absolute inset-0 rounded-full bg-brand-accent/30 animate-ping" />
-            <span className="relative w-1.5 h-1.5 rounded-full bg-brand-accent shadow-[0_0_8px_rgba(111,59,245,0.8)]" />
+            <span className="relative w-1.5 h-1.5 rounded-full bg-brand-accent" />
           </div>
           <span className="text-[10px] font-medium text-white/40 uppercase tracking-widest animate-pulse">
             {message.maxwellState.phase === 'verification' ? 'Verifying Claims...' : 'Finalizing Verdict...'}
@@ -512,7 +512,7 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
                       />
                       {/* Progress Ring */}
                       <path
-                        className={`${message.maxwellState.verification.overallConfidence >= 80 ? 'text-[#FA5D19]' :
+                        className={`${message.maxwellState.verification.overallConfidence >= 80 ? 'text-brand-accent' :
                           message.maxwellState.verification.overallConfidence >= 50 ? 'text-white/50' :
                             'text-white/30'
                           }`}
@@ -527,7 +527,7 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
 
                     {/* Inner Icon/Text */}
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className={`w-1.5 h-1.5 rounded-full ${message.maxwellState.verification.overallConfidence >= 80 ? 'bg-[#FA5D19]' :
+                      <div className={`w-1.5 h-1.5 rounded-full ${message.maxwellState.verification.overallConfidence >= 80 ? 'bg-brand-accent' :
                         message.maxwellState.verification.overallConfidence >= 50 ? 'bg-white/40' :
                           'bg-white/20'
                         }`} />

@@ -67,8 +67,9 @@ export function AsciiDecoration({ className, style }: { className?: string; styl
   return (
     <div 
       ref={containerRef}
-      className={`text-[#525252] font-mono select-none absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden opacity-30 ${className}`}
+      className={`font-mono select-none absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden opacity-30 ${className}`}
       style={{ 
+        color: '#525252',
         whiteSpace: 'pre', 
         fontSize: '8px', 
         lineHeight: '8px',

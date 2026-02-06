@@ -14,25 +14,26 @@
   --text-secondary: #A3A3A3;
   --text-tertiary: #666666;
 
-  --brand-accent: #FA5D19;
-  
+  --brand-accent: #06B6D4;
+  --brand-accent-hover: #0891B2;
+
+  --signal-buy: #22C55E;
+  --signal-sell: #EF4444;
+  --signal-hold: #6B7280;
+
   /* Legacy Overrides */
   --bg-primary: var(--bg-app);
   --bg-elevated: var(--bg-surface);
   --border-subtle: var(--border-base);
   --border-default: var(--border-base);
-
-  /* Status */
-  --verified: #4ade80;
-  /* Teal-ish Green */
-  --flagged: #fbbf24;
-  /* Warm Yellow */
-  --failed: #f87171;
-  /* Soft Red */
 }
 
 @theme inline {
   --color-brand-accent: var(--brand-accent);
+  --color-brand-accent-hover: var(--brand-accent-hover);
+  --color-signal-buy: var(--signal-buy);
+  --color-signal-sell: var(--signal-sell);
+  --color-signal-hold: var(--signal-hold);
   --color-bg-primary: var(--bg-primary);
   --color-bg-surface: var(--bg-surface);
   --color-bg-elevated: var(--bg-elevated);
@@ -93,13 +94,12 @@ body {
 
 /* Selection */
 ::selection {
-  background: rgba(250, 93, 25, 0.3);
+  background: color-mix(in srgb, var(--brand-accent) 30%, transparent);
   color: white;
 }
 
-/* Focus */
 *:focus-visible {
-  outline: 2px solid rgba(250, 93, 25, 0.5);
+  outline: 2px solid color-mix(in srgb, var(--brand-accent) 50%, transparent);
   outline-offset: 2px;
 }
 

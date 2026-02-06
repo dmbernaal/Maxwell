@@ -28,7 +28,7 @@ export function RawOutputSection({ data }: RawOutputSectionProps) {
       
       <div className="h-12 flex items-center justify-between px-6 bg-transparent select-none border-b border-[#2A2A2A]">
         <div className="flex items-center gap-2">
-          <ChevronDown className="w-3.5 h-3.5 text-[#FA5D19]" />
+          <ChevronDown className="w-3.5 h-3.5 text-brand-accent" />
           <span className="font-semibold text-[16px] text-white tracking-tight uppercase">Raw Analysis</span>
         </div>
         
@@ -39,7 +39,7 @@ export function RawOutputSection({ data }: RawOutputSectionProps) {
               className={cn(
                 "text-[12px] font-medium transition-colors border-b-2 pb-0.5",
                 activeTab === 'synthesis' 
-                  ? "text-white border-[#FA5D19]" 
+                  ? "text-white border-brand-accent" 
                   : "text-white/30 border-transparent hover:text-white/60"
               )}
             >
@@ -50,7 +50,7 @@ export function RawOutputSection({ data }: RawOutputSectionProps) {
               className={cn(
                 "text-[12px] font-medium transition-colors border-b-2 pb-0.5",
                 activeTab === 'adjudication' 
-                  ? "text-white border-[#FA5D19]" 
+                  ? "text-white border-brand-accent" 
                   : "text-white/30 border-transparent hover:text-white/60"
               )}
             >
@@ -64,7 +64,7 @@ export function RawOutputSection({ data }: RawOutputSectionProps) {
             onClick={handleCopy}
             className="flex items-center gap-1.5 text-[12px] text-white/30 hover:text-white transition-colors"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-[#FA5D19]" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? <Check className="w-3.5 h-3.5 text-brand-accent" /> : <Copy className="w-3.5 h-3.5" />}
             {copied ? "Copied" : "Copy"}
           </button>
         </div>

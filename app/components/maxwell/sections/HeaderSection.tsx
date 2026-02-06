@@ -41,8 +41,8 @@ export function HeaderSection({ data }: HeaderSectionProps) {
           <span>Status:</span>
           <span className="flex items-center gap-1.5 text-white/60">
             <span className="relative flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FA5D19] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#FA5D19]"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-accent opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand-accent"></span>
             </span>
             SYNCED
           </span>

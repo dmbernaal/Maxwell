@@ -46,7 +46,7 @@ function ThinkingTrace({
 
   return (
     <div className="flex items-center gap-2.5 px-1 py-1">
-      <div className="size-1.5 rounded-full bg-[#FA5D19] animate-pulse" />
+      <div className="size-1.5 rounded-full bg-brand-accent animate-pulse" />
       <span className="text-[12px] text-white/40">
         {label}...
       </span>
@@ -192,7 +192,7 @@ function AgentMessage({ message }: { message: MarketChatMessage }) {
             code: ({ className, children }) => {
               const isInline = !className;
               return isInline ? (
-                <code className="bg-white/5 border border-white/10 px-1 py-0.5 text-[12px] font-mono text-[#FA5D19]">
+                <code className="bg-white/5 border border-white/10 px-1 py-0.5 text-[12px] font-mono text-brand-accent">
                   {children}
                 </code>
               ) : (
@@ -213,7 +213,7 @@ function AgentMessage({ message }: { message: MarketChatMessage }) {
                     target="_blank"
                     rel="noopener noreferrer"
                     title={href}
-                    className="inline-flex items-center justify-center size-[18px] text-[10px] font-mono font-medium text-[#FA5D19] bg-[#FA5D19]/10 rounded-sm no-underline hover:bg-[#FA5D19]/20 transition-colors align-super -mt-1 mx-[1px] cursor-pointer"
+                    className="inline-flex items-center justify-center size-[18px] text-[10px] font-mono font-medium text-brand-accent bg-brand-accent/10 rounded-sm no-underline hover:bg-brand-accent/20 transition-colors align-super -mt-1 mx-[1px] cursor-pointer"
                   >
                     {childText.trim()}
                   </a>
@@ -225,7 +225,7 @@ function AgentMessage({ message }: { message: MarketChatMessage }) {
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#FA5D19] hover:text-[#FA5D19]/80 underline underline-offset-2 decoration-[#FA5D19]/30 transition-colors"
+                  className="text-brand-accent hover:text-brand-accent/80 underline underline-offset-2 decoration-brand-accent/30 transition-colors"
                 >
                   {children}
                 </a>
@@ -306,7 +306,7 @@ function EmptyState({ onSend }: { onSend: (content: string) => void }) {
             <button
               key={hint}
               onClick={() => onSend(hint)}
-              className="text-[10px] font-mono text-white/20 px-2 py-1 border border-[#2A2A2A] rounded-sm hover:border-[#FA5D19]/50 hover:text-[#FA5D19] transition-colors cursor-pointer"
+              className="text-[10px] font-mono text-white/20 px-2 py-1 border border-[#2A2A2A] rounded-sm hover:border-brand-accent/50 hover:text-brand-accent transition-colors cursor-pointer"
             >
               {hint}
             </button>
@@ -364,7 +364,7 @@ function ChatInput({
         aria-label="Send message"
         className={`size-7 rounded-lg flex items-center justify-center shrink-0 transition-all focus-visible:outline-none ${
           value.trim() && !isLoading
-            ? 'bg-[#FA5D19] text-black hover:opacity-90'
+            ? 'bg-brand-accent text-black hover:opacity-90'
             : 'bg-[#2A2A2A] text-white/30 cursor-not-allowed'
         }`}
       >

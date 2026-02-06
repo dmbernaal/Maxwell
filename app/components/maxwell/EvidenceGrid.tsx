@@ -117,7 +117,7 @@ export function EvidenceGrid({ intelligence, className }: EvidenceGridProps) {
                             {isActive && (
                                 <motion.div
                                     layoutId="activeTab"
-                                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#FA5D19]"
+                                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-accent"
                                 />
                             )}
                         </button>
@@ -160,7 +160,7 @@ function EvidenceItem({ factor }: { factor: UnifiedFactor }) {
                 className="group p-4 hover:bg-[#1A1A1A] transition-colors block border-b border-[#2A2A2A] last:border-0"
             >
                 <div className="flex items-baseline justify-between gap-4 mb-1">
-                    <h4 className="text-xs font-medium text-white leading-snug group-hover:text-[#FA5D19] transition-colors truncate">
+                    <h4 className="text-xs font-medium text-white leading-snug group-hover:text-brand-accent transition-colors truncate">
                         {factor.headline}
                     </h4>
                     

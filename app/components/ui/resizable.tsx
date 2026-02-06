@@ -92,14 +92,14 @@ export function ResizablePanels({
 
       <div
         className={cn(
-          "flex-shrink-0 w-[1px] flex items-center justify-center cursor-col-resize hover:bg-[#FA5D19] active:bg-[#FA5D19] transition-all duration-150 group relative z-10",
-          isDragging === 0 && "bg-[#FA5D19] w-[1px]"
+          "flex-shrink-0 w-[1px] flex items-center justify-center cursor-col-resize hover:bg-brand-accent active:bg-brand-accent transition-all duration-150 group relative z-10",
+          isDragging === 0 && "bg-brand-accent w-[1px]"
         )}
         onMouseDown={handleMouseDown(0)}
       >
         <div className={cn(
           "w-[1px] h-full transition-all duration-150",
-          isDragging === 0 ? "bg-[#FA5D19]" : "bg-[#2A2A2A] group-hover:bg-[#FA5D19]"
+          isDragging === 0 ? "bg-brand-accent" : "bg-[#2A2A2A] group-hover:bg-brand-accent"
         )} />
       </div>
 
@@ -112,14 +112,14 @@ export function ResizablePanels({
 
       <div
         className={cn(
-          "flex-shrink-0 w-[1px] flex items-center justify-center cursor-col-resize hover:bg-[#FA5D19] active:bg-[#FA5D19] transition-all duration-150 group relative z-10",
-          isDragging === 1 && "bg-[#FA5D19] w-[1px]"
+          "flex-shrink-0 w-[1px] flex items-center justify-center cursor-col-resize hover:bg-brand-accent active:bg-brand-accent transition-all duration-150 group relative z-10",
+          isDragging === 1 && "bg-brand-accent w-[1px]"
         )}
         onMouseDown={handleMouseDown(1)}
       >
         <div className={cn(
           "w-[1px] h-full transition-all duration-150",
-          isDragging === 1 ? "bg-[#FA5D19]" : "bg-[#2A2A2A] group-hover:bg-[#FA5D19]"
+          isDragging === 1 ? "bg-brand-accent" : "bg-[#2A2A2A] group-hover:bg-brand-accent"
         )} />
       </div>
 

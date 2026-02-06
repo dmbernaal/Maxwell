@@ -82,10 +82,10 @@ export function SmallGhostLogo({ isActive = false }: SmallGhostLogoProps) {
           </clipPath>
 
           <linearGradient id="fallbackGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#FA5D19" />
-            <stop offset="33%" stopColor="#F97316" />
-            <stop offset="66%" stopColor="#EA580C" />
-            <stop offset="100%" stopColor="#C2410C" />
+            <stop offset="0%" stopColor="var(--brand-accent)" />
+            <stop offset="33%" stopColor="var(--brand-accent)" />
+            <stop offset="66%" stopColor="var(--brand-accent-hover)" />
+            <stop offset="100%" stopColor="var(--brand-accent-hover)" />
           </linearGradient>
         </defs>
 

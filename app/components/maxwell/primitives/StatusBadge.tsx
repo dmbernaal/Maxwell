@@ -11,7 +11,7 @@ interface StatusBadgeProps {
 
 const DOT_COLORS: Record<StatusColor, string> = {
   default: 'bg-white/40',
-  accent: 'bg-[#FA5D19]',
+  accent: 'bg-brand-accent',
 };
 
 const TEXT_COLORS: Record<StatusColor, string> = {

@@ -42,7 +42,7 @@ export function VerificationChecklist({
         </div>
       )}
       <div className="flex items-center gap-2">
-        <span className="text-[#FA5D19]">└─ ●</span>
+        <span className="text-brand-accent">└─ ●</span>
         <span className="tabular-nums">{Math.round(score * 100)}% confidence</span>
       </div>
     </div>

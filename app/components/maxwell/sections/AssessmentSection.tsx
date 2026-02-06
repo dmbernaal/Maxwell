@@ -7,6 +7,13 @@ interface AssessmentSectionProps {
   data: MaxwellIntelligence;
 }
 
+const SIGNAL_MAP = {
+  UNDERPRICED: { text: 'BUY SIGNAL', cssVar: 'var(--signal-buy)', dotClass: 'bg-signal-buy', rgb: '34, 197, 94' },
+  OVERPRICED: { text: 'SELL SIGNAL', cssVar: 'var(--signal-sell)', dotClass: 'bg-signal-sell', rgb: '239, 68, 68' },
+  FAIR: { text: 'HOLD', cssVar: 'var(--signal-hold)', dotClass: 'bg-signal-hold', rgb: '107, 114, 128' },
+  UNCERTAIN: { text: 'HOLD', cssVar: 'var(--signal-hold)', dotClass: 'bg-signal-hold', rgb: '107, 114, 128' },
+} as const;
+
 export function AssessmentSection({ data }: AssessmentSectionProps) {
   const { assessment } = data;
   
@@ -16,18 +23,19 @@ export function AssessmentSection({ data }: AssessmentSectionProps) {
   const maxwellHigh = Math.round(assessment.maxwellRange.high * 100);
   const edge = maxwellMid - marketPrice;
   
-  const getAction = () => {
-    if (assessment.verdict === 'UNDERPRICED') return { text: 'BUY SIGNAL', color: '#FA5D19' };
-    if (assessment.verdict === 'OVERPRICED') return { text: 'SELL SIGNAL', color: '#FA5D19' };
-    return { text: 'HOLD', color: 'rgba(255,255,255,0.4)' };
-  };
-  
-  const action = getAction();
+  const signal = SIGNAL_MAP[assessment.verdict] ?? SIGNAL_MAP.UNCERTAIN;
   const isActive = assessment.verdict === 'UNDERPRICED' || assessment.verdict === 'OVERPRICED';
   
   return (
     <div className="relative bg-[#1A1A1A] overflow-hidden">
-      <AsciiDecoration className="opacity-[0.10]" />
+      <div
+        className="absolute inset-0 z-0"
+        style={{
+          background: `linear-gradient(to right, rgba(${signal.rgb}, 0.10) 0%, rgba(${signal.rgb}, 0.06) 50%, rgba(${signal.rgb}, 0.02) 85%, transparent 100%)`,
+        }}
+      />
+      
+      <AsciiDecoration className="opacity-[0.10]" style={{ maskImage: 'radial-gradient(ellipse at 70% 50%, black 30%, transparent 70%)' }} />
       
       <CornerGridDecoration className="absolute -top-[10px] -right-[11px] z-30" />
       <CornerGridDecoration className="absolute -top-[10px] -left-[11px] z-30" />
@@ -40,15 +48,15 @@ export function AssessmentSection({ data }: AssessmentSectionProps) {
             <div className="flex items-center gap-2 mb-4">
               {isActive && (
                 <span className="relative flex h-1.5 w-1.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FA5D19] opacity-75" />
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#FA5D19]" />
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${signal.dotClass} opacity-75`} />
+                  <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${signal.dotClass}`} />
                 </span>
               )}
               <span 
                 className="text-[10px] font-medium uppercase tracking-[0.15em]"
-                style={{ color: action.color }}
+                style={{ color: signal.cssVar }}
               >
-                {action.text}
+                {signal.text}
               </span>
               <span className="text-white/15">·</span>
               <span className="text-[10px] uppercase tracking-wider text-white/30">
@@ -59,11 +67,11 @@ export function AssessmentSection({ data }: AssessmentSectionProps) {
             <div className="flex items-baseline gap-1">
               <span 
                 className="text-[72px] font-mono font-bold tracking-tighter leading-none"
-                style={{ color: isActive ? action.color : 'white' }}
+                style={{ color: signal.cssVar }}
               >
                 {edge > 0 ? '+' : ''}{edge}
               </span>
-              <span className="text-[24px] font-mono font-bold text-white/30">%</span>
+              <span className="text-[72px] font-mono font-bold tracking-tighter leading-none" style={{ color: signal.cssVar }}>%</span>
             </div>
             
             <div className="mt-1 text-[11px] uppercase tracking-wider text-white/20 font-mono">
@@ -89,14 +97,14 @@ export function AssessmentSection({ data }: AssessmentSectionProps) {
         </div>
         
         <div className="mt-8">
-          <div className="h-[3px] bg-[#1A1A1A] flex">
+          <div className="h-[5px] flex" style={{ backgroundColor: `rgba(${signal.rgb}, 0.10)` }}>
             <div 
-              className="h-full bg-white/20"
-              style={{ width: `${marketPrice}%` }}
+              className="h-full"
+              style={{ width: `${marketPrice}%`, backgroundColor: `rgba(${signal.rgb}, 0.25)` }}
             />
             <div 
-              className="h-full bg-[#FA5D19]"
-              style={{ width: `${Math.abs(edge)}%` }}
+              className="h-full"
+              style={{ width: `${Math.abs(edge)}%`, backgroundColor: signal.cssVar }}
             />
           </div>
           
@@ -106,7 +114,7 @@ export function AssessmentSection({ data }: AssessmentSectionProps) {
           </div>
         </div>
         
-        <div className="mt-6 pt-5 border-t border-[#1A1A1A]">
+        <div className="mt-6">
           <p className="text-[14px] text-white/60 leading-relaxed max-w-[85%]">
             {assessment.headline}
           </p>

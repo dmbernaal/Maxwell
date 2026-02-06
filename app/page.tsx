@@ -111,8 +111,8 @@ export default function Home() {
                   key={p}
                   onClick={() => setPlatform(p)}
                   className={`px-3 py-1.5 rounded-md text-[10px] font-medium uppercase tracking-wider transition-all ${
-                    platform === p 
-                      ? 'bg-[#FA5D19] text-white' 
+                    platform === p
+                      ? 'bg-brand-accent text-white'
                       : 'text-white/30 hover:text-white/60'
                   }`}
                 >
@@ -134,11 +134,11 @@ export default function Home() {
                   <button
                     key={item.id}
                     onClick={() => setSort(item.id as Sort)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-medium uppercase tracking-wider transition-all ${
-                      sort === item.id 
-                        ? 'bg-[#FA5D19] text-white' 
-                        : 'text-white/30 hover:text-white/60'
-                    }`}
+className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-medium uppercase tracking-wider transition-all ${
+                       sort === item.id
+                         ? 'bg-brand-accent text-white'
+                         : 'text-white/30 hover:text-white/60'
+                     }`}
                   >
                     <Icon className="w-3 h-3" />
                     <span>{item.label}</span>

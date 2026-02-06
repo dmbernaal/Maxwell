@@ -20,7 +20,7 @@ export function FactorStrengthBar({ strength, className }: FactorStrengthBarProp
 
   const getStrengthColor = () => {
     switch (strength) {
-      case 'HIGH': return 'text-[#FA5D19]';
+      case 'HIGH': return 'text-brand-accent';
       case 'MEDIUM': return 'text-white/60';
       case 'LOW': return 'text-white/40';
       default: return 'text-white/20';
@@ -32,7 +32,7 @@ export function FactorStrengthBar({ strength, className }: FactorStrengthBarProp
       <span className={cn("mr-2 font-medium w-[45px]", getStrengthColor())}>{strength}</span>
       <div className="flex text-[10px]">
         {Array.from({ length: total }).map((_, i) => (
-          <span key={i} className={i < filled ? "text-[#FA5D19]" : "text-white/10"}>
+          <span key={i} className={i < filled ? "text-brand-accent" : "text-white/10"}>
             █
           </span>
         ))}

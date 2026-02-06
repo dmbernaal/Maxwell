@@ -46,7 +46,7 @@ export function SkeletonBlock({
           <div
             key={i}
             className={`
-              w-4 rounded-sm bg-[#FA5D19]/20
+              w-4 rounded-sm bg-brand-accent/20
               ${shouldReduceMotion ? '' : 'skeleton-terminal'}
             `}
             style={{

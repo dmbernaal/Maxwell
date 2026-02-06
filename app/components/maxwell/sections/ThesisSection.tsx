@@ -30,14 +30,14 @@ export function ThesisSection({ data }: ThesisSectionProps) {
         <div className="space-y-8 text-[14px]">
 
           <div className="space-y-4">
-            <h3 className="text-[12px] text-[#FA5D19] uppercase tracking-wider font-semibold border-l-2 border-[#FA5D19] pl-3">
+            <h3 className="text-[12px] text-brand-accent uppercase tracking-wider font-semibold border-l-2 border-brand-accent pl-3">
               Supporting Factors
             </h3>
             {thesis.factorsFor && thesis.factorsFor.length > 0 ? (
               <ul className="space-y-4">
                 {thesis.factorsFor.map((factor, i) => (
                   <li key={i} className="flex gap-4">
-                    <span className="text-[#FA5D19] font-mono text-[10px] pt-1 font-semibold">+{i + 1}</span>
+                    <span className="text-brand-accent font-mono text-[10px] pt-1 font-semibold">+{i + 1}</span>
                     <div className="space-y-2 flex-1">
                       <p
                         className="text-white/90 cursor-help leading-relaxed"

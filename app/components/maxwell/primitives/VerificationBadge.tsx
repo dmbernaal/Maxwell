@@ -23,7 +23,7 @@ export function VerificationIndicator({
     <div className={cn('flex items-center gap-3', className)}>
       <div className="flex items-center gap-1.5">
         {isVerified ? (
-          <Check className="w-3.5 h-3.5 text-[#FA5D19]" />
+          <Check className="w-3.5 h-3.5 text-brand-accent" />
         ) : (
           <AlertTriangle className="w-3.5 h-3.5 text-white/40" />
         )}

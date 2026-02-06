@@ -117,7 +117,7 @@ export function PhaseProgress({ phase, phaseDurations, phaseStartTimes }: PhaseP
                     )}
                     {durations.verification > 0 && (
                         <div
-                            className="h-full bg-[#FA5D19]/60"
+                            className="h-full bg-brand-accent/60"
                             style={{ width: `${(durations.verification / totalDuration) * 100}%` }}
                         />
                     )}
@@ -130,8 +130,8 @@ export function PhaseProgress({ phase, phaseDurations, phaseStartTimes }: PhaseP
                         const isActive = key === 'verification';
                         return (
                             <div key={key} className="flex items-center gap-1.5 mr-2 last:mr-0">
-                                <span className={`w-1 h-1 rounded-full ${isActive ? 'bg-[#FA5D19]/60' : 'bg-white/30'}`} />
-                                <span className={`text-[9px] uppercase tracking-wider ${isActive ? 'text-[#FA5D19]/60' : 'text-white/40'}`}>
+                                <span className={`w-1 h-1 rounded-full ${isActive ? 'bg-brand-accent/60' : 'bg-white/30'}`} />
+                                <span className={`text-[9px] uppercase tracking-wider ${isActive ? 'text-brand-accent/60' : 'text-white/40'}`}>
                                     {(duration / 1000).toFixed(1)}s
                                 </span>
                             </div>

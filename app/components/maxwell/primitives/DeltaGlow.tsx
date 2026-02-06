@@ -18,14 +18,14 @@ export function DeltaGlow({ children, delta, className }: DeltaGlowProps) {
     if (!delta) return '';
 
     if (shouldReduceMotion) {
-      return 'border-[#FA5D19]/30';
+      return 'border-brand-accent/30';
     }
 
     if (delta.significance === 'HIGH') {
-      return 'border-[#FA5D19]/40';
+      return 'border-brand-accent/40';
     }
 
-    return 'border-[#FA5D19]/20';
+    return 'border-brand-accent/20';
   };
 
   return (

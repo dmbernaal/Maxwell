@@ -74,7 +74,7 @@ export function OutcomesAnalysisTable({ outcomes }: OutcomesAnalysisTableProps) 
                 {isExpanded ? (
                   <motion.div
                     layoutId="activeRow"
-                    className="absolute left-0 top-0 bottom-0 w-[2px] bg-[#FA5D19] z-10"
+                    className="absolute left-0 top-0 bottom-0 w-[2px] bg-brand-accent z-10"
                   />
                 ) : isActionable && (
                   <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[#3A3A3A] z-10" />

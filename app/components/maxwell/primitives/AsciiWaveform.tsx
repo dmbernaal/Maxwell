@@ -28,7 +28,7 @@ export function AsciiWaveform() {
   }, []);
 
   return (
-    <div className="font-mono text-[10px] tracking-widest text-[#FA5D19] select-none opacity-80">
+    <div className="font-mono text-[10px] tracking-widest text-brand-accent select-none opacity-80">
       [{text}]
     </div>
   );

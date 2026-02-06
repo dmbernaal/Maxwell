@@ -98,7 +98,7 @@ export function IntelligenceHero({
                   {onAnalyze && (
                     <button
                       onClick={onAnalyze}
-                      className="px-5 py-2.5 bg-[#FA5D19] text-white font-semibold text-[12px] rounded-[4px] hover:bg-[#EA580C] transition-colors flex items-center gap-2"
+                      className="px-5 py-2.5 bg-brand-accent text-white font-semibold text-[12px] rounded-[4px] hover:bg-brand-accent-hover transition-colors flex items-center gap-2"
                     >
                       <Zap className="w-3.5 h-3.5 fill-white" />
                       Run Analysis

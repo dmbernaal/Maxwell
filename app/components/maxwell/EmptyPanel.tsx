@@ -67,7 +67,7 @@ export function EmptyPanel({
             {onGenerate && (
               <button
                 onClick={onGenerate}
-                className="group relative z-10 inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#FA5D19] hover:bg-[#EA580C] text-white shadow-lg shadow-orange-900/20 transition-all duration-200"
+                className="group relative z-10 inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-brand-accent hover:bg-brand-accent-hover text-white transition-all duration-200"
               >
                 <span className="text-[12px] font-semibold tracking-wide">Generate Analysis</span>
                 <span className="text-[10px] font-mono text-white/60 bg-black/10 px-1.5 py-0.5 rounded ml-1">

@@ -1,6 +1,6 @@
 export const GHOST_LOGO_COLORS = [
-  "#FA5D19",
-  "#F97316",
-  "#EA580C",
-  "#C2410C",
+  "#06B6D4",
+  "#22D3EE",
+  "#0891B2",
+  "#0E7490",
 ];
