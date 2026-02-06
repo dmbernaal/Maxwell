@@ -290,12 +290,12 @@ export async function fetchPolymarketMarketById(id: string): Promise<UnifiedMark
 }
 
 const MULTI_OUTCOME_COLORS = [
-  '#4a9eff',
-  '#f59e0b',
-  '#10b981',
-  '#8b5cf6',
-  '#ef4444',
-  '#06b6d4',
+  'rgba(255,255,255,0.9)',
+  'rgba(255,255,255,0.45)',
+  'rgba(255,255,255,0.25)',
+  'rgba(255,255,255,0.65)',
+  'rgba(255,255,255,0.35)',
+  'rgba(255,255,255,0.15)',
 ];
 
 export async function fetchPolymarketMultiOutcomePriceHistory(
