@@ -1,8 +1,8 @@
 import React from 'react';
 
 export const PLATFORM_COLORS = {
-  polymarket: 'rgba(255,255,255,0.7)',
-  kalshi: 'rgba(255,255,255,0.7)',
+  polymarket: '#2E5CFF',
+  kalshi: '#28CC95',
 } as const;
 
 /** Source: https://polymarket.com/brand */

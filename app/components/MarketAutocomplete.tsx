@@ -74,8 +74,7 @@ export default function MarketAutocomplete({
                   >
                     <div className="shrink-0">
                       <div 
-                        className="w-7 h-7 rounded-md flex items-center justify-center"
-                        style={{ backgroundColor: isPoly ? '#0F1A3D' : '#0A1F1A' }}
+                        className="w-7 h-7 rounded-md flex items-center justify-center bg-white/[0.05]"
                       >
                         {market.platform === 'polymarket' ? (
                           <div style={{ color: brandColor }}>
