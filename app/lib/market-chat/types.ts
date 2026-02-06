@@ -63,7 +63,7 @@ export function emptyCost(): CostBreakdown {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type ServerEvent =
-  | { type: 'status'; status: string; tool?: string; estimatedTime?: string }
+  | { type: 'status'; status: string; tool?: string; phase?: number; totalPhases?: number; estimatedTime?: string }
   | { type: 'chunk'; content: string }
   | { type: 'sources'; sources: ScoredSource[] }
   | { type: 'facts'; facts: Array<{ content: string; source: string; confidence: string; timestamp: number }> }

@@ -362,7 +362,8 @@ function deduplicateSources(sources: ScoredSource[]): ScoredSource[] {
       if (seen.has(s.url)) return false;
       seen.add(s.url);
       return true;
-    });
+    })
+    .map((s, i) => ({ ...s, id: i + 1 }));
 }
 
 async function* fallbackToModerate(
@@ -418,10 +419,13 @@ async function* fallbackToModerate(
       };
       yield { type: 'status', status: statusMap[event.toolName] || 'thinking', tool: event.toolName };
     } else if (event.type === 'tool-result') {
-      const output = (event as any).result;
+      const output = (event as any).output;
       if (output && 'results' in output && Array.isArray(output.results)) {
         if (output.results[0]?.qualityScore !== undefined) {
-          collectedSources.push(...output.results);
+          const offset = collectedSources.length;
+          const renumbered = output.results.map((s: ScoredSource, i: number) => ({ ...s, id: offset + i + 1 }));
+          collectedSources.push(...renumbered);
+          yield { type: 'sources', sources: [...collectedSources] };
         }
         if ('searchCost' in output) totalCost.search += output.searchCost;
         if ('extractCost' in output) totalCost.extract += output.extractCost;
@@ -435,10 +439,6 @@ async function* fallbackToModerate(
     FLASH_MODEL
   );
   totalCost.total = totalCost.llm + totalCost.search + totalCost.extract + totalCost.classification;
-
-  if (collectedSources.length > 0) {
-    yield { type: 'sources', sources: collectedSources };
-  }
 
   yield {
     type: 'complete',

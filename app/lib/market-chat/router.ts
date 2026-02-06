@@ -103,7 +103,7 @@ async function* handleSimple(
   totalCost: CostBreakdown,
   startTime: number,
 ): AsyncGenerator<ServerEvent> {
-  yield { type: 'status', status: 'thinking' };
+  yield { type: 'status', status: 'thinking', phase: 1, totalPhases: 1 };
 
   let fullText = '';
   const result = streamText({
@@ -144,10 +144,10 @@ async function* handleModerate(
   totalCost: CostBreakdown,
   startTime: number,
 ): AsyncGenerator<ServerEvent> {
-  yield { type: 'status', status: 'thinking' };
-
   let fullText = '';
   const collectedSources: ScoredSource[] = [];
+  const toolsUsed: string[] = [];
+  let currentPhase = 1;
 
   const result = streamText({
     model: openrouter(MAIN_MODEL),
@@ -171,13 +171,28 @@ async function* handleModerate(
       const statusMap: Record<string, string> = {
         search_news: 'searching',
         calculate: 'calculating',
-        get_market_data: 'searching',
+        get_market_data: 'fetching data',
       };
-      yield { type: 'status', status: statusMap[event.toolName] || 'thinking', tool: event.toolName };
+      
+      if (!toolsUsed.includes(event.toolName)) {
+        toolsUsed.push(event.toolName);
+        currentPhase++;
+      }
+      
+      yield { 
+        type: 'status', 
+        status: statusMap[event.toolName] || 'thinking', 
+        tool: event.toolName,
+        phase: currentPhase,
+        totalPhases: Math.max(2, toolsUsed.length + 1)
+      };
     } else if (event.type === 'tool-result') {
-      const output = (event as any).result as SearchNewsResult | undefined;
+      const output = (event as any).output as SearchNewsResult | undefined;
       if (output && 'results' in output && Array.isArray(output.results)) {
-        collectedSources.push(...output.results);
+        const offset = collectedSources.length;
+        const renumbered = output.results.map((s, i) => ({ ...s, id: offset + i + 1 }));
+        collectedSources.push(...renumbered);
+        yield { type: 'sources', sources: [...collectedSources] };
         if ('searchCost' in output && typeof output.searchCost === 'number') {
           totalCost.search += output.searchCost;
         }
@@ -191,10 +206,6 @@ async function* handleModerate(
     MAIN_MODEL
   );
   totalCost.total = totalCost.llm + totalCost.search + totalCost.extract + totalCost.classification;
-
-  if (collectedSources.length > 0) {
-    yield { type: 'sources', sources: collectedSources };
-  }
 
   yield* emitFacts(fullText);
 
@@ -247,10 +258,13 @@ async function* handleComplex(
       };
       yield { type: 'status', status: statusMap[event.toolName] || 'thinking', tool: event.toolName };
     } else if (event.type === 'tool-result') {
-      const output = (event as any).result;
+      const output = (event as any).output;
       if (output && 'results' in output && Array.isArray(output.results)) {
         if (output.results[0]?.qualityScore !== undefined) {
-          collectedSources.push(...output.results);
+          const offset = collectedSources.length;
+          const renumbered = output.results.map((s: ScoredSource, i: number) => ({ ...s, id: offset + i + 1 }));
+          collectedSources.push(...renumbered);
+          yield { type: 'sources', sources: [...collectedSources] };
         }
         if ('searchCost' in output && typeof output.searchCost === 'number') {
           totalCost.search += output.searchCost;
@@ -268,10 +282,6 @@ async function* handleComplex(
     MAIN_MODEL
   );
   totalCost.total = totalCost.llm + totalCost.search + totalCost.extract + totalCost.classification;
-
-  if (collectedSources.length > 0) {
-    yield { type: 'sources', sources: collectedSources };
-  }
 
   yield* emitFacts(fullText);
 

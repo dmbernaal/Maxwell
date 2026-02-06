@@ -9,7 +9,7 @@ import type { MarketChatMessage, ScoredSource, ThinkingStep } from '../../lib/ma
 import { AsciiDecoration } from './primitives/AsciiDecoration';
 import { CornerGridDecoration } from './primitives/CornerGridDecoration';
 import { useMarketChat } from '../../hooks/use-market-chat';
-import { Search, Calculator, Globe, Zap, ExternalLink, ChevronDown, Trash2, ArrowUp } from 'lucide-react';
+import { Search, Calculator, Globe, Zap, ExternalLink, Trash2, ArrowUp } from 'lucide-react';
 
 interface MarketChatProps {
   marketId: string;
@@ -24,69 +24,32 @@ const TOOL_META: Record<string, { icon: typeof Search; label: string }> = {
   deep_extract: { icon: Zap, label: 'DEEP EXTRACT' },
 };
 
-const STATUS_META: Record<string, { label: string; char: string }> = {
-  thinking: { label: 'THINKING', char: '>' },
-  searching: { label: 'SEARCHING', char: '~' },
-  calculating: { label: 'CALCULATING', char: '#' },
-  synthesizing: { label: 'SYNTHESIZING', char: '=' },
-  planning: { label: 'PLANNING', char: '+' },
-  researching: { label: 'DEEP RESEARCH', char: '*' },
-  validating: { label: 'VALIDATING', char: '!' },
+const STATUS_META: Record<string, string> = {
+  thinking: 'Thinking',
+  searching: 'Searching',
+  calculating: 'Calculating',
+  synthesizing: 'Synthesizing',
+  planning: 'Planning',
+  researching: 'Researching',
+  validating: 'Validating',
 };
 
-const TIER_LABELS: Record<string, string> = {
-  fast: 'INSTANT',
-  simple: 'QUICK',
-  moderate: 'STANDARD',
-  complex: 'DEEP',
-  research: 'RESEARCH',
-};
 
-function ThinkingTrace({ steps, currentStatus }: { steps: ThinkingStep[]; currentStatus: string }) {
-  const meta = STATUS_META[currentStatus] || STATUS_META.thinking;
-  const uniqueSteps = steps.reduce<ThinkingStep[]>((acc, step) => {
-    if (acc.length === 0 || acc[acc.length - 1].status !== step.status) {
-      acc.push(step);
-    }
-    return acc;
-  }, []);
+function ThinkingTrace({ 
+  currentStatus, 
+}: { 
+  steps: ThinkingStep[]; 
+  currentStatus: string;
+  phaseInfo: { current: number; total: number };
+}) {
+  const label = STATUS_META[currentStatus] || STATUS_META.thinking;
 
   return (
-    <div className="border border-[#2A2A2A] bg-[#0A0A0A]">
-      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-[#2A2A2A]">
-        <span className="size-1.5 rounded-full bg-[#FA5D19] animate-pulse" />
-        <span className="text-[10px] font-mono font-medium uppercase tracking-wider text-[#FA5D19]">
-          {meta.label}
-        </span>
-      </div>
-      <div className="px-3 py-2 space-y-0.5">
-        {uniqueSteps.map((step) => {
-          const stepMeta = STATUS_META[step.status] || STATUS_META.thinking;
-          const toolInfo = step.tool ? TOOL_META[step.tool] : null;
-          const isActive = step === uniqueSteps[uniqueSteps.length - 1];
-
-          return (
-            <div
-              key={step.id}
-              className={`flex items-center gap-2 text-[10px] font-mono ${isActive ? 'text-white/60' : 'text-white/30'}`}
-            >
-              <span className="text-white/20 select-none w-3 text-right shrink-0">{stepMeta.char}</span>
-              <span className={isActive ? 'text-white/60' : 'text-white/30'}>
-                {stepMeta.label.toLowerCase()}
-              </span>
-              {toolInfo && (
-                <>
-                  <span className="text-white/10">·</span>
-                  <span className="text-white/40">{toolInfo.label.toLowerCase()}</span>
-                </>
-              )}
-              {isActive && (
-                <span className="inline-block w-1.5 h-3 bg-white/30 animate-pulse ml-0.5" />
-              )}
-            </div>
-          );
-        })}
-      </div>
+    <div className="flex items-center gap-2.5 px-1 py-1">
+      <div className="size-1.5 rounded-full bg-[#FA5D19] animate-pulse" />
+      <span className="text-[12px] text-white/40">
+        {label}...
+      </span>
     </div>
   );
 }
@@ -99,64 +62,51 @@ function SourceCard({ source, index }: { source: ScoredSource; index: number }) 
     hostname = source.url;
   }
 
-  const tierColor = {
-    tier1: 'text-[#4ade80]',
-    tier2: 'text-white/60',
-    tier3: 'text-white/40',
-    tier4: 'text-white/30',
-  }[source.qualityTier] || 'text-white/40';
-
   return (
     <a
       href={source.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex items-start gap-2 px-3 py-2 border border-[#2A2A2A] bg-[#0A0A0A] hover:bg-[#141414] hover:border-white/10 transition-colors"
+      className="group flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.04] hover:border-white/[0.08] transition-colors cursor-pointer min-w-0"
     >
-      <span className="text-[10px] font-mono text-white/20 tabular-nums shrink-0 mt-0.5 select-none">
-        {String(index + 1).padStart(2, '0')}
+      <span className="text-[10px] font-mono text-white/20 tabular-nums shrink-0 select-none">
+        {index + 1}
       </span>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5 mb-0.5">
-          <span className={`text-[10px] font-mono uppercase tracking-wider ${tierColor}`}>
-            {hostname}
-          </span>
-          <ExternalLink className="size-2.5 text-white/20 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-        </div>
-        <span className="text-[12px] text-white/70 leading-snug line-clamp-2 group-hover:text-white/90 transition-colors">
-          {source.title || 'Untitled'}
+        <span className="text-[12px] text-white/60 line-clamp-1 group-hover:text-white/80 transition-colors">
+          {source.title || hostname}
+        </span>
+        <span className="text-[10px] text-white/30 block truncate">
+          {hostname}
         </span>
       </div>
+      <ExternalLink className="size-3 text-white/20 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
     </a>
   );
 }
 
 function SourcesBlock({ sources }: { sources: ScoredSource[] }) {
   const [expanded, setExpanded] = useState(false);
-  const visible = expanded ? sources : sources.slice(0, 3);
+  const visible = expanded ? sources : sources.slice(0, 4);
 
   return (
-    <div className="mt-3">
+    <div className="mt-4">
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-[10px] font-mono font-medium uppercase tracking-wider text-white/30 select-none">
-          Sources
-        </span>
-        <span className="text-[10px] font-mono text-white/20 tabular-nums">
-          {sources.length}
+        <span className="text-[10px] font-mono text-white/30 select-none">
+          {sources.length} source{sources.length !== 1 ? 's' : ''}
         </span>
       </div>
-      <div className="space-y-1">
+      <div className="grid grid-cols-2 gap-1.5">
         {visible.map((s, i) => (
           <SourceCard key={s.id ?? i} source={s} index={i} />
         ))}
       </div>
-      {!expanded && sources.length > 3 && (
+      {!expanded && sources.length > 4 && (
         <button
           onClick={() => setExpanded(true)}
-          className="flex items-center gap-1.5 mt-1.5 px-3 py-1.5 text-[10px] font-mono text-white/30 hover:text-white/60 transition-colors w-full"
+          className="text-[10px] font-mono text-white/30 hover:text-white/60 transition-colors mt-2 cursor-pointer"
         >
-          <ChevronDown className="size-3" />
-          <span>{sources.length - 3} more</span>
+          +{sources.length - 4} more
         </button>
       )}
     </div>
@@ -166,31 +116,20 @@ function SourcesBlock({ sources }: { sources: ScoredSource[] }) {
 function MessageMeta({ message }: { message: MarketChatMessage }) {
   if (!message.tier && !message.latencyMs) return null;
 
-  const tierLabel = message.tier ? TIER_LABELS[message.tier] || message.tier.toUpperCase() : null;
   const latency = message.latencyMs ? `${(message.latencyMs / 1000).toFixed(1)}s` : null;
   const tools = message.toolsUsed?.length ? message.toolsUsed : null;
 
   return (
-    <div className="flex items-center gap-2 mt-2 flex-wrap">
-      {tierLabel && (
-        <span className="text-[10px] font-mono text-white/20 uppercase tracking-wider select-none">
-          {tierLabel}
-        </span>
-      )}
+    <div className="flex items-center gap-1.5 mt-2">
       {latency && (
-        <>
-          <span className="text-white/10">·</span>
-          <span className="text-[10px] font-mono text-white/20 tabular-nums">{latency}</span>
-        </>
+        <span className="text-[10px] font-mono text-white/20 tabular-nums">{latency}</span>
       )}
       {tools && tools.map(t => {
         const info = TOOL_META[t];
         if (!info) return null;
-        const Icon = info.icon;
         return (
           <span key={t} className="flex items-center gap-1 text-[10px] font-mono text-white/20">
             <span className="text-white/10">·</span>
-            <Icon className="size-2.5" />
             <span>{info.label.toLowerCase()}</span>
           </span>
         );
@@ -200,6 +139,26 @@ function MessageMeta({ message }: { message: MarketChatMessage }) {
 }
 
 function AgentMessage({ message }: { message: MarketChatMessage }) {
+  const transformCitations = (content: string): string => {
+    if (!message.sources || message.sources.length === 0) return content;
+
+    // Match bracket groups containing comma-separated numbers: [1], [1, 5], [1, 2, 3]
+    return content.replace(/\[([\d]+(?:\s*,\s*\d+)*)\]/g, (match, inner: string) => {
+      const nums = inner.split(',').map(s => s.trim());
+      const links = nums.map(numStr => {
+        const index = parseInt(numStr, 10) - 1;
+        const source = message.sources?.[index];
+        if (source) {
+          return `[${numStr}](${source.url})`;
+        }
+        return numStr;
+      });
+      return links.join(' ');
+    });
+  };
+
+  const processedContent = transformCitations(message.content);
+
   return (
     <div className="space-y-0">
       <div className="prose prose-invert prose-sm max-w-none">
@@ -237,28 +196,48 @@ function AgentMessage({ message }: { message: MarketChatMessage }) {
                   {children}
                 </code>
               ) : (
-                <pre className="bg-[#0A0A0A] border border-[#2A2A2A] p-3 overflow-x-auto text-[12px] font-mono my-2">
+                <pre className="bg-[#111111] border border-[#2A2A2A] p-3 overflow-x-auto text-[12px] font-mono my-2">
                   <code>{children}</code>
                 </pre>
               );
             },
-            a: ({ href, children }) => (
-              <a
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#FA5D19] hover:text-[#FA5D19]/80 underline underline-offset-2 decoration-[#FA5D19]/30 transition-colors"
-              >
-                {children}
-              </a>
-            ),
+            a: ({ href, children }) => {
+              const childText = typeof children === 'string' ? children : 
+                Array.isArray(children) ? children.map(c => typeof c === 'string' ? c : '').join('') : '';
+              const isCitation = /^\d+$/.test(childText.trim());
+              
+              if (isCitation) {
+                return (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={href}
+                    className="inline-flex items-center justify-center size-[18px] text-[10px] font-mono font-medium text-[#FA5D19] bg-[#FA5D19]/10 rounded-sm no-underline hover:bg-[#FA5D19]/20 transition-colors align-super -mt-1 mx-[1px] cursor-pointer"
+                  >
+                    {childText.trim()}
+                  </a>
+                );
+              }
+
+              return (
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#FA5D19] hover:text-[#FA5D19]/80 underline underline-offset-2 decoration-[#FA5D19]/30 transition-colors"
+                >
+                  {children}
+                </a>
+              );
+            },
             table: ({ children }) => (
               <div className="overflow-x-auto my-2 border border-[#2A2A2A]">
                 <table className="min-w-full text-[12px] font-mono">{children}</table>
               </div>
             ),
             thead: ({ children }) => (
-              <thead className="bg-[#0A0A0A] border-b border-[#2A2A2A]">{children}</thead>
+              <thead className="border-b border-[#2A2A2A]">{children}</thead>
             ),
             tbody: ({ children }) => (
               <tbody className="divide-y divide-[#2A2A2A]">{children}</tbody>
@@ -272,7 +251,7 @@ function AgentMessage({ message }: { message: MarketChatMessage }) {
             hr: () => <hr className="my-3 border-[#2A2A2A]" />,
           }}
         >
-          {message.content}
+          {processedContent}
         </ReactMarkdown>
       </div>
 
@@ -287,9 +266,10 @@ function AgentMessage({ message }: { message: MarketChatMessage }) {
 
 function UserMessage({ message }: { message: MarketChatMessage }) {
   return (
-    <div className="flex items-start gap-2">
-      <span className="text-[10px] font-mono text-[#FA5D19] mt-0.5 shrink-0 select-none">{'>'}</span>
-      <p className="text-[14px] text-white/90 font-sans leading-relaxed">{message.content}</p>
+    <div className="flex justify-end">
+      <div className="max-w-[85%] bg-[#1A1A1A] border border-[#2A2A2A] rounded-sm px-4 py-3">
+        <p className="text-[14px] text-white/90 font-sans leading-relaxed">{message.content}</p>
+      </div>
     </div>
   );
 }
@@ -326,7 +306,7 @@ function EmptyState({ onSend }: { onSend: (content: string) => void }) {
             <button
               key={hint}
               onClick={() => onSend(hint)}
-              className="text-[10px] font-mono text-white/20 px-2 py-1 border border-[#2A2A2A] hover:border-white/20 hover:text-white/40 transition-colors cursor-pointer"
+              className="text-[10px] font-mono text-white/20 px-2 py-1 border border-[#2A2A2A] rounded-sm hover:border-[#FA5D19]/50 hover:text-[#FA5D19] transition-colors cursor-pointer"
             >
               {hint}
             </button>
@@ -358,7 +338,7 @@ function ChatInput({
   }, [value, isLoading, onSend]);
 
   return (
-    <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg flex items-end px-3 py-2 gap-2 transition-all focus-within:border-[#3A3A3A]">
+    <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-sm flex items-end px-3 py-2 gap-2 transition-all focus-within:border-[#3A3A3A]">
       <textarea
         ref={textareaRef}
         value={value}
@@ -382,10 +362,10 @@ function ChatInput({
         onClick={handleSubmit}
         disabled={!value.trim() || isLoading}
         aria-label="Send message"
-        className={`size-7 rounded-md flex items-center justify-center shrink-0 transition-all ${
+        className={`size-7 rounded-sm flex items-center justify-center shrink-0 transition-all ${
           value.trim() && !isLoading
-            ? 'bg-white text-black hover:opacity-90'
-            : 'bg-white/5 text-white/10 cursor-not-allowed'
+            ? 'bg-[#FA5D19] text-black hover:opacity-90'
+            : 'bg-[#2A2A2A] text-white/30 cursor-not-allowed'
         }`}
       >
         <ArrowUp className="size-4" />
@@ -400,6 +380,7 @@ export function MarketChat({ marketId, market, maxwellReport }: MarketChatProps)
     status,
     currentTool,
     thinkingSteps,
+    phaseInfo,
     sendMessage,
     isLoading,
     clearChat,
@@ -418,7 +399,7 @@ export function MarketChat({ marketId, market, maxwellReport }: MarketChatProps)
       <CornerGridDecoration className="absolute -top-[10px] -right-[11px] z-30" />
       <CornerGridDecoration className="absolute -top-[10px] -left-[11px] z-30" />
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto relative">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto no-scrollbar relative">
         {messages.length === 0 && !isLoading ? (
           <EmptyState onSend={sendMessage} />
         ) : (
@@ -432,16 +413,12 @@ export function MarketChat({ marketId, market, maxwellReport }: MarketChatProps)
                 return null;
               }
 
-              return (
-                <div key={msg.id} className="pl-4 border-l border-[#2A2A2A]">
-                  <AgentMessage message={msg} />
-                </div>
-              );
+              return <AgentMessage key={msg.id} message={msg} />;
             })}
 
             {isLoading && status !== 'idle' && (
               <div className="space-y-3">
-                <ThinkingTrace steps={thinkingSteps} currentStatus={status} />
+                <ThinkingTrace steps={thinkingSteps} currentStatus={status} phaseInfo={phaseInfo} />
               </div>
             )}
           </div>
@@ -454,7 +431,7 @@ export function MarketChat({ marketId, market, maxwellReport }: MarketChatProps)
             <button
               onClick={clearChat}
               aria-label="Clear chat"
-              className="flex items-center gap-1 text-[10px] font-mono text-white/20 hover:text-white/40 transition-colors px-1"
+              className="flex items-center gap-1 text-[10px] font-mono text-white/20 hover:text-[#f87171] transition-colors px-1"
             >
               <Trash2 className="size-2.5" />
               <span>Clear</span>

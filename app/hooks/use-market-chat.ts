@@ -12,6 +12,7 @@ interface UseMarketChatReturn {
   status: ChatStatus;
   currentTool: string | null;
   thinkingSteps: ThinkingStep[];
+  phaseInfo: { current: number; total: number };
   sendMessage: (content: string) => Promise<void>;
   isLoading: boolean;
   totalCost: CostBreakdown;
@@ -29,6 +30,7 @@ export function useMarketChat(
   const [status, setStatus] = useState<ChatStatus>('idle');
   const [currentTool, setCurrentTool] = useState<string | null>(null);
   const [thinkingSteps, setThinkingSteps] = useState<ThinkingStep[]>([]);
+  const [phaseInfo, setPhaseInfo] = useState<{ current: number; total: number }>({ current: 1, total: 1 });
   const [isLoading, setIsLoading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -133,6 +135,9 @@ export function useMarketChat(
                   setCurrentTool(event.tool);
                   toolsUsedSet.add(event.tool);
                 }
+                if (event.phase && event.totalPhases) {
+                  setPhaseInfo({ current: event.phase, total: event.totalPhases });
+                }
                 setThinkingSteps(prev => [
                   ...prev,
                   { id: crypto.randomUUID(), status: event.status, tool: event.tool, timestamp: Date.now() },
@@ -190,14 +195,17 @@ export function useMarketChat(
     store.clearConversation(marketId);
   }, [marketId, store]);
 
+  const currentConversation = store.getConversation(marketId);
+
   return {
-    messages: conversation.messages,
+    messages: currentConversation.messages,
     status,
     currentTool,
     thinkingSteps,
+    phaseInfo,
     sendMessage,
     isLoading,
-    totalCost: conversation.totalCost,
+    totalCost: currentConversation.totalCost,
     clearChat,
   };
 }
