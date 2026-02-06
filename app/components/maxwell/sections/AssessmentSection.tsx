@@ -95,39 +95,48 @@ export function AssessmentSection({ data }: AssessmentSectionProps) {
             </div>
           </div>
         </div>
-        
         <div className="mt-8">
-          <div className="relative h-[5px]" style={{ backgroundColor: `rgba(${signal.rgb}, 0.10)` }}>
+          <div className="relative">
+            <div className="h-[5px] bg-white/[0.06] rounded-full overflow-hidden">
+              <div 
+                className="absolute top-0 left-0 h-full rounded-full bg-white/10"
+                style={{ width: `${marketPrice}%` }}
+              />
+              <div 
+                className="absolute top-0 left-0 h-full rounded-full"
+                style={{ width: `${maxwellMid}%`, backgroundColor: signal.cssVar, opacity: 0.35 }}
+              />
+            </div>
+
             <div 
-              className="absolute top-0 left-0 h-full"
-              style={{ width: `${maxwellMid}%`, backgroundColor: `rgba(${signal.rgb}, 0.20)` }}
-            />
-            <div 
-              className="absolute top-0 h-full w-[2px] bg-white/40"
+              className="absolute top-1/2 -translate-y-1/2 group/market cursor-default px-3 -mx-3"
               style={{ left: `${marketPrice}%` }}
-            />
+            >
+              <div className="w-[3px] h-[13px] bg-white/50 -translate-x-1/2" />
+              <span className="absolute top-[18px] left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-mono text-white/40">
+                Market
+              </span>
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-[#111111] border border-[#2A2A2A] rounded-md opacity-0 group-hover/market:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                <span className="text-[10px] font-mono text-white/70">Current market price: <span className="text-white font-medium">{marketPrice}%</span></span>
+              </div>
+            </div>
+
             <div 
-              className="absolute top-0 h-full w-[2px]"
-              style={{ left: `${maxwellMid}%`, backgroundColor: signal.cssVar }}
-            />
-          </div>
-          
-          <div className="relative mt-2 text-[10px] font-mono">
-            <span 
-              className="absolute text-white/40"
-              style={{ left: `${marketPrice}%`, transform: 'translateX(-50%)' }}
+              className="absolute top-1/2 -translate-y-1/2 group/target cursor-default px-3 -mx-3"
+              style={{ left: `${maxwellMid}%` }}
             >
-              {marketPrice}%
-            </span>
-            <span 
-              className="absolute font-medium"
-              style={{ left: `${maxwellMid}%`, transform: 'translateX(-50%)', color: signal.cssVar }}
-            >
-              {maxwellMid}%
-            </span>
+              <div className="w-[3px] h-[13px] -translate-x-1/2" style={{ backgroundColor: signal.cssVar }} />
+              <span className="absolute top-[18px] left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-mono font-medium" style={{ color: signal.cssVar }}>
+                Target
+              </span>
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-[#111111] border border-[#2A2A2A] rounded-md opacity-0 group-hover/target:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                <span className="text-[10px] font-mono text-white/70">AI target: <span className="font-medium" style={{ color: signal.cssVar }}>{maxwellMid}%</span> <span className="text-white/30">({maxwellLow}%–{maxwellHigh}%)</span></span>
+              </div>
+            </div>
           </div>
+          <div className="h-8" />
         </div>
-        
+
         <div className="mt-6">
           <p className="text-[13px] text-white/40 leading-relaxed">
             Market is priced at <span className="text-white/70 font-medium">{marketPrice}%</span>
