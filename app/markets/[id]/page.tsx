@@ -234,7 +234,7 @@ export default function MarketDetailPage(props: { params: Params }) {
         className="flex-1"
       >
         <div className="h-full border-r border-border-base bg-panel overflow-y-auto">
-          {market ? <MarketChat marketId={market.id} /> : (
+          {market ? <MarketChat marketId={market.id} market={market} maxwellReport={maxwell.intelligence} /> : (
             <div className="h-full flex flex-col items-center justify-center">
               <div className="w-48 h-4 bg-[#1A1A1A] rounded animate-pulse" />
             </div>
