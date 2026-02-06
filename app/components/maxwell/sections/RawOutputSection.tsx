@@ -26,7 +26,7 @@ export function RawOutputSection({ data }: RawOutputSectionProps) {
       <CornerGridDecoration className="absolute -top-[10px] -right-[11px] z-30" />
       <CornerGridDecoration className="absolute -top-[10px] -left-[11px] z-30" />
       
-      <div className="h-12 flex items-center justify-between px-6 bg-transparent select-none border-b border-[#2A2A2A]">
+      <div className="h-14 flex items-center justify-between px-6 bg-transparent select-none border-b border-[#2A2A2A]">
         <div className="flex items-center gap-2">
           <ChevronDown className="w-3.5 h-3.5 text-brand-accent" />
           <span className="font-semibold text-[16px] text-white tracking-tight uppercase">Raw Analysis</span>

@@ -57,7 +57,7 @@ export default function Loading() {
             </div>
 
             <div className="bg-[#141414]">
-              <div className="h-12 flex items-center px-6 border-b border-[#2A2A2A]">
+              <div className="h-14 flex items-center px-6 border-b border-[#2A2A2A]">
                 <div className="w-24 h-4 bg-[#1A1A1A] rounded" />
               </div>
               <div className="p-6 space-y-4">
@@ -87,7 +87,7 @@ export default function Loading() {
             </div>
 
             <div className="bg-[#141414]">
-              <div className="h-12 flex items-center px-6 border-b border-[#2A2A2A]">
+              <div className="h-14 flex items-center px-6 border-b border-[#2A2A2A]">
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-[#1A1A1A] rounded" />
                   <div className="w-16 h-4 bg-[#1A1A1A] rounded" />
@@ -117,7 +117,7 @@ export default function Loading() {
             </div>
 
             <div className="bg-[#141414]">
-              <div className="h-12 flex items-center px-6 border-b border-[#2A2A2A]">
+              <div className="h-14 flex items-center px-6 border-b border-[#2A2A2A]">
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-[#1A1A1A] rounded" />
                   <div className="w-32 h-4 bg-[#1A1A1A] rounded" />
@@ -133,7 +133,7 @@ export default function Loading() {
             </div>
 
             <div className="bg-[#141414]">
-              <div className="h-12 flex items-center px-6 border-b border-[#2A2A2A]">
+              <div className="h-14 flex items-center px-6 border-b border-[#2A2A2A]">
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-[#1A1A1A] rounded" />
                   <div className="w-20 h-4 bg-[#1A1A1A] rounded" />
@@ -155,7 +155,7 @@ export default function Loading() {
             </div>
 
             <div className="bg-[#141414]">
-              <div className="h-12 flex items-center justify-between px-6 border-b border-[#2A2A2A]">
+              <div className="h-14 flex items-center justify-between px-6 border-b border-[#2A2A2A]">
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 bg-[#1A1A1A] rounded" />
                   <div className="w-24 h-4 bg-[#1A1A1A] rounded" />

@@ -72,7 +72,7 @@ function PanelSection({ children, className = '' }: { children: React.ReactNode;
 
 function PanelHeader({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`flex items-center px-6 h-10 shrink-0 bg-[#111111] ${className}`}>
+    <div className={`flex items-center px-6 h-14 shrink-0 bg-[#111111] ${className}`}>
       {children}
     </div>
   );

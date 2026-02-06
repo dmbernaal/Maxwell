@@ -37,7 +37,7 @@ export function OutcomesSection({ data }: OutcomesSectionProps) {
        <CornerGridDecoration className="absolute -top-[10px] -right-[11px] z-30" />
        <CornerGridDecoration className="absolute -top-[10px] -left-[11px] z-30" />
        
-        <div className="h-12 flex items-center px-6 border-b border-[#2A2A2A] select-none">
+        <div className="h-14 flex items-center px-6 border-b border-[#2A2A2A] select-none">
           <div className="flex items-center gap-2">
             <ChevronDown className="w-3.5 h-3.5 text-white/30" />
             <h2 className="text-[16px] font-semibold text-white tracking-tight uppercase">

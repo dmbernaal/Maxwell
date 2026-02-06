@@ -33,7 +33,7 @@ export function SourcesSection({ data, onViewAll }: SourcesSectionProps) {
       <CornerGridDecoration className="absolute -top-[10px] -right-[11px] z-30" />
       <CornerGridDecoration className="absolute -top-[10px] -left-[11px] z-30" />
       
-      <div className="h-12 flex items-center px-6 bg-transparent select-none border-b border-[#2A2A2A]">
+      <div className="h-14 flex items-center px-6 bg-transparent select-none border-b border-[#2A2A2A]">
         <div className="flex items-center gap-2">
           <ChevronDown className="w-3.5 h-3.5 text-white/30" />
           <span className="font-medium text-[12px] text-white/60 uppercase tracking-wider">
