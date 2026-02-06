@@ -8,6 +8,7 @@ interface OutcomeDataBarProps {
   verdict: IntelligenceVerdict;
   confidence: ConfidenceLevel;
   maxwellRange?: { low: number; mid: number; high: number };
+  isPrimary?: boolean;
   className?: string;
 }
 
@@ -24,6 +25,7 @@ export function OutcomeDataBar({
   verdict,
   confidence,
   maxwellRange,
+  isPrimary,
   className
 }: OutcomeDataBarProps) {
   const signal = VERDICT_SIGNAL[verdict] ?? VERDICT_SIGNAL.UNCERTAIN;
@@ -35,9 +37,14 @@ export function OutcomeDataBar({
   return (
     <div className={cn("w-full py-2", className)}>
       <div className="flex items-center justify-between mb-3">
-        <span className="text-[14px] font-medium text-white truncate pr-4 max-w-[240px]">
-          {name}
-        </span>
+        <div className="flex items-center gap-2 truncate pr-4 max-w-[280px]">
+          {isPrimary && (
+            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: signal.cssVar }} />
+          )}
+          <span className={`text-[14px] truncate ${isPrimary ? 'font-semibold text-white' : 'font-medium text-white/80'}`}>
+            {name}
+          </span>
+        </div>
         <div className="flex items-center gap-4">
           <span className="text-[14px] font-mono tabular-nums text-white/60">
             {percentage}%

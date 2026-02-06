@@ -1,16 +1,23 @@
 import React, { useState } from 'react';
-import { MaxwellIntelligence } from '@/app/lib/maxwell/types';
+import { MaxwellIntelligence, IntelligenceVerdict } from '@/app/lib/maxwell/types';
 import { OutcomeDataBar } from '../primitives/OutcomeDataBar';
 import { PaginationControls } from '../PaginationControls';
 import { ChevronDown } from 'lucide-react';
 import { CornerGridDecoration } from '../primitives/CornerGridDecoration';
+
+const VERDICT_RGB: Record<IntelligenceVerdict, string> = {
+  UNDERPRICED: '34, 197, 94',
+  OVERPRICED: '239, 68, 68',
+  FAIR: '107, 114, 128',
+  UNCERTAIN: '107, 114, 128',
+};
 
 interface OutcomesSectionProps {
   data: MaxwellIntelligence;
 }
 
 export function OutcomesSection({ data }: OutcomesSectionProps) {
-  const { outcomes } = data;
+  const { outcomes, assessment } = data;
 
   if (!outcomes || outcomes.length === 0) return null;
 
@@ -22,6 +29,8 @@ export function OutcomesSection({ data }: OutcomesSectionProps) {
     (page - 1) * pageSize,
     page * pageSize
   );
+
+  const primaryOutcomeName = assessment?.primaryOutcome;
 
   return (
     <div className="border-b border-[#2A2A2A] relative overflow-visible">
@@ -38,26 +47,45 @@ export function OutcomesSection({ data }: OutcomesSectionProps) {
         </div>
 
         <div className="divide-y divide-[#2A2A2A]">
-          {paginatedOutcomes.map((outcome, index) => (
-            <div key={outcome.name} className="px-6 py-6 bg-[#141414] hover:bg-[#1A1A1A] transition-colors relative overflow-visible">
-              {index === 0 && (
-                <>
-                  <CornerGridDecoration className="absolute -top-[10px] -right-[11px] z-30" />
-                  <CornerGridDecoration className="absolute -top-[10px] -left-[11px] z-30" />
-                </>
-              )}
-              <OutcomeDataBar
-                name={outcome.name}
-                percentage={Math.round(outcome.marketPrice * 100)}
-                verdict={outcome.view}
-                confidence={outcome.confidence}
-                maxwellRange={outcome.maxwellRange}
-                className="p-0"
-              />
-              <CornerGridDecoration className="absolute -bottom-[10px] -right-[11px] z-30" />
-              <CornerGridDecoration className="absolute -bottom-[10px] -left-[11px] z-30" />
-            </div>
-          ))}
+          {paginatedOutcomes.map((outcome, index) => {
+            const isPrimary = outcome.name === primaryOutcomeName;
+            const rgb = VERDICT_RGB[outcome.view] ?? VERDICT_RGB.UNCERTAIN;
+
+            return (
+              <div 
+                key={outcome.name} 
+                className="px-6 py-6 bg-[#141414] hover:bg-[#1A1A1A] transition-colors relative overflow-visible"
+              >
+                {isPrimary && (
+                  <div
+                    className="absolute inset-0 z-0"
+                    style={{
+                      background: `linear-gradient(to right, rgba(${rgb}, 0.06) 0%, rgba(${rgb}, 0.03) 50%, transparent 80%)`,
+                    }}
+                  />
+                )}
+                {index === 0 && (
+                  <>
+                    <CornerGridDecoration className="absolute -top-[10px] -right-[11px] z-30" />
+                    <CornerGridDecoration className="absolute -top-[10px] -left-[11px] z-30" />
+                  </>
+                )}
+                <div className="relative z-10">
+                  <OutcomeDataBar
+                    name={outcome.name}
+                    percentage={Math.round(outcome.marketPrice * 100)}
+                    verdict={outcome.view}
+                    confidence={outcome.confidence}
+                    maxwellRange={outcome.maxwellRange}
+                    isPrimary={isPrimary}
+                    className="p-0"
+                  />
+                </div>
+                <CornerGridDecoration className="absolute -bottom-[10px] -right-[11px] z-30" />
+                <CornerGridDecoration className="absolute -bottom-[10px] -left-[11px] z-30" />
+              </div>
+            );
+          })}
         </div>
 
        {totalPages > 1 && (

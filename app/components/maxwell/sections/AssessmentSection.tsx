@@ -45,7 +45,7 @@ export function AssessmentSection({ data }: AssessmentSectionProps) {
       <div className="relative z-10 px-8 py-10">
         <div className="grid grid-cols-[1fr_auto] gap-8 items-end">
           <div>
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2.5 mb-3">
               {isActive && (
                 <span className="relative flex h-1.5 w-1.5">
                   <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${signal.dotClass} opacity-75`} />
@@ -58,8 +58,9 @@ export function AssessmentSection({ data }: AssessmentSectionProps) {
               >
                 {signal.text}
               </span>
-              <span className="text-white/15">·</span>
-              <span className="text-[10px] uppercase tracking-wider text-white/30">
+            </div>
+            <div className="mb-4">
+              <span className="text-[20px] font-semibold text-white tracking-tight">
                 {assessment.primaryOutcome}
               </span>
             </div>
