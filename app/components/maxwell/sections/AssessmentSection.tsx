@@ -147,6 +147,15 @@ export function AssessmentSection({ data }: AssessmentSectionProps) {
           <p className="mt-2 text-[14px] text-white/60 leading-relaxed max-w-[95%]">
             {assessment.headline}
           </p>
+
+          <div className="mt-6">
+            <div className="text-[8px] font-mono text-white/[0.08] tracking-[0.3em] select-none mb-3 overflow-hidden whitespace-nowrap">
+              ·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·&nbsp;·
+            </div>
+            <p className="text-[10px] text-white/20 leading-relaxed">
+              This is not financial advice. AI predictions may be inaccurate — always do your own research before trading. Below is a comprehensive analysis with verified sources to help you make an informed decision.
+            </p>
+          </div>
         </div>
       </div>
     </div>
