@@ -264,7 +264,7 @@ export default function MarketDetailPage(props: { params: Params }) {
         </div>
 
         <div className="h-full border-l border-border-base bg-app overflow-y-auto">
-          {market ? <MarketDataPanel market={market} /> : (
+          {market ? <MarketDataPanel market={market} intelligence={maxwell.intelligence} /> : (
             <div className="p-4 space-y-4">
               <div className="h-20 bg-[#141414] rounded-lg animate-pulse" />
               <div className="h-32 bg-[#141414] rounded-lg animate-pulse" />

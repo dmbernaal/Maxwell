@@ -4,11 +4,13 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { createChart, IChartApi, ISeriesApi, AreaSeries, LineSeries, ColorType, LineStyle, Time, MouseEventParams, MismatchDirection, LineWidth } from 'lightweight-charts';
 import { ExternalLink, ChevronDown, Clock, BarChart3, Activity, Layers, ArrowUpRight } from 'lucide-react';
 import type { UnifiedMarket, UnifiedMarketDetail, PricePoint, MarketOutcome, OrderBook, OutcomePriceHistory } from '@/app/lib/markets/types';
+import type { MaxwellIntelligence, IntelligenceVerdict } from '@/app/lib/maxwell/types';
 import { PolymarketLogo, KalshiLogo, PLATFORM_COLORS } from './icons/PlatformIcons';
 import { CornerGridDecoration } from './maxwell/primitives/CornerGridDecoration';
 
 interface MarketDataPanelProps {
   market: UnifiedMarket | UnifiedMarketDetail;
+  intelligence?: MaxwellIntelligence | null;
 }
 
 type TimeRange = '1D' | '1W' | '1M' | 'ALL';
@@ -138,7 +140,13 @@ function SpreadDisplay({ market }: { market: UnifiedMarket }) {
   );
 }
 
-function OutcomesList({ outcomes, brandColor, outcomeColors }: { outcomes: MarketOutcome[]; brandColor: string; outcomeColors?: Map<string, string> }) {
+function getSignalColor(verdict?: IntelligenceVerdict): string {
+  if (verdict === 'UNDERPRICED') return 'var(--signal-buy)';
+  if (verdict === 'OVERPRICED') return 'var(--signal-sell)';
+  return 'rgba(255,255,255,0.4)';
+}
+
+function OutcomesList({ outcomes, brandColor, outcomeColors, verdicts }: { outcomes: MarketOutcome[]; brandColor: string; outcomeColors?: Map<string, string>; verdicts?: Map<string, IntelligenceVerdict> }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const sortedOutcomes = [...outcomes].sort((a, b) => b.price - a.price);
 
@@ -161,7 +169,8 @@ function OutcomesList({ outcomes, brandColor, outcomeColors }: { outcomes: Marke
         {displayedOutcomes.map((outcome, idx) => {
           const pct = Math.round(outcome.price * 100);
           const barWidth = outcome.price * 100;
-          const outcomeColor = outcomeColors?.get(outcome.name) || brandColor;
+          const verdict = verdicts?.get(outcome.name);
+          const barColor = verdict ? getSignalColor(verdict) : `rgba(255,255,255,${idx === 0 ? 0.5 : 0.25})`;
 
           return (
             <div key={outcome.name} className="group flex flex-col p-2 rounded-md hover:bg-white/[0.08] transition-colors">
@@ -184,7 +193,7 @@ function OutcomesList({ outcomes, brandColor, outcomeColors }: { outcomes: Marke
                   className="h-full"
                   style={{
                     width: `${barWidth}%`,
-                    backgroundColor: outcomeColor
+                    backgroundColor: barColor
                   }}
                 />
               </div>
@@ -637,7 +646,7 @@ function PriceChart({ market, brandColor }: { market: UnifiedMarket | UnifiedMar
 }
 
 
-export default function MarketDataPanel({ market }: MarketDataPanelProps) {
+export default function MarketDataPanel({ market, intelligence }: MarketDataPanelProps) {
   const isPoly = market.platform === 'polymarket';
   const brandColor = isPoly ? PLATFORM_COLORS.polymarket : PLATFORM_COLORS.kalshi;
   const platformName = isPoly ? 'Polymarket' : 'Kalshi';
@@ -654,6 +663,15 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
     });
     return colorMap.size > 0 ? colorMap : undefined;
   }, [market]);
+
+  const outcomeVerdicts = useMemo(() => {
+    if (!intelligence?.outcomes) return undefined;
+    const verdictMap = new Map<string, IntelligenceVerdict>();
+    intelligence.outcomes.forEach(o => {
+      verdictMap.set(o.name, o.view);
+    });
+    return verdictMap.size > 0 ? verdictMap : undefined;
+  }, [intelligence]);
 
   return (
     <div className="relative w-full h-full bg-[#111111] flex flex-col overflow-hidden">
@@ -723,7 +741,7 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
               <span className="text-[12px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">Outcomes</span>
             </PanelHeader>
             <PanelContent>
-              <OutcomesList outcomes={market.outcomes} brandColor={brandColor} outcomeColors={outcomeColors} />
+              <OutcomesList outcomes={market.outcomes} brandColor={brandColor} outcomeColors={outcomeColors} verdicts={outcomeVerdicts} />
             </PanelContent>
           </PanelSection>
         )}
