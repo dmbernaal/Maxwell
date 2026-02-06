@@ -492,9 +492,9 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
                 <div className="flex items-center gap-3">
                   <div className="flex flex-col items-end">
                     <span className="text-[10px] uppercase tracking-wider font-medium text-white/40">Confidence</span>
-                    <span className={`text-xs font-bold ${message.maxwellState.verification.overallConfidence >= 80 ? 'text-emerald-400' :
-                      message.maxwellState.verification.overallConfidence >= 50 ? 'text-amber-400' :
-                        'text-rose-400'
+                    <span className={`text-xs font-bold ${message.maxwellState.verification.overallConfidence >= 80 ? 'text-white/80' :
+                      message.maxwellState.verification.overallConfidence >= 50 ? 'text-white/60' :
+                        'text-white/40'
                       }`}>
                       {message.maxwellState.verification.overallConfidence}%
                     </span>
@@ -512,10 +512,10 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
                       />
                       {/* Progress Ring */}
                       <path
-                        className={`${message.maxwellState.verification.overallConfidence >= 80 ? 'text-emerald-500' :
-                          message.maxwellState.verification.overallConfidence >= 50 ? 'text-amber-500' :
-                            'text-rose-500'
-                          } drop-shadow-[0_0_4px_currentColor]`}
+                        className={`${message.maxwellState.verification.overallConfidence >= 80 ? 'text-[#FA5D19]' :
+                          message.maxwellState.verification.overallConfidence >= 50 ? 'text-white/50' :
+                            'text-white/30'
+                          }`}
                         strokeDasharray={`${message.maxwellState.verification.overallConfidence}, 100`}
                         d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                         fill="none"
@@ -527,9 +527,9 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
 
                     {/* Inner Icon/Text */}
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className={`w-1.5 h-1.5 rounded-full ${message.maxwellState.verification.overallConfidence >= 80 ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' :
-                        message.maxwellState.verification.overallConfidence >= 50 ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]' :
-                          'bg-rose-400 shadow-[0_0_8px_rgba(251,113,133,0.6)]'
+                      <div className={`w-1.5 h-1.5 rounded-full ${message.maxwellState.verification.overallConfidence >= 80 ? 'bg-[#FA5D19]' :
+                        message.maxwellState.verification.overallConfidence >= 50 ? 'bg-white/40' :
+                          'bg-white/20'
                         }`} />
                     </div>
                   </div>

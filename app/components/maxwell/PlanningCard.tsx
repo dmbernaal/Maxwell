@@ -16,14 +16,14 @@ export function PlanningCard({ config }: PlanningCardProps) {
                     icon: Zap,
                     label: 'Speed Mode',
                     desc: 'Optimized for velocity',
-                    color: 'text-emerald-400' // Subtle accent
+                    color: 'text-white/60'
                 };
             case 'deep_research':
                 return {
                     icon: BrainCircuit,
                     label: 'Deep Research',
                     desc: 'Maximum depth & verification',
-                    color: 'text-violet-400' // Brand accent
+                    color: 'text-white/60'
                 };
             case 'standard':
             default:

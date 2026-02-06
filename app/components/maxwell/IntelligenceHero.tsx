@@ -162,7 +162,7 @@ export function IntelligenceHero({
                 
                 <StatusBadge
                   label={tickerData.verdict}
-                  color="zinc"
+                  color="default"
                 />
               </div>
             </div>

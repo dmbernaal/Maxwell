@@ -122,12 +122,12 @@ function SpreadDisplay({ market }: { market: UnifiedMarket }) {
     <div className="flex items-center gap-4 text-[12px] font-mono pt-3 mt-3 border-t border-white/[0.08]">
       <div className="flex items-center gap-2">
         <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">Bid</span>
-        <span className="text-emerald-400 tabular-nums">{Math.round(market.yesBid * 100)}¢</span>
+        <span className="text-white/70 tabular-nums">{Math.round(market.yesBid * 100)}¢</span>
       </div>
       <div className="w-px h-3 bg-white/[0.08]" />
       <div className="flex items-center gap-2">
         <span className="text-[10px] font-medium uppercase tracking-wider text-white/40 font-mono select-none">Ask</span>
-        <span className="text-rose-400 tabular-nums">{Math.round(market.yesAsk * 100)}¢</span>
+        <span className="text-white/50 tabular-nums">{Math.round(market.yesAsk * 100)}¢</span>
       </div>
       <div className="w-px h-3 bg-white/[0.08]" />
       <div className="flex items-center gap-2 ml-auto">
@@ -179,9 +179,9 @@ function OutcomesList({ outcomes, brandColor, outcomeColors }: { outcomes: Marke
                 </span>
               </div>
 
-              <div className="h-1.5 w-full bg-white/[0.08] rounded-full overflow-hidden mt-1.5">
+              <div className="h-1 w-full bg-white/[0.06] mt-1.5">
                 <div
-                  className="h-full rounded-full"
+                  className="h-full"
                   style={{
                     width: `${barWidth}%`,
                     backgroundColor: outcomeColor
@@ -232,11 +232,11 @@ function OrderBookDisplay({ orderBook }: { orderBook: OrderBook }) {
         {bids.map(([price, size], i) => (
           <div key={`bid-${i}`} className="relative group hover:bg-white/[0.08] transition-colors rounded-sm overflow-hidden">
             <div
-              className="absolute inset-y-0 right-0 bg-emerald-500/[0.06]"
+              className="absolute inset-y-0 right-0 bg-white/[0.06]"
               style={{ width: `${(size / maxSize) * 100}%` }}
             />
             <div className="relative flex justify-between items-center px-1.5 py-0.5 text-[10px] font-mono">
-              <span className="text-emerald-400/90 tabular-nums">{Math.round(price * 100)}¢</span>
+              <span className="text-white/70 tabular-nums">{Math.round(price * 100)}¢</span>
               <span className="text-white/40 tabular-nums">{formatCompact(size)}</span>
             </div>
           </div>
@@ -254,11 +254,11 @@ function OrderBookDisplay({ orderBook }: { orderBook: OrderBook }) {
         {asks.map(([price, size], i) => (
           <div key={`ask-${i}`} className="relative group hover:bg-white/[0.08] transition-colors rounded-sm overflow-hidden">
             <div
-              className="absolute inset-y-0 left-0 bg-rose-500/[0.06]"
+              className="absolute inset-y-0 left-0 bg-white/[0.04]"
               style={{ width: `${(size / maxSize) * 100}%` }}
             />
             <div className="relative flex justify-between items-center px-1.5 py-0.5 text-[10px] font-mono">
-              <span className="text-rose-400/90 tabular-nums">{Math.round(price * 100)}¢</span>
+              <span className="text-white/50 tabular-nums">{Math.round(price * 100)}¢</span>
               <span className="text-white/40 tabular-nums">{formatCompact(size)}</span>
             </div>
           </div>
@@ -662,7 +662,7 @@ export default function MarketDataPanel({ market }: MarketDataPanelProps) {
       <CornerGridDecoration className="absolute -bottom-[10px] -right-[11px] z-30 opacity-50 text-[#2A2A2A]" />
       <CornerGridDecoration className="absolute -bottom-[10px] -left-[11px] z-30 opacity-50 text-[#2A2A2A]" />
       
-      <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar">
         <PanelSection>
           <PanelHeader>
             <div className="flex items-center justify-between w-full gap-4">

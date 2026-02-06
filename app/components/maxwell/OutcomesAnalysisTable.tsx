@@ -11,8 +11,8 @@ interface OutcomesAnalysisTableProps {
 }
 
 function getEdgeColor(edge: number) {
-  if (edge > 2) return 'text-emerald-400';
-  if (edge < -2) return 'text-rose-400';
+  if (edge > 2) return 'text-white/80';
+  if (edge < -2) return 'text-white/40';
   return 'text-[#666666]';
 }
 
@@ -115,7 +115,7 @@ export function OutcomesAnalysisTable({ outcomes }: OutcomesAnalysisTableProps) 
                 <div className="w-28 flex justify-center h-full items-center">
                   <StatusBadge 
                     label={formatVerdict(outcome.view)} 
-                    color="zinc" 
+                    color="default" 
                   />
                 </div>
               </div>
@@ -148,7 +148,7 @@ export function OutcomesAnalysisTable({ outcomes }: OutcomesAnalysisTableProps) 
                           <span className="text-[#525252]">Market {Math.round(marketProb)}%</span>
                           <span className={cn(
                             "font-mono",
-                            edge > 0 ? 'text-emerald-400/80' : edge < 0 ? 'text-rose-400/80' : 'text-[#737373]'
+                            edge > 0 ? 'text-white/60' : edge < 0 ? 'text-white/30' : 'text-[#737373]'
                           )}>
                             {edge > 0 ? '+' : ''}{Math.round(edge)}%
                           </span>
@@ -158,11 +158,11 @@ export function OutcomesAnalysisTable({ outcomes }: OutcomesAnalysisTableProps) 
                             className="h-full bg-[#3A3A3A]"
                             style={{ width: `${Math.min(marketProb, maxwellProb)}%` }}
                           />
-                          <div 
-                            className={cn(
-                              "h-full",
-                              edge > 0 ? 'bg-emerald-400/50' : edge < 0 ? 'bg-rose-400/50' : 'bg-[#525252]'
-                            )}
+<div 
+                             className={cn(
+                               "h-full",
+                               edge > 0 ? 'bg-white/30' : edge < 0 ? 'bg-white/15' : 'bg-[#525252]'
+                             )}
                             style={{ width: `${Math.abs(edge)}%` }}
                           />
                         </div>

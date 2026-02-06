@@ -53,7 +53,7 @@ export function EventLog({ events }: EventLogProps) {
                             {new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                         </span>
                         <div className="flex-1 break-all">
-                            <span className="text-emerald-500/50 mr-2">[{event.type}]</span>
+                            <span className="text-white/40 mr-2">[{event.type}]</span>
                             {renderEventData(event)}
                         </div>
                     </div>
@@ -72,9 +72,9 @@ function renderEventData(event: MaxwellEvent): React.ReactNode {
         case 'verification-progress':
             return <span>{event.data.status}</span>;
         case 'complete':
-            return <span className="text-emerald-400">Pipeline execution complete.</span>;
+            return <span className="text-white/60">Pipeline execution complete.</span>;
         case 'error':
-            return <span className="text-rose-400">Error: {event.message}</span>;
+            return <span className="text-white/40">Error: {event.message}</span>;
         default:
             return null;
     }

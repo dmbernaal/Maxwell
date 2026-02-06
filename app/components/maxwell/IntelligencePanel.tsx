@@ -67,9 +67,7 @@ export function IntelligencePanel({
   return (
     <>
       <PanelFrame className={cn("bg-[#111111] !p-0 divide-y divide-[#2A2A2A]", className)}>
-        <div className="border-b border-[#2A2A2A]">
-          <AssessmentSection data={data} />
-        </div>
+        <AssessmentSection data={data} />
 
         <OutcomesSection data={data} />
 

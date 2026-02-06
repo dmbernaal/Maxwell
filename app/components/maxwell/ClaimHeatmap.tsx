@@ -93,11 +93,11 @@ function ClaimTooltip({ sentence, position }: ClaimTooltipProps) {
                 <div className="relative z-10 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         {claim.entailment === 'SUPPORTED' ? (
-                            <ShieldCheck size={14} className="text-emerald-400" />
+                            <ShieldCheck size={14} className="text-white/60" />
                         ) : claim.entailment === 'CONTRADICTED' ? (
-                            <ShieldX size={14} className="text-rose-400" />
+                            <ShieldX size={14} className="text-white/30" />
                         ) : (
-                            <ShieldAlert size={14} className="text-amber-400" />
+                            <ShieldAlert size={14} className="text-white/40" />
                         )}
                         <span className={`text-xs font-medium ${getConfidenceColorClass(claim.confidenceLevel, 'text')}`}>
                             {getEntailmentLabel(claim.entailment)}
@@ -135,7 +135,7 @@ function ClaimTooltip({ sentence, position }: ClaimTooltipProps) {
                 <div className="relative z-10 flex items-center justify-between text-[10px] text-white/30 pt-2 border-t border-white/5">
                     <span>Match Quality: {Math.round(sentence.matchScore * 100)}%</span>
                     {claim.issues.length > 0 && (
-                        <span className="text-amber-400/70">⚠ {claim.issues.length} issue(s)</span>
+                        <span className="text-white/40">⚠ {claim.issues.length} issue(s)</span>
                     )}
                 </div>
             </div>
@@ -239,15 +239,15 @@ function HeatmapStats({ stats }: { stats: ClaimMappingResult['stats'] }) {
 
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 ml-auto">
                 <div className="flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-white/40" />
                     <span className="text-[10px] font-medium text-white/40 uppercase tracking-wider">High</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-white/20" />
                     <span className="text-[10px] font-medium text-white/40 uppercase tracking-wider">Medium</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
                     <span className="text-[10px] font-medium text-white/40 uppercase tracking-wider">Low</span>
                 </div>
             </div>

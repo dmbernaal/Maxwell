@@ -91,6 +91,18 @@ body {
   scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
 }
 
+/* Selection */
+::selection {
+  background: rgba(250, 93, 25, 0.3);
+  color: white;
+}
+
+/* Focus */
+*:focus-visible {
+  outline: 2px solid rgba(250, 93, 25, 0.5);
+  outline-offset: 2px;
+}
+
 /* Utilities */
 .no-scrollbar::-webkit-scrollbar {
   display: none;

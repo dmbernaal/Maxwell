@@ -67,7 +67,7 @@ export function SubQueryList({ subQueries, searchMetadata, sources, reasoning }:
                                 {/* Container pl-4 (16px). Dot needs to be at left 3px (3 + 4.5 = 7.5 center). */}
                                 {/* Relative left: 3 - 16 = -13px */}
                                 <div className={`absolute -left-[13px] top-1.5 w-[9px] h-[9px] rounded-full border ${isDeadEnd ? 'bg-[#18151d] border-white/20' :
-                                    isComplete ? 'bg-emerald-500 border-emerald-500' :
+                                    isComplete ? 'bg-white/40 border-white/40' :
                                         'bg-[#18151d] border-white/20'
                                     } z-10 transition-all duration-500 flex items-center justify-center`}>
                                     {/* Inner Dot for In-Progress/Pending */}

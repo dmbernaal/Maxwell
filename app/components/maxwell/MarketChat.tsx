@@ -175,7 +175,7 @@ function AgentMessage({ message }: { message: MarketChatMessage }) {
               <h1 className="text-[16px] font-semibold text-white uppercase tracking-tight mt-4 mb-2">{children}</h1>
             ),
             h2: ({ children }) => (
-              <h2 className="text-[14px] font-semibold text-white/90 mt-3 mb-1">{children}</h2>
+              <h2 className="text-[14px] font-semibold text-white mt-4 mb-2">{children}</h2>
             ),
             h3: ({ children }) => (
               <h3 className="text-[12px] font-medium text-white/70 uppercase tracking-wide mt-2 mb-1">{children}</h3>
@@ -267,7 +267,7 @@ function AgentMessage({ message }: { message: MarketChatMessage }) {
 function UserMessage({ message }: { message: MarketChatMessage }) {
   return (
     <div className="flex justify-end">
-      <div className="max-w-[85%] bg-[#1A1A1A] border border-[#2A2A2A] rounded-sm px-4 py-3">
+      <div className="max-w-[85%] bg-white/[0.04] rounded-lg px-4 py-3">
         <p className="text-[14px] text-white/90 font-sans leading-relaxed">{message.content}</p>
       </div>
     </div>
@@ -338,7 +338,7 @@ function ChatInput({
   }, [value, isLoading, onSend]);
 
   return (
-    <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-sm flex items-end px-3 py-2 gap-2 transition-all focus-within:border-[#3A3A3A]">
+    <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg flex items-center px-3 py-2.5 gap-2 transition-all focus-within:border-[#3A3A3A]">
       <textarea
         ref={textareaRef}
         value={value}
@@ -356,13 +356,13 @@ function ChatInput({
         placeholder={isLoading ? 'Processing...' : 'Ask anything...'}
         disabled={isLoading}
         rows={1}
-        className="flex-1 bg-transparent text-[14px] text-white placeholder-white/30 focus:outline-none py-0.5 resize-none max-h-[120px] overflow-y-auto leading-5 disabled:opacity-50"
+        className="flex-1 bg-transparent text-[14px] text-white placeholder-white/30 focus:outline-none focus-visible:outline-none resize-none max-h-[120px] overflow-y-auto leading-5 disabled:opacity-50"
       />
       <button
         onClick={handleSubmit}
         disabled={!value.trim() || isLoading}
         aria-label="Send message"
-        className={`size-7 rounded-sm flex items-center justify-center shrink-0 transition-all ${
+        className={`size-7 rounded-lg flex items-center justify-center shrink-0 transition-all focus-visible:outline-none ${
           value.trim() && !isLoading
             ? 'bg-[#FA5D19] text-black hover:opacity-90'
             : 'bg-[#2A2A2A] text-white/30 cursor-not-allowed'
@@ -403,7 +403,7 @@ export function MarketChat({ marketId, market, maxwellReport }: MarketChatProps)
         {messages.length === 0 && !isLoading ? (
           <EmptyState onSend={sendMessage} />
         ) : (
-          <div className="p-4 space-y-4">
+          <div className="px-5 py-4 space-y-5">
             {messages.map((msg) => {
               if (msg.role === 'user') {
                 return <UserMessage key={msg.id} message={msg} />;
@@ -431,7 +431,7 @@ export function MarketChat({ marketId, market, maxwellReport }: MarketChatProps)
             <button
               onClick={clearChat}
               aria-label="Clear chat"
-              className="flex items-center gap-1 text-[10px] font-mono text-white/20 hover:text-[#f87171] transition-colors px-1"
+              className="flex items-center gap-1 text-[10px] font-mono text-white/20 hover:text-white/50 transition-colors px-1"
             >
               <Trash2 className="size-2.5" />
               <span>Clear</span>

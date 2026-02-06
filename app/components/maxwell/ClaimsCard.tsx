@@ -10,9 +10,9 @@ interface ClaimsCardProps {
 }
 
 const STATUS_CONFIG: Record<EntailmentVerdict, { color: string; label: string }> = {
-    SUPPORTED: { color: '#10b981', label: 'Verified' },
-    CONTRADICTED: { color: '#a855f7', label: 'Disputed' },
-    NEUTRAL: { color: '#f97316', label: 'Uncertain' },
+    SUPPORTED: { color: 'rgba(255,255,255,0.7)', label: 'Verified' },
+    CONTRADICTED: { color: 'rgba(255,255,255,0.3)', label: 'Disputed' },
+    NEUTRAL: { color: 'rgba(255,255,255,0.4)', label: 'Uncertain' },
 };
 
 function ClaimItem({ claim }: { claim: VerifiedClaim }) {
@@ -101,13 +101,13 @@ export function ClaimsCard({ verification }: ClaimsCardProps) {
                 
                 <div className="flex items-center gap-3 text-[11px] font-mono">
                     {summary.supported > 0 && (
-                        <span className="text-[#10b981]">{summary.supported} verified</span>
+                        <span className="text-white/70">{summary.supported} verified</span>
                     )}
                     {summary.uncertain > 0 && (
-                        <span className="text-[#f97316]">{summary.uncertain} uncertain</span>
+                        <span className="text-white/40">{summary.uncertain} uncertain</span>
                     )}
                     {summary.contradicted > 0 && (
-                        <span className="text-[#a855f7]">{summary.contradicted} disputed</span>
+                        <span className="text-white/30">{summary.contradicted} disputed</span>
                     )}
                 </div>
             </div>

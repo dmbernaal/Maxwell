@@ -30,7 +30,7 @@ export function ProbabilityEstimate({
       <div className="flex items-baseline gap-2">
         <span className={cn(
           'text-lg font-mono tabular-nums font-medium',
-          isUnderpriced ? 'text-emerald-400' : isOverpriced ? 'text-rose-400' : 'text-white/90'
+          isUnderpriced ? 'text-white' : isOverpriced ? 'text-white/60' : 'text-white/90'
         )}>
           {estimatePct}%
         </span>
@@ -58,7 +58,7 @@ export function ProbabilityEstimate({
         <div
           className={cn(
             'absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full',
-            isUnderpriced ? 'bg-emerald-400' : isOverpriced ? 'bg-rose-400' : 'bg-white/70'
+            isUnderpriced ? 'bg-white/70' : isOverpriced ? 'bg-white/40' : 'bg-white/70'
           )}
           style={{ left: `${estimatePct}%`, transform: 'translate(-50%, -50%)' }}
         />
@@ -69,7 +69,7 @@ export function ProbabilityEstimate({
           <span>Market: {marketPct}%</span>
           <span className="text-white/20">|</span>
           <span className={cn(
-            isUnderpriced ? 'text-emerald-400/70' : isOverpriced ? 'text-rose-400/70' : 'text-white/50'
+            isUnderpriced ? 'text-white/60' : isOverpriced ? 'text-white/40' : 'text-white/50'
           )}>
             Edge: {edge > 0 ? '+' : ''}{Math.round(edge * 100)}%
           </span>

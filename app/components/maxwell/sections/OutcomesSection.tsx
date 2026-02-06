@@ -30,7 +30,7 @@ export function OutcomesSection({ data }: OutcomesSectionProps) {
        
         <div className="h-12 flex items-center px-6 border-b border-[#2A2A2A] select-none">
           <div className="flex items-center gap-2">
-            <ChevronDown className="w-3.5 h-3.5 text-[#FA5D19]" />
+            <ChevronDown className="w-3.5 h-3.5 text-white/30" />
             <h2 className="text-[16px] font-semibold text-white tracking-tight uppercase">
               Outcomes ({outcomes.length})
             </h2>

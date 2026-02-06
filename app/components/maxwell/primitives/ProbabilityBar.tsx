@@ -35,9 +35,9 @@ export function ProbabilityBar({
     lg: 'h-2',
   }[height];
 
-  const maxwellColor = isPositiveEdge ? 'bg-emerald-400' :
-                       isNegativeEdge ? 'bg-rose-400' :
-                       'bg-white/60';
+  const maxwellColor = isPositiveEdge ? 'bg-white/70' :
+                       isNegativeEdge ? 'bg-white/30' :
+                       'bg-white/50';
 
   return (
     <div className={cn('flex flex-col gap-1', className)}>
@@ -73,7 +73,7 @@ export function ProbabilityBar({
 
       <div className="flex justify-between text-[9px] font-mono text-white/40 tabular-nums">
         <span>0%</span>
-        <span className={isPositiveEdge ? 'text-emerald-400/60' : isNegativeEdge ? 'text-rose-400/60' : 'text-white/50'}>
+        <span className="text-white/50">
           {maxwellPct}%
         </span>
         <span>100%</span>
@@ -128,7 +128,7 @@ export function ProbabilityComparison({
               <div
                 className={cn(
                   'absolute top-1 bottom-1 rounded-[1px]',
-                  isPositive ? 'bg-emerald-400/60' : 'bg-white/50'
+                  isPositive ? 'bg-white/50' : 'bg-white/30'
                 )}
                 style={{
                   left: 0,
@@ -145,7 +145,7 @@ export function ProbabilityComparison({
             <div className="w-16 text-right">
               <span className={cn(
                 'text-[10px] font-mono tabular-nums',
-                isPositive ? 'text-emerald-400' : 'text-white/60'
+                isPositive ? 'text-white/70' : 'text-white/60'
               )}>
                 {Math.round(outcome.maxwellPrice * 100)}%
               </span>

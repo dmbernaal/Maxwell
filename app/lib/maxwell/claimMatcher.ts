@@ -224,19 +224,19 @@ export function getConfidenceColorClass(
 ): string {
     const colors = {
         high: {
-            bg: 'bg-emerald-500/20',
-            text: 'text-emerald-400',
-            border: 'border-emerald-500/30',
+            bg: 'bg-white/[0.08]',
+            text: 'text-white/60',
+            border: 'border-white/20',
         },
         medium: {
-            bg: 'bg-amber-500/20',
-            text: 'text-amber-400',
-            border: 'border-amber-500/30',
+            bg: 'bg-white/[0.05]',
+            text: 'text-white/40',
+            border: 'border-white/10',
         },
         low: {
-            bg: 'bg-rose-500/20',
-            text: 'text-rose-400',
-            border: 'border-rose-500/30',
+            bg: 'bg-white/[0.03]',
+            text: 'text-white/30',
+            border: 'border-white/5',
         },
         null: {
             bg: '',

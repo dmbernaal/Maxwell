@@ -18,8 +18,8 @@ export function ResolutionRiskSection({ data }: ResolutionRiskSectionProps) {
       
       <div className="h-12 flex items-center justify-between px-6 bg-transparent select-none border-b border-[#2A2A2A]">
         <div className="flex items-center gap-2">
-          <ChevronDown className="w-3.5 h-3.5 text-[#FA5D19]" />
-          <span className="font-semibold text-[16px] text-white tracking-tight uppercase">Resolution Risk</span>
+          <ChevronDown className="w-3.5 h-3.5 text-white/30" />
+          <span className="font-medium text-[14px] text-white/70 uppercase tracking-wider">Resolution Risk</span>
         </div>
         {resolutionRisk && (
           <RiskGauge level={resolutionRisk.level} score={resolutionRisk.score} />

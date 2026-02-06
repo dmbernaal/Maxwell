@@ -18,20 +18,14 @@ export function DeltaGlow({ children, delta, className }: DeltaGlowProps) {
     if (!delta) return '';
 
     if (shouldReduceMotion) {
-      return delta.color === 'amber'
-        ? 'border-amber-500/40'
-        : 'border-cyan-500/40';
+      return 'border-[#FA5D19]/30';
     }
 
     if (delta.significance === 'HIGH') {
-      return delta.color === 'amber'
-        ? 'edge-glow-amber'
-        : 'edge-glow-cyan';
+      return 'border-[#FA5D19]/40';
     }
 
-    return delta.color === 'amber'
-      ? 'border-amber-500/30'
-      : 'border-cyan-500/30';
+    return 'border-[#FA5D19]/20';
   };
 
   return (

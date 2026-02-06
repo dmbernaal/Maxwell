@@ -18,12 +18,21 @@ export function FactorStrengthBar({ strength, className }: FactorStrengthBarProp
 
   const { filled, total } = getBlocks();
 
+  const getStrengthColor = () => {
+    switch (strength) {
+      case 'HIGH': return 'text-[#FA5D19]';
+      case 'MEDIUM': return 'text-white/60';
+      case 'LOW': return 'text-white/40';
+      default: return 'text-white/20';
+    }
+  };
+
   return (
     <div className={cn("font-mono text-[10px] tracking-tight flex items-center", className)}>
-      <span className="mr-2 font-medium w-[45px] text-white/40">{strength}</span>
+      <span className={cn("mr-2 font-medium w-[45px]", getStrengthColor())}>{strength}</span>
       <div className="flex text-[10px]">
         {Array.from({ length: total }).map((_, i) => (
-          <span key={i} className={i < filled ? "text-white/60" : "text-white/10"}>
+          <span key={i} className={i < filled ? "text-[#FA5D19]" : "text-white/10"}>
             █
           </span>
         ))}

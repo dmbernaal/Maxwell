@@ -34,23 +34,26 @@ export function OutcomeDataBar({
         </div>
       </div>
       
-      {/* Range Visualization */}
-      <div className="relative h-2 w-full bg-[#2A2A2A] rounded-full overflow-hidden">
-        {/* Market Price Marker */}
+      <div className="relative h-1 w-full bg-[#2A2A2A]">
         <div 
-          className="absolute top-0 bottom-0 w-0.5 bg-white z-20" 
+          className="absolute -top-1 -bottom-1 w-[2px] bg-white z-20" 
           style={{ left: `${percentage}%` }}
         />
         
-        {/* Maxwell Range (if available) */}
         {maxwellRange && (
-          <div 
-            className="absolute top-0 bottom-0 bg-[#FA5D19]/20 rounded-full z-10"
-            style={{ 
-              left: `${maxwellRange.low * 100}%`, 
-              right: `${100 - (maxwellRange.high * 100)}%` 
-            }}
-          />
+          <>
+            <div 
+              className="absolute top-0 bottom-0 bg-[#FA5D19]/15 z-10"
+              style={{ 
+                left: `${maxwellRange.low * 100}%`, 
+                right: `${100 - (maxwellRange.high * 100)}%` 
+              }}
+            />
+            <div 
+              className="absolute -top-0.5 -bottom-0.5 w-[2px] bg-[#FA5D19]/60 z-10" 
+              style={{ left: `${maxwellRange.mid * 100}%` }}
+            />
+          </>
         )}
       </div>
       

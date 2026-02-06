@@ -35,8 +35,8 @@ export function SourcesSection({ data, onViewAll }: SourcesSectionProps) {
       
       <div className="h-12 flex items-center px-6 bg-transparent select-none border-b border-[#2A2A2A]">
         <div className="flex items-center gap-2">
-          <ChevronDown className="w-3.5 h-3.5 text-[#FA5D19]" />
-          <span className="font-semibold text-[16px] text-white tracking-tight uppercase">
+          <ChevronDown className="w-3.5 h-3.5 text-white/30" />
+          <span className="font-medium text-[12px] text-white/60 uppercase tracking-wider">
             Sources ({verification.sourcesAnalyzed})
           </span>
         </div>

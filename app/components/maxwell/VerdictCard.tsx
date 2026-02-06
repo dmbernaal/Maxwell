@@ -78,11 +78,11 @@ function parseMarketVerdict(adjudication: string, verification: VerificationOutp
 }
 
 const VERDICT_CONFIG = {
-    YES: { color: '#10b981', label: 'YES', sublabel: 'Likely to resolve yes' },
-    LIKELY: { color: '#10b981', label: 'LIKELY', sublabel: 'Favorable outcome expected' },
-    NO: { color: '#a855f7', label: 'NO', sublabel: 'Likely to resolve no' },
-    UNLIKELY: { color: '#a855f7', label: 'UNLIKELY', sublabel: 'Unfavorable conditions' },
-    UNCERTAIN: { color: '#71717a', label: 'UNCERTAIN', sublabel: 'Insufficient evidence' },
+    YES: { color: '#ffffff', label: 'YES', sublabel: 'Likely to resolve yes' },
+    LIKELY: { color: '#ffffff', label: 'LIKELY', sublabel: 'Favorable outcome expected' },
+    NO: { color: 'rgba(255,255,255,0.6)', label: 'NO', sublabel: 'Likely to resolve no' },
+    UNLIKELY: { color: 'rgba(255,255,255,0.6)', label: 'UNLIKELY', sublabel: 'Unfavorable conditions' },
+    UNCERTAIN: { color: 'rgba(255,255,255,0.3)', label: 'UNCERTAIN', sublabel: 'Insufficient evidence' },
 };
 
 export function VerdictCard({ adjudication, verification }: VerdictCardProps) {
@@ -124,15 +124,15 @@ export function VerdictCard({ adjudication, verification }: VerdictCardProps) {
                 {verification && (
                     <div className="flex items-center gap-4 text-[11px] font-mono text-white/30">
                         <div className="flex items-center gap-1.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-white/40" />
                             <span>{verification.summary.supported}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-[#f97316]" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-white/20" />
                             <span>{verification.summary.uncertain}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                            <div className="w-1.5 h-1.5 rounded-full bg-[#a855f7]" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
                             <span>{verification.summary.contradicted}</span>
                         </div>
                     </div>

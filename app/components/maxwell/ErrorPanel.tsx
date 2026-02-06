@@ -19,15 +19,15 @@ export function ErrorPanel({ error, onRetry }: ErrorPanelProps) {
       >
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <span className="text-amber-500 font-bold">⚡ MAXWELL</span>
-            <span className="text-amber-500 font-mono text-xs">⚠ ERROR</span>
+            <span className="text-[#FA5D19] font-bold">⚡ MAXWELL</span>
+            <span className="text-white/60 font-mono text-xs">⚠ ERROR</span>
           </div>
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
           >
-            <div className="w-3 h-3 rounded-full bg-amber-500" />
+            <div className="w-3 h-3 rounded-full bg-[#FA5D19]" />
           </motion.div>
         </div>
 
@@ -66,8 +66,8 @@ export function ErrorPanel({ error, onRetry }: ErrorPanelProps) {
         {onRetry && (
           <motion.button
             onClick={onRetry}
-            className="w-full font-mono text-sm bg-amber-500/20 hover:bg-amber-500/30
-                       text-amber-400 px-4 py-3 rounded-sm
+            className="w-full font-mono text-sm bg-[#FA5D19]/20 hover:bg-[#FA5D19]/30
+                       text-[#FA5D19] px-4 py-3 rounded-sm
                        transition-all-200"
             whileHover={!shouldReduceMotion ? { scale: 1.02 } : undefined}
             whileTap={!shouldReduceMotion ? { scale: 0.98 } : undefined}
