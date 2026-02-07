@@ -41,20 +41,31 @@ export async function adjudicateAnswer(
     try {
         const openrouter = getOpenRouterClient();
 
-        // 1. Filter Claims for Reconstruction
         const verifiedFacts = verification.claims
             .filter(c => c.entailment === 'SUPPORTED' || c.confidence > 0.7)
-            .map(c => `- ${c.text} (CONFIRMED by: ${c.bestMatchingSource?.passage || 'Verified Source'})`)
+            .map(c => {
+                const crossCheckLabel = c.issues?.find(i => i.startsWith('CROSS-VALIDATED'));
+                const label = crossCheckLabel ? ` [${crossCheckLabel}]` : '';
+                return `- ${c.text} (CONFIRMED by: ${c.bestMatchingSource?.passage || 'Verified Source'})${label}`;
+            })
             .join('\n');
 
         const disputedFacts = verification.claims
             .filter(c => c.entailment === 'CONTRADICTED')
-            .map(c => `- FALSE: ${c.text} \n  CORRECTION: ${c.bestMatchingSource?.passage || 'Contradicting Evidence'}`)
+            .map(c => {
+                const crossCheckLabel = c.issues?.find(i => i.includes('DISPUTED') || i.includes('CROSS-VALIDATED CONTRADICTION'));
+                const label = crossCheckLabel ? ` [${crossCheckLabel}]` : '';
+                return `- FALSE: ${c.text} \n  CORRECTION: ${c.bestMatchingSource?.passage || 'Contradicting Evidence'}${label}`;
+            })
             .join('\n');
 
         const unverifiedFacts = verification.claims
             .filter(c => c.entailment === 'NEUTRAL' && c.confidence <= 0.7)
-            .map(c => `- UNVERIFIED: ${c.text}`)
+            .map(c => {
+                const crossCheckLabel = c.issues?.find(i => i.includes('INDEPENDENTLY CONFIRMED'));
+                const label = crossCheckLabel ? ` [${crossCheckLabel}]` : '';
+                return `- UNVERIFIED: ${c.text}${label}`;
+            })
             .join('\n');
 
         // 2. Construct the Prompt Payload

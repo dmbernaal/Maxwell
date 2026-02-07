@@ -13,6 +13,7 @@
 
 import { NextRequest } from 'next/server';
 import { verifyClaimsWithPrecomputedEvidence } from '../../../lib/maxwell/verifier';
+import { crossCheckWithPerplexity, integratePerplexityResults } from '../../../lib/maxwell/perplexity-verifier';
 import { fetchEvidenceFromBlob, deleteEvidenceFromBlob } from '../../../lib/maxwell/blob-storage';
 import type { VerifyRequest } from '../../../lib/maxwell/api-types';
 import type { PreparedEvidence } from '../../../lib/maxwell/verifier';
@@ -111,7 +112,8 @@ export async function POST(request: NextRequest) {
                 };
 
                 try {
-                    // Stream verification with progress updates
+                    let verificationResult: any = null;
+
                     for await (const event of verifyClaimsWithPrecomputedEvidence(
                         answer,
                         sources,
@@ -125,15 +127,46 @@ export async function POST(request: NextRequest) {
                             const sseEvent = { type: 'verification-progress', data: event.data };
                             safeEnqueue(`data: ${JSON.stringify(sseEvent)}\n\n`);
                         } else if (event.type === 'result') {
-                            const sseEvent = { type: 'verification-complete', data: event.data };
-                            safeEnqueue(`data: ${JSON.stringify(sseEvent)}\n\n`);
-
-                            console.log('[Maxwell Verify] Complete:', {
-                                claims: event.data.claims.length,
-                                overallConfidence: event.data.overallConfidence,
-                                durationMs: event.data.durationMs,
-                            });
+                            verificationResult = event.data;
                         }
+                    }
+
+                    // Perplexity cross-check (runs after NLI, gracefully degrades if no API key)
+                    if (verificationResult && !isClosed) {
+                        safeEnqueue(`data: ${JSON.stringify({ type: 'verification-progress', data: { current: verificationResult.claims.length, total: verificationResult.claims.length, status: 'Cross-checking with independent search...' } })}\n\n`);
+
+                        const crossCheck = await crossCheckWithPerplexity(verificationResult.claims);
+
+                        if (crossCheck.enabled && crossCheck.results.length > 0) {
+                            verificationResult = {
+                                ...verificationResult,
+                                claims: integratePerplexityResults(verificationResult.claims, crossCheck),
+                                crossCheck: {
+                                    enabled: true,
+                                    checked: crossCheck.results.length,
+                                    agrees: crossCheck.results.filter((r: any) => r.perplexityVerdict === 'AGREES').length,
+                                    disagrees: crossCheck.results.filter((r: any) => r.perplexityVerdict === 'DISAGREES').length,
+                                    durationMs: crossCheck.durationMs,
+                                },
+                            };
+
+                            // Recalculate overall confidence after integration
+                            const supported = verificationResult.claims.filter((c: any) => c.entailment === 'SUPPORTED').length;
+                            const total = verificationResult.claims.length;
+                            verificationResult.overallConfidence = total > 0 ? Math.round((supported / total) * 100) : 0;
+                        }
+                    }
+
+                    if (verificationResult) {
+                        const sseEvent = { type: 'verification-complete', data: verificationResult };
+                        safeEnqueue(`data: ${JSON.stringify(sseEvent)}\n\n`);
+
+                        console.log('[Maxwell Verify] Complete:', {
+                            claims: verificationResult.claims.length,
+                            overallConfidence: verificationResult.overallConfidence,
+                            crossCheck: verificationResult.crossCheck || 'disabled',
+                            durationMs: verificationResult.durationMs,
+                        });
                     }
 
                     safeEnqueue('data: [DONE]\n\n');

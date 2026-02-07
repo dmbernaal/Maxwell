@@ -52,10 +52,11 @@ const SubQuerySchema = z.object({
     id: z.string().describe('Unique identifier like "q1", "q2"'),
     query: z.string().describe('The search query optimized for Tavily'),
     purpose: z.string().describe('Why this query is needed'),
-    topic: z.enum(['general', 'news']).describe('Search topic'),
+    topic: z.enum(['general', 'news', 'finance']).describe('Search topic: general, news, or finance'),
     depth: z.enum(['basic', 'advanced']).describe('Search depth'),
     days: z.number().nullable().describe('Days back to search (null for all time)'),
     domains: z.array(z.string()).nullable().describe('Specific domains to search'),
+    excludeDomains: z.array(z.string()).nullable().optional().describe('Specific domains to exclude'),
 });
 
 const DecompositionSchema = z.object({
@@ -69,10 +70,11 @@ const PredictionMarketSubQuerySchema = z.object({
     id: z.string(),
     query: z.string(),
     purpose: z.string(),
-    topic: z.enum(['general', 'news']),
+    topic: z.enum(['general', 'news', 'finance']),
     depth: z.enum(['basic', 'advanced']),
     days: z.number().nullable(),
     domains: z.array(z.string()).nullable(),
+    excludeDomains: z.array(z.string()).nullable().optional(),
     category: z.enum(['resolution', 'catalyst', 'factor_for', 'factor_against', 'contrarian', 'cross_platform']),
     targetOutcome: z.string().nullable(),
 });
@@ -145,6 +147,7 @@ export async function decomposeQuery(
             depth: sq.depth,
             days: sq.days ?? undefined,
             domains: sq.domains ?? undefined,
+            excludeDomains: sq.excludeDomains ?? undefined,
         }));
 
         return {
@@ -194,6 +197,7 @@ async function decomposeWithMarketContext(
         depth: sq.depth,
         days: sq.days ?? undefined,
         domains: sq.domains ?? undefined,
+        excludeDomains: sq.excludeDomains ?? undefined,
         category: sq.category as SubQueryCategory,
         targetOutcome: sq.targetOutcome ?? undefined,
     }));

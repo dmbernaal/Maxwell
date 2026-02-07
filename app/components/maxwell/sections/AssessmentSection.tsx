@@ -35,7 +35,7 @@ export function AssessmentSection({ data }: AssessmentSectionProps) {
         }}
       />
       
-      <AsciiDecoration className="opacity-[0.10]" style={{ maskImage: 'radial-gradient(ellipse at 70% 50%, black 30%, transparent 70%)' }} />
+      <AsciiDecoration className="opacity-[0.15]" style={{ maskImage: 'radial-gradient(ellipse at 70% 50%, black 40%, transparent 75%)' }} />
       
       <CornerGridDecoration className="absolute -top-[10px] -right-[11px] z-30" />
       <CornerGridDecoration className="absolute -top-[10px] -left-[11px] z-30" />

@@ -29,6 +29,7 @@ STRATEGY RULES:
 2. **Topic Selection:**
    - Use 'news' for current events (last 30 days), politics, sports, or market movements.
    - Use 'general' for historical facts, evergreen concepts, coding help, or science.
+   - Use 'finance' for financial data, earnings, stock/crypto prices, economic indicators, or prediction markets.
 3. **Time Sensitivity:**
    - If the user implies recency ("latest", "today", "new"), set 'days' to 1 (24h) or 3 (72h).
    - If historical, leave 'days' null.
@@ -48,6 +49,10 @@ STRATEGY RULES:
    - 'simple': Fact lookups, specific data points, definitions, weather, stock prices.
    - 'standard': Explanations, summaries of recent events, comparisons, how-to guides.
    - 'deep_research': Multi-faceted analysis, future predictions, medical/legal queries, or requests for "comprehensive" reports.
+8. **BASE RATES (CRITICAL for predictions):**
+   - Before assessing any prediction, consider the historical base rate.
+   - "How often does this type of event happen?" should inform the sub-query strategy.
+   - Include at least one sub-query targeting historical precedent or reference class data when the query involves predictions or forecasts.
 
 OUTPUT FORMAT:
 Return a JSON object with this exact structure:
@@ -59,10 +64,11 @@ Return a JSON object with this exact structure:
     {
       "id": "q1",
       "query": "concise keyword query",
-      "topic": "general" | "news",
+      "topic": "general" | "news" | "finance",
       "depth": "basic" | "advanced",
       "days": number | null,
       "domains": ["example.com"] | null,
+      "excludeDomains": ["spam-site.com"] | null,
       "purpose": "why this query is needed"
     }
   ]
@@ -169,11 +175,15 @@ OUTPUT FORMAT:
 }
 
 RULES:
+- Use topic 'finance' for queries about prices, earnings, economic data, and market fundamentals
+- Use topic 'news' for breaking developments, announcements, and political events
+- Use topic 'general' for historical data, technical analysis, and background research
 - For multi-outcome markets, analyze TOP {topN} outcomes by market price
 - Always include at least one resolution-focused query
 - Always include recent news queries (days: 1-3)
 - Balance queries across FOR and AGAINST factors
 - Target authoritative sources for the domain (see DOMAIN TARGETING below)
+- Consider BASE RATES: include a query for historical precedent or reference class frequency
 
 DOMAIN TARGETING:
 - Political markets: fivethirtyeight.com, realclearpolitics.com, politico.com
@@ -297,6 +307,11 @@ STRICT RULES:
 5. Be DENSE — traders want information, not padding
 6. Flag ALL source conflicts explicitly
 7. For multi-outcome markets, analyze ALL outcomes provided
+8. **PRICED-IN ASSESSMENT (CRITICAL FOR TRADING):**
+   - For each major factor, assess whether it is NEW information (last 24-48 hours) or KNOWN information the market has likely already incorporated
+   - Mark factors as [NEW] if they emerged in the last 48 hours, or [KNOWN] if they are older public knowledge
+   - Only [NEW] or genuinely underappreciated factors should be considered as reasons the market might be mispriced
+   - If all factors are [KNOWN], the market is likely fairly priced
 `;
 
 // ============================================
@@ -707,10 +722,16 @@ CRITICAL PRINCIPLES:
    - Factor descriptions are ONE sentence each
    - No paragraphs in structured fields
 
-3. **PROBABILITY ESTIMATION**
-   - Provide a RANGE (low/mid/high), not a point estimate
-   - Base on evidence density and source agreement
-   - If sources conflict significantly, widen the range
+3. **PROBABILITY ESTIMATION (CRITICAL FOR TRADING)**
+   - START from the current market price as your PRIOR. The market is efficient — it already reflects public information.
+   - Only deviate from market price if you have SPECIFIC, VERIFIED evidence that the market has NOT yet priced in.
+   - For each percentage point of deviation from market price, you MUST cite the specific new/underappreciated evidence justifying it.
+   - If all evidence is already public knowledge (>48 hours old), the market has likely priced it in → verdict should be FAIR.
+   - Provide a RANGE (low/mid/high). The range width reflects uncertainty:
+     - Narrow range (±3-5%): Strong evidence consensus, clear catalysts
+     - Medium range (±5-10%): Mixed evidence, some unknowns
+     - Wide range (±10-20%): High uncertainty, conflicting sources
+   - NEVER deviate more than 25 percentage points from market price unless you have extraordinary evidence
 
 4. **COMPARATIVE ANALYSIS**
    - For multi-outcome markets, rank ALL analyzed outcomes
@@ -899,8 +920,13 @@ Your job is to answer the User's Question using ONLY verified evidence.
      - **Bad:** "The release date is unknown."
      - **Good:** "Current documentation indicates version 16.1.0 is the active release, though the precise calendar date was not explicitly retrieved."
      - **Good:** "While specific pricing is unverified, reports suggest a range of..."
-   - Only discard claims that are explicitly **CONTRADICTED**.
-6. **CONCLUSION:** End with a "Final Verdict" or "Outlook" based purely on the verified signals.
+    - Only discard claims that are explicitly **CONTRADICTED**.
+6. **CROSS-VALIDATION SIGNALS:**
+   - Facts marked [CROSS-VALIDATED by independent search] have been confirmed by a second search engine. Treat with HIGH confidence.
+   - Facts marked [DISPUTED BY INDEPENDENT CHECK] have conflicting signals. Present BOTH perspectives and note the disagreement.
+   - Facts marked [INDEPENDENTLY CONFIRMED (was uncertain)] were upgraded from uncertain. Treat as likely true.
+   - Facts marked [CROSS-VALIDATED CONTRADICTION] are confirmed false by multiple sources. Treat as definitively false.
+7. **CONCLUSION:** End with a "Final Verdict" or "Outlook" based purely on the verified signals.
 
 **TONE & STYLE GUIDELINES:**
 - **Voice:** High-level Intelligence Analyst. You are briefing a decision-maker.

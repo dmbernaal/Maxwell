@@ -80,8 +80,8 @@ export const ADJUDICATOR_MODEL = 'google/gemini-3-flash-preview';
 /** Model for resolution risk analysis (fast classification task) */
 export const RESOLUTION_RISK_MODEL = 'google/gemini-3-flash-preview';
 
-/** Model for presenter transformation (structured output, fast) */
-export const PRESENTER_MODEL = 'google/gemini-3-flash-preview';
+/** Model for presenter transformation — uses a stronger model for calibrated probability estimation */
+export const PRESENTER_MODEL = 'anthropic/claude-sonnet-4.5';
 
 // ============================================
 // DECOMPOSITION CONFIGURATION
@@ -102,6 +102,39 @@ export const RESULTS_PER_QUERY = 5;
 
 /** Tavily search depth ('basic' or 'advanced') */
 export const SEARCH_DEPTH = 'basic' as const;
+
+/** Minimum relevance score to keep a search result (0-1). Results below this are filtered out. */
+export const MIN_SEARCH_RELEVANCE_SCORE = 0.3;
+
+/** Maximum retry attempts for transient search failures (429, 500, 502, 503) */
+export const MAX_SEARCH_RETRIES = 3;
+
+/** Base delay in ms for exponential backoff between retries */
+export const SEARCH_RETRY_BASE_DELAY_MS = 500;
+
+/** Default number of chunks per source for advanced searches */
+export const DEFAULT_CHUNKS_PER_SOURCE = 3;
+
+/**
+ * Global domain blocklist for low-quality or unreliable sources.
+ * These domains are excluded from ALL search queries to improve source quality.
+ */
+export const EXCLUDED_DOMAINS: string[] = [
+    // Content farms / clickbait
+    'buzzfeed.com',
+    'huffpost.com',
+    'dailymail.co.uk',
+    // SEO spam with low editorial standards
+    'medium.com',
+    // Social media (unreliable for factual verification)
+    'reddit.com',
+    'twitter.com',
+    'x.com',
+    'facebook.com',
+    'tiktok.com',
+    // AI-generated content farms
+    'seekingalpha.com',
+];
 
 // ============================================
 // SYNTHESIS CONFIGURATION

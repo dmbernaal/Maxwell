@@ -82,7 +82,7 @@ export const PresenterOutputSchema = z.object({
         spread: z.number().nullable(),
     }).optional(),
     verification: z.object({
-        score: z.number().min(0).max(100),
+        score: z.number(),
         level: z.enum(['VERIFIED', 'PARTIAL', 'LOW_CONFIDENCE']),
         sourcesAnalyzed: z.number(),
         claimsVerified: z.number(),
@@ -108,6 +108,57 @@ function getOpenRouterClient() {
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
+
+// Minimum edge (in decimal, e.g. 0.05 = 5%) to issue an UNDERPRICED/OVERPRICED verdict.
+// Below this threshold, the deviation is treated as noise → FAIR.
+const MIN_EDGE_THRESHOLD = 0.05;
+
+// Confidence discount factors — shrink maxwellRange toward market price
+// to prevent overconfident predictions from uncalibrated LLM estimates.
+const CONFIDENCE_DISCOUNT: Record<string, number> = {
+    HIGH: 1.0,
+    MEDIUM: 0.5,
+    LOW: 0.25,
+};
+
+/**
+ * Applies confidence-weighted discounting to the maxwell range.
+ * Shrinks the range toward market price based on confidence level.
+ * HIGH confidence: full range preserved.
+ * MEDIUM confidence: range shrunk 50% toward market price.
+ * LOW confidence: range shrunk 75% toward market price.
+ */
+function applyConfidenceDiscount(
+    range: { low: number; mid: number; high: number },
+    marketPrice: number,
+    confidence: string
+): { low: number; mid: number; high: number } {
+    const factor = CONFIDENCE_DISCOUNT[confidence] ?? CONFIDENCE_DISCOUNT.LOW;
+
+    return {
+        low: marketPrice + (range.low - marketPrice) * factor,
+        mid: marketPrice + (range.mid - marketPrice) * factor,
+        high: marketPrice + (range.high - marketPrice) * factor,
+    };
+}
+
+/**
+ * Determines the correct verdict based on the adjusted edge.
+ * If the absolute edge is below MIN_EDGE_THRESHOLD, returns FAIR
+ * regardless of what the LLM suggested — small deviations are noise.
+ */
+function calibrateVerdict(
+    adjustedMid: number,
+    marketPrice: number,
+    originalVerdict: string
+): 'UNDERPRICED' | 'OVERPRICED' | 'FAIR' | 'UNCERTAIN' {
+    const edge = adjustedMid - marketPrice;
+    const absEdge = Math.abs(edge);
+
+    if (originalVerdict === 'UNCERTAIN') return 'UNCERTAIN';
+    if (absEdge < MIN_EDGE_THRESHOLD) return 'FAIR';
+    return edge > 0 ? 'UNDERPRICED' : 'OVERPRICED';
+}
 
 export function calculateDeadlineString(endDate: Date): string {
     const now = new Date();
@@ -225,9 +276,43 @@ export async function present(input: PresentInput): Promise<MaxwellIntelligence>
     });
 
     const totalClaims = verification.summary.supported + verification.summary.contradicted + verification.summary.uncertain;
-    const verificationScore = Math.round(
+    const verificationScore = Math.min(100, Math.max(0, Math.round(
         (verification.summary.supported / Math.max(1, totalClaims)) * 100
+    )));
+
+    // Apply confidence-weighted calibration to the assessment
+    const rawAssessment = presenterOutput.assessment;
+    const adjustedRange = applyConfidenceDiscount(
+        rawAssessment.maxwellRange,
+        rawAssessment.marketPrice,
+        rawAssessment.confidence
     );
+    const adjustedVerdict = calibrateVerdict(
+        adjustedRange.mid,
+        rawAssessment.marketPrice,
+        rawAssessment.verdict
+    );
+
+    const calibratedAssessment = {
+        ...rawAssessment,
+        maxwellRange: adjustedRange,
+        verdict: adjustedVerdict,
+    };
+
+    // Apply same calibration to individual outcomes
+    const calibratedOutcomes = presenterOutput.outcomes?.map(outcome => {
+        const adjRange = applyConfidenceDiscount(
+            outcome.maxwellRange,
+            outcome.marketPrice,
+            outcome.confidence
+        );
+        const adjVerdict = calibrateVerdict(
+            adjRange.mid,
+            outcome.marketPrice,
+            outcome.view
+        );
+        return { ...outcome, maxwellRange: adjRange, view: adjVerdict };
+    });
 
     const intelligence: MaxwellIntelligence = {
         market: {
@@ -238,7 +323,7 @@ export async function present(input: PresentInput): Promise<MaxwellIntelligence>
             resolutionCriteria: presenterOutput.market.resolutionCriteria,
         },
         resolutionRisk,
-        assessment: presenterOutput.assessment,
+        assessment: calibratedAssessment,
         thesis: {
             factorsFor: presenterOutput.thesis.factorsFor,
             factorsAgainst: presenterOutput.thesis.factorsAgainst,
@@ -246,7 +331,7 @@ export async function present(input: PresentInput): Promise<MaxwellIntelligence>
             nextCatalyst: presenterOutput.thesis.nextCatalyst,
             sourceConflicts: presenterOutput.thesis.sourceConflicts,
         },
-        outcomes: presenterOutput.outcomes,
+        outcomes: calibratedOutcomes,
         arbitrage: transformArbitrage(presenterOutput.arbitrage),
         verification: {
             score: verificationScore,

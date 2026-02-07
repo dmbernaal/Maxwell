@@ -15,7 +15,7 @@
  * A sub-query generated from the original user query.
  * Each sub-query is designed to be searched independently.
  */
-export type TavilySearchTopic = 'general' | 'news';
+export type TavilySearchTopic = 'general' | 'news' | 'finance';
 export type TavilySearchDepth = 'basic' | 'advanced';
 export type TavilyTimeRange = 'day' | 'week' | 'month' | 'year' | 'd' | 'w' | 'm' | 'y';
 
@@ -46,6 +46,8 @@ export interface SubQuery {
     days?: number;
     /** Specific domains to include (optional) */
     domains?: string[];
+    /** Specific domains to exclude (optional) */
+    excludeDomains?: string[];
     
     // Prediction Market Specific Fields (optional for backward compatibility)
     /** Category of query for market analysis coverage */
@@ -132,6 +134,8 @@ export interface MaxwellSource {
     fromQuery: string;
     /** Published date of the source (from Tavily) */
     date?: string;
+    /** Relevance score from search provider (0-1) */
+    score?: number;
 }
 
 /**

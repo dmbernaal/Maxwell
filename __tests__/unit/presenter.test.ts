@@ -646,8 +646,10 @@ describe('PresenterOutputSchema', () => {
         expect(() => PresenterOutputSchema.parse(output)).not.toThrow();
     });
 
-    it('should reject verification score > 100', () => {
-        const output = {
+    it('should accept any numeric verification score (clamping happens in code, not schema)', () => {
+        // Schema constraint removed for Anthropic API compatibility.
+        // Score clamping (0-100) is enforced in presenter.ts code instead.
+        const makeOutput = (score: number) => ({
             market: {
                 question: 'Test?',
                 type: 'binary',
@@ -670,52 +672,18 @@ describe('PresenterOutputSchema', () => {
                 nextCatalyst: { event: 'None', impact: 'None' },
             },
             verification: {
-                score: 150,
+                score,
                 level: 'VERIFIED',
                 sourcesAnalyzed: 10,
                 claimsVerified: 8,
                 claimsDisputed: 2,
                 topSources: [],
             },
-        };
+        });
 
-        expect(() => PresenterOutputSchema.parse(output)).toThrow();
-    });
-
-    it('should reject verification score < 0', () => {
-        const output = {
-            market: {
-                question: 'Test?',
-                type: 'binary',
-                deadline: '5 days',
-                deadlineDate: '2026-01-25T00:00:00Z',
-                resolutionCriteria: 'Test',
-            },
-            assessment: {
-                primaryOutcome: 'Yes',
-                marketPrice: 0.65,
-                maxwellRange: { low: 0.60, mid: 0.70, high: 0.80 },
-                verdict: 'FAIR',
-                confidence: 'HIGH',
-                headline: 'Test.',
-            },
-            thesis: {
-                factorsFor: [],
-                factorsAgainst: [],
-                keyUncertainty: 'Unknown',
-                nextCatalyst: { event: 'None', impact: 'None' },
-            },
-            verification: {
-                score: -10,
-                level: 'VERIFIED',
-                sourcesAnalyzed: 10,
-                claimsVerified: 8,
-                claimsDisputed: 2,
-                topSources: [],
-            },
-        };
-
-        expect(() => PresenterOutputSchema.parse(output)).toThrow();
+        expect(() => PresenterOutputSchema.parse(makeOutput(150))).not.toThrow();
+        expect(() => PresenterOutputSchema.parse(makeOutput(-10))).not.toThrow();
+        expect(() => PresenterOutputSchema.parse(makeOutput(75))).not.toThrow();
     });
 
     it('should reject invalid market type', () => {
@@ -805,7 +773,7 @@ describe('PRESENTER_MODEL', () => {
         expect(PRESENTER_MODEL.length).toBeGreaterThan(0);
     });
 
-    it('should reference a Google model for structured output', () => {
-        expect(PRESENTER_MODEL).toContain('google/');
+    it('should use a strong model for calibrated probability estimation', () => {
+        expect(PRESENTER_MODEL).toBe('anthropic/claude-sonnet-4.5');
     });
 });

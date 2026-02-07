@@ -341,6 +341,7 @@ export function useMaxwell(): UseMaxwellReturn {
                     body: JSON.stringify({
                         subQueries: decomposition.subQueries,
                         config: decomposition.config,
+                        originalQuery: query,
                     }),
                     signal: abortControllerRef.current.signal,
                 });

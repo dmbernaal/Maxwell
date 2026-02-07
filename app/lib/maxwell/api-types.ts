@@ -40,6 +40,7 @@ export interface DecomposeResponse extends DecompositionOutput {
 export interface SearchRequest {
     subQueries: SubQuery[];
     config: ExecutionConfig;
+    originalQuery?: string;
 }
 
 /**
