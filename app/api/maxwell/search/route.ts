@@ -14,6 +14,7 @@
 
 import { NextRequest } from 'next/server';
 import { parallelSearch } from '../../../lib/maxwell/searcher';
+import { extractSourceContent } from '../../../lib/maxwell/extractor';
 import { prepareEvidence } from '../../../lib/maxwell/verifier';
 import { storeEvidenceInBlob } from '../../../lib/maxwell/blob-storage';
 import type { SearchRequest, SearchResponse } from '../../../lib/maxwell/api-types';
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { subQueries, config } = body;
+        const { subQueries, config, originalQuery } = body;
 
         // 2. Validation
         if (!subQueries || !Array.isArray(subQueries) || subQueries.length === 0) {
@@ -64,11 +65,24 @@ export async function POST(request: NextRequest) {
 
         console.log('[Maxwell Search] Found', searchOutput.sources.length, 'sources');
 
-        // 4. PRE-EMBED ALL PASSAGES (THE KEY OPTIMIZATION)
-        // This moves the expensive embedding operation from /verify to /search
-        // We embed ALL passages - no truncation for maximum verification quality
+        // 4. EXTRACT: Enrich top sources with full page content (standard/deep_research only)
+        let sourcesToEmbed = searchOutput.sources;
+        if (originalQuery && config.complexity !== 'simple') {
+            console.log('[Maxwell Search] Extracting full content from top sources...');
+            const extractResult = await extractSourceContent(
+                searchOutput.sources,
+                originalQuery,
+                config.complexity
+            );
+            sourcesToEmbed = extractResult.sources;
+            if (extractResult.extractedCount > 0) {
+                console.log(`[Maxwell Search] Enriched ${extractResult.extractedCount} sources (${extractResult.durationMs}ms)`);
+            }
+        }
+
+        // 5. PRE-EMBED ALL PASSAGES (THE KEY OPTIMIZATION)
         console.log('[Maxwell Search] Pre-embedding passages...');
-        const evidence = await prepareEvidence(searchOutput.sources);
+        const evidence = await prepareEvidence(sourcesToEmbed);
 
         console.log('[Maxwell Search] Embedded', evidence.passages.length, 'passages');
 
@@ -83,7 +97,7 @@ export async function POST(request: NextRequest) {
 
         // 6. Build response (small payload - just URL reference)
         const response: SearchResponse = {
-            sources: searchOutput.sources,
+            sources: sourcesToEmbed,
             searchMetadata: searchOutput.searchMetadata,
             evidenceBlobUrl: blobResult.blobUrl,
             evidenceStats: {

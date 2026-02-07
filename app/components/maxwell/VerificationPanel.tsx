@@ -27,18 +27,18 @@ function ClaimRow({ claim, sources }: { claim: VerifiedClaim; sources: MaxwellSo
     const verdictConfig = {
         SUPPORTED: {
             label: 'Verified',
-            color: 'text-emerald-400',
-            dot: 'bg-emerald-400'
+            color: 'text-white/70',
+            dot: 'bg-white/40'
         },
         NEUTRAL: {
             label: 'Uncertain',
-            color: 'text-amber-400',
-            dot: 'bg-amber-400'
+            color: 'text-white/40',
+            dot: 'bg-white/20'
         },
         CONTRADICTED: {
             label: 'Disputed',
-            color: 'text-rose-400',
-            dot: 'bg-rose-400'
+            color: 'text-white/30',
+            dot: 'bg-white/15'
         },
     };
 
@@ -72,7 +72,7 @@ function ClaimRow({ claim, sources }: { claim: VerifiedClaim; sources: MaxwellSo
                         {hasNumericMismatch && (
                             <>
                                 <span className="w-0.5 h-0.5 rounded-full bg-white/20" />
-                                <span className="text-[10px] font-mono text-rose-400/80 tracking-wider flex items-center gap-1.5">
+                                <span className="text-[10px] font-mono text-white/40 tracking-wider flex items-center gap-1.5">
                                     NUMERIC MISMATCH
                                 </span>
                             </>
@@ -108,13 +108,13 @@ function ClaimRow({ claim, sources }: { claim: VerifiedClaim; sources: MaxwellSo
                                 <div className="grid grid-cols-2 gap-8 py-3">
                                     <div>
                                         <div className="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-1">Claimed</div>
-                                        <div className="font-mono text-xs text-rose-400/90">
+                                        <div className="font-mono text-xs text-white/50">
                                             {claim.numericCheck.claimNumbers.join(', ')}
                                         </div>
                                     </div>
                                     <div>
                                         <div className="text-[9px] font-mono text-white/30 uppercase tracking-widest mb-1">Evidence</div>
-                                        <div className="font-mono text-xs text-emerald-400/90">
+                                        <div className="font-mono text-xs text-white/70">
                                             {claim.numericCheck.evidenceNumbers.join(', ')}
                                         </div>
                                     </div>

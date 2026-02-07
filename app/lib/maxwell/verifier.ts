@@ -11,7 +11,7 @@ import { generateObject } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { z } from 'zod';
 
-import { createClaimExtractionPrompt, createNLIPrompt } from './prompts';
+import { createClaimExtractionPrompt, createNLIPrompt, createResolutionRiskPrompt } from './prompts';
 import { embedText, embedTexts, cosineSimilarity } from './embeddings';
 import {
     CLAIM_EXTRACTION_MODEL,
@@ -29,6 +29,7 @@ import {
     CITATION_MISMATCH_MULTIPLIER,
     NUMERIC_MISMATCH_MULTIPLIER,
     DEFAULT_VERIFICATION_CONCURRENCY,
+    RESOLUTION_RISK_MODEL,
 } from './constants';
 
 import type {
@@ -42,6 +43,8 @@ import type {
     VerifiedClaim,
     VerificationOutput,
     VerificationSummary,
+    MarketContext,
+    ResolutionRisk,
 } from './types';
 
 // ============================================
@@ -102,6 +105,35 @@ const EntailmentSchema = z.object({
     verdict: z.enum(['SUPPORTED', 'CONTRADICTED', 'NEUTRAL']),
     reasoning: z.string(),
 });
+
+// ============================================
+// RESOLUTION RISK SCHEMAS
+// ============================================
+
+export const ResolutionRiskFactorTypeSchema = z.enum([
+    'ambiguous_language',
+    'source_reliability',
+    'edge_case',
+    'platform_risk',
+    'temporal_risk',
+]);
+
+export const ResolutionRiskFactorSchema = z.object({
+    type: ResolutionRiskFactorTypeSchema,
+    description: z.string(),
+    severity: z.enum(['LOW', 'MEDIUM', 'HIGH']),
+});
+
+export const ResolutionRiskAnalysisSchema = z.object({
+    riskLevel: z.enum(['LOW', 'MEDIUM', 'HIGH']),
+    riskScore: z.number().min(0).max(100),
+    factors: z.array(ResolutionRiskFactorSchema),
+    ambiguousTerms: z.array(z.string()),
+    recommendation: z.string(),
+    historicalComparison: z.string().nullable(),
+});
+
+export type ResolutionRiskAnalysis = z.infer<typeof ResolutionRiskAnalysisSchema>;
 
 // ============================================
 // CLAIM EXTRACTION
@@ -1038,6 +1070,40 @@ export async function* verifyClaimsWithPrecomputedEvidence(
     if (error) throw error;
     const result = await verificationPromise;
     yield { type: 'result', data: result };
+}
+
+// ============================================
+// RESOLUTION RISK ANALYSIS
+// ============================================
+
+export async function analyzeResolutionRisk(
+    marketContext: MarketContext
+): Promise<ResolutionRisk> {
+    const openrouter = getOpenRouterClient();
+    const prompt = createResolutionRiskPrompt(marketContext);
+
+    try {
+        const { object } = await generateObject({
+            model: openrouter(RESOLUTION_RISK_MODEL),
+            prompt,
+            schema: ResolutionRiskAnalysisSchema,
+        });
+
+        return {
+            level: object.riskLevel,
+            score: object.riskScore,
+            factors: object.factors.map((f) => f.description),
+            historicalDisputes: object.historicalComparison || undefined,
+        };
+    } catch (error) {
+        console.error('Resolution risk analysis failed:', error);
+        return {
+            level: 'MEDIUM',
+            score: 50,
+            factors: ['Resolution risk analysis failed - defaulting to medium risk'],
+            historicalDisputes: undefined,
+        };
+    }
 }
 
 // ============================================

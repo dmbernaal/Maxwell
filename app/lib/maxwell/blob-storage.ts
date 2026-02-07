@@ -5,19 +5,18 @@
  * to avoid the 4.5MB request body limit between serverless functions.
  *
  * HYBRID MODE:
- * - Production (Vercel): Uses Blob Storage
- * - Development (local): Uses base64-encoded data URLs (no size limit locally)
- *
- * Flow:
- * 1. Search endpoint: prepares evidence, stores in Blob (or data URL), returns URL
- * 2. Client: passes URL to Verify endpoint
- * 3. Verify endpoint: fetches from Blob (or decodes data URL)
+ * - Production (Vercel): Uses Blob Storage (external URL)
+ * - Development (local): Uses in-memory cache with reference ID
+ *   (Data URLs caused browser OOM crashes with large embeddings)
  *
  * @module maxwell/blob-storage
  */
 
 import { put, del } from '@vercel/blob';
 import type { Passage } from './types';
+
+const LOCAL_EVIDENCE_CACHE = new Map<string, SerializedEvidence>();
+const LOCAL_CACHE_PREFIX = 'maxwell-local://';
 
 // ============================================
 // TYPES
@@ -149,18 +148,20 @@ export async function storeEvidenceInBlob(
 
     const jsonString = JSON.stringify(evidence);
 
-    // LOCAL DEVELOPMENT: Use data URL (no size limits locally)
     if (!isVercelEnvironment()) {
-        const dataUrl = `data:application/json;base64,${Buffer.from(jsonString).toString('base64')}`;
+        const cacheId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        LOCAL_EVIDENCE_CACHE.set(cacheId, evidence);
 
-        console.log('[Maxwell Blob] Stored evidence locally (data URL):', {
+        console.log('[Maxwell Blob] Stored evidence in local memory cache:', {
+            cacheId,
             passages: passages.length,
             embeddings: embeddings.length,
             sizeEstimate: `~${Math.round(jsonString.length / 1024)}KB`,
+            cacheSize: LOCAL_EVIDENCE_CACHE.size,
         });
 
         return {
-            blobUrl: dataUrl,
+            blobUrl: `${LOCAL_CACHE_PREFIX}${cacheId}`,
             passageCount: passages.length,
             embeddingCount: embeddings.length,
         };
@@ -200,8 +201,24 @@ export async function fetchEvidenceFromBlob(blobUrl: string): Promise<{
 }> {
     let evidence: SerializedEvidence;
 
-    // LOCAL DEVELOPMENT: Handle data URLs
-    if (blobUrl.startsWith('data:')) {
+    if (blobUrl.startsWith(LOCAL_CACHE_PREFIX)) {
+        const cacheId = blobUrl.slice(LOCAL_CACHE_PREFIX.length);
+        const cached = LOCAL_EVIDENCE_CACHE.get(cacheId);
+        
+        if (!cached) {
+            throw new Error(`Local evidence cache miss: ${cacheId}`);
+        }
+        
+        evidence = cached;
+        LOCAL_EVIDENCE_CACHE.delete(cacheId);
+
+        console.log('[Maxwell Blob] Fetched evidence from local memory cache:', {
+            cacheId,
+            passages: evidence.passages.length,
+            embeddings: evidence.embeddingsDimensions.rows,
+            remainingCacheSize: LOCAL_EVIDENCE_CACHE.size,
+        });
+    } else if (blobUrl.startsWith('data:')) {
         const base64Data = blobUrl.split(',')[1];
         const jsonString = Buffer.from(base64Data, 'base64').toString('utf-8');
         evidence = JSON.parse(jsonString);
@@ -248,7 +265,12 @@ export async function fetchEvidenceFromBlob(blobUrl: string): Promise<{
  * @param blobUrl - URL of the blob to delete
  */
 export async function deleteEvidenceFromBlob(blobUrl: string): Promise<void> {
-    // Skip deletion for data URLs (local development)
+    if (blobUrl.startsWith(LOCAL_CACHE_PREFIX)) {
+        const cacheId = blobUrl.slice(LOCAL_CACHE_PREFIX.length);
+        LOCAL_EVIDENCE_CACHE.delete(cacheId);
+        return;
+    }
+    
     if (blobUrl.startsWith('data:')) {
         return;
     }

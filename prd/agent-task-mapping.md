@@ -61,7 +61,7 @@ This document maps PRD sections to implementation tasks for AI agents. Each task
 |---------|-------------|---------------|----------|-------|
 | `P4-T1` | Add loading/skeleton states | design.prd.md §10 | P1 | Frontend |
 | `P4-T2` | Add error handling UI | design.prd.md §10 | P1 | Frontend |
-| `P4-T3` | Mobile responsive pass | design.prd.md §7 | P1 | Frontend |
+| `P4-T3` | Mobile responsive pass | design.prd.md §7 | P1 | Frontend | ✅ Completed |
 | `P4-T4` | Accessibility fixes (ARIA, keyboard) | design.prd.md §9 | P1 | Frontend |
 | `P4-T5` | IndexedDB persistence for analyses | system-architecture.prd.md §6 | P2 | Frontend |
 

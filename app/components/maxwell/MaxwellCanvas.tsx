@@ -1,33 +1,23 @@
-/**
- * Maxwell Canvas Component
- * 
- * The right-side panel that displays all Maxwell-specific information:
- * - Phase progress
- * - Sub-queries
- * - Sources
- * - Verification results
- * 
- * Slides in from the right when Maxwell mode starts processing.
- * 
- * @module components/maxwell/MaxwellCanvas
- */
-
-'use client';
-
 import React from 'react';
 import { motion } from 'framer-motion';
-import { X, Sparkles } from 'lucide-react';
-import { PhaseProgress } from './PhaseProgress';
-import { SubQueryList } from './SubQueryList';
-import { VerificationPanel } from './VerificationPanel';
-import { EventLog } from './EventLog';
-import { PlanningCard } from './PlanningCard'; // Added import
+import { X } from 'lucide-react';
 
-import type { ExecutionPhase, PhaseDurations, SubQuery, SearchMetadata, MaxwellSource, VerificationOutput, MaxwellEvent } from '../../lib/maxwell/types';
+import { IntelligencePanel } from './IntelligencePanel';
+
+import type {
+    ExecutionPhase,
+    PhaseDurations,
+    SubQuery,
+    SearchMetadata,
+    MaxwellSource,
+    VerificationOutput,
+    MaxwellEvent,
+    MaxwellIntelligence
+} from '../../lib/maxwell/types';
 import type { VerificationProgress } from '../../hooks/use-maxwell';
-import type { ExecutionConfig } from '../../lib/maxwell/configFactory'; // Added import
+import type { ExecutionConfig } from '../../lib/maxwell/configFactory';
 
-interface MaxwellCanvasProps {
+export interface MaxwellCanvasProps {
     phase: ExecutionPhase;
     subQueries: SubQuery[];
     sources: MaxwellSource[];
@@ -39,7 +29,10 @@ interface MaxwellCanvasProps {
     events: MaxwellEvent[];
     onClose: () => void;
     reasoning?: string;
-    config?: ExecutionConfig; // Added config prop
+    config?: ExecutionConfig;
+    answer?: string;
+    adjudication?: string | null;
+    intelligence?: MaxwellIntelligence | null;
 }
 
 export function MaxwellCanvas({
@@ -53,81 +46,53 @@ export function MaxwellCanvas({
     phaseStartTimes,
     events,
     onClose,
-    reasoning,
-    config, // Added config
+    config,
+    answer = '',
+    adjudication = null,
+    intelligence
 }: MaxwellCanvasProps) {
+    const isAnalyzing = phase !== 'idle' && phase !== 'complete';
+
     return (
         <motion.div
             initial={{ x: 100, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: 100, opacity: 0 }}
-            transition={{
-                type: 'spring',
-                stiffness: 300,
-                damping: 30,
-            }}
-            className="fixed top-4 right-4 bottom-4 w-[48%] bg-[#18151d] rounded-[32px] border border-white/10 shadow-2xl z-40 flex flex-col overflow-hidden"
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#0a0a0a] shadow-2xl md:top-4 md:right-4 md:bottom-4 md:left-auto md:w-[600px] md:max-w-[90vw] md:rounded-2xl md:border md:border-[#2a2a2a] md:z-40"
         >
-            {/* Background Pattern - Dot Matrix */}
-            <div
-                className="absolute inset-0 opacity-[0.15] pointer-events-none z-0"
-                style={{
-                    backgroundImage: 'radial-gradient(#333 1px, transparent 1px)',
-                    backgroundSize: '24px 24px',
-                    maskImage: 'radial-gradient(circle at center, black 40%, transparent 100%)',
-                    WebkitMaskImage: 'radial-gradient(circle at center, black 40%, transparent 100%)'
-                }}
-            />
+            <div className="relative z-10 flex items-center justify-between px-5 py-4 border-b border-[#2a2a2a] bg-[#0a0a0a]/95 backdrop-blur-md">
+                <div className="flex items-center gap-3">
+                    <h2 className="text-sm font-medium text-white/90 tracking-tight">
+                        Maxwell Intelligence
+                    </h2>
+                    {phaseDurations.total && (
+                        <span className="text-[10px] font-mono text-white/30">
+                            {(phaseDurations.total / 1000).toFixed(1)}s
+                        </span>
+                    )}
+                </div>
 
-            {/* Close Button - Absolute Top Left */}
-            <button
-                onClick={onClose}
-                className="absolute top-6 left-6 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors z-50 group"
-            >
-                <X className="w-5 h-5 text-white/40 group-hover:text-white transition-colors" />
-            </button>
-
-            {/* Header - Minimalist & Transparent */}
-            <div className="relative z-10 flex items-center justify-end px-8 pt-8 pb-2">
-                {phaseDurations.total && (
-                    <span className="text-[10px] font-mono text-white/30">
-                        {phaseDurations.total > 0 ? `${(phaseDurations.total / 1000).toFixed(2)}s` : ''}
-                    </span>
-                )}
+                <button
+                    onClick={onClose}
+                    className="p-2 -mr-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-white transition-colors"
+                >
+                    <X size={16} />
+                </button>
             </div>
 
-            {/* Content - Scrollable & Left Aligned */}
-            <div className="relative z-10 flex-1 overflow-y-auto px-8 py-8 space-y-8 no-scrollbar">
-                {/* Phase Progress */}
-                <div className="space-y-3">
-                    <PhaseProgress phase={phase} phaseDurations={phaseDurations} phaseStartTimes={phaseStartTimes} />
-                </div>
-
-                {/* Planning Card - Adaptive Compute Visualization */}
-                {config && (
-                    <div className="space-y-3">
-                        <PlanningCard config={config} />
-                    </div>
-                )}
-
-                {/* Sub-queries */}
-                <div className="space-y-3">
-                    <SubQueryList subQueries={subQueries} searchMetadata={searchMetadata} sources={sources} reasoning={reasoning} />
-                </div>
-
-                {/* Verification */}
-                {(verification || verificationProgress) && (
-                    <div className="space-y-3">
-                        <VerificationPanel
-                            verification={verification}
-                            progress={verificationProgress}
-                            sources={sources}
-                        />
-                    </div>
-                )}
-
-                {/* Live Event Log */}
-                <EventLog events={events} />
+            <div className="relative z-10 flex-1 overflow-y-auto px-5 py-6 custom-scrollbar">
+                <IntelligencePanel
+                    data={intelligence || null}
+                    isLoading={isAnalyzing}
+                    error={null}
+                    onRetry={() => onClose()}
+                    phase={phase}
+                    sourceCount={sources.length}
+                    verificationProgress={verificationProgress}
+                    phaseDurations={phaseDurations}
+                    phaseStartTimes={phaseStartTimes}
+                />
             </div>
         </motion.div>
     );

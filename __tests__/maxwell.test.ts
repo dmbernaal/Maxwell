@@ -53,8 +53,8 @@ describe('Maxwell Core Logic', () => {
             expect(config.complexity).toBe('simple');
             expect(config.maxSubQueries).toBe(2);
             expect(config.resultsPerQuery).toBe(4);
-            expect(config.verificationConcurrency).toBe(4);
-            expect(config.maxClaimsToVerify).toBe(4);
+            expect(config.verificationConcurrency).toBe(8);
+            expect(config.maxClaimsToVerify).toBe(5);
             expect(config.synthesisModel).toContain('flash');
         });
 

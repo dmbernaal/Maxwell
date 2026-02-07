@@ -14,12 +14,12 @@ export function AdjudicationPanel({ text, isStreaming, status }: AdjudicationPan
     const isCorrection = status === 'correction_needed';
 
     // Styling based on status
-    const borderColor = isCorrection ? 'border-amber-500/50' : 'border-emerald-500/50';
+    const borderColor = isCorrection ? 'border-brand-accent/30' : 'border-white/20';
     const bgGradient = isCorrection
-        ? 'bg-gradient-to-r from-amber-950/30 to-transparent'
-        : 'bg-gradient-to-r from-emerald-950/30 to-transparent';
-    const iconColor = isCorrection ? 'text-amber-400' : 'text-emerald-400';
-    const titleColor = isCorrection ? 'text-amber-200' : 'text-emerald-200';
+        ? 'bg-white/[0.02]'
+        : 'bg-white/[0.02]';
+    const iconColor = isCorrection ? 'text-brand-accent' : 'text-white/60';
+    const titleColor = isCorrection ? 'text-white/80' : 'text-white/70';
 
     return (
         <motion.div

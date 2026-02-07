@@ -12,7 +12,7 @@
 import { NextRequest } from 'next/server';
 import { streamText } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import { createSynthesisPrompt } from '../../../lib/maxwell/prompts';
+import { createSynthesisPrompt, createPredictionMarketSynthesisPrompt } from '../../../lib/maxwell/prompts';
 import { SYNTHESIS_MAX_TOKENS } from '../../../lib/maxwell/constants';
 import type { SynthesizeRequest } from '../../../lib/maxwell/api-types';
 import type { MaxwellSource } from '../../../lib/maxwell/types';
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { query, sources, synthesisModel } = body;
+        const { query, sources, synthesisModel, marketContext } = body;
 
         // 2. Validation
         if (!query || typeof query !== 'string') {
@@ -93,10 +93,12 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        console.log('[Maxwell Synthesize] Starting synthesis with', sources.length, 'sources');
+        console.log('[Maxwell Synthesize] Starting synthesis with', sources.length, 'sources', marketContext ? '[Prediction Market Mode]' : '');
 
         const openrouter = getOpenRouterClient();
-        const prompt = createSynthesisPrompt(sources as MaxwellSource[], query);
+        const prompt = marketContext
+            ? createPredictionMarketSynthesisPrompt(sources as MaxwellSource[], query, marketContext)
+            : createSynthesisPrompt(sources as MaxwellSource[], query);
 
         // 3. Create AI stream with explicit abort controller
         const abortController = new AbortController();

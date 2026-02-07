@@ -97,50 +97,41 @@ export function PhaseProgress({ phase, phaseDurations, phaseStartTimes }: PhaseP
             {/* Latency Waterfall */}
             <div className="mt-2 px-1">
                 <div className="flex h-1.5 w-full rounded-full overflow-hidden bg-white/5">
-                    {/* Decomposition */}
                     {durations.decomposition > 0 && (
                         <div
-                            className="h-full bg-indigo-500/50"
+                            className="h-full bg-white/20"
                             style={{ width: `${(durations.decomposition / totalDuration) * 100}%` }}
                         />
                     )}
-                    {/* Search */}
                     {durations.search > 0 && (
                         <div
-                            className="h-full bg-sky-500/50"
+                            className="h-full bg-white/30"
                             style={{ width: `${(durations.search / totalDuration) * 100}%` }}
                         />
                     )}
-                    {/* Synthesis */}
                     {durations.synthesis > 0 && (
                         <div
-                            className="h-full bg-violet-500/50"
+                            className="h-full bg-white/40"
                             style={{ width: `${(durations.synthesis / totalDuration) * 100}%` }}
                         />
                     )}
-                    {/* Verification */}
                     {durations.verification > 0 && (
                         <div
-                            className="h-full bg-emerald-500/50"
+                            className="h-full bg-brand-accent/60"
                             style={{ width: `${(durations.verification / totalDuration) * 100}%` }}
                         />
                     )}
                 </div>
 
                 {/* Waterfall Legend */}
-                <div className="flex justify-between mt-1.5">
+                <div className="flex flex-wrap justify-between gap-y-1 mt-1.5">
                     {Object.entries(durations).map(([key, duration]) => {
                         if (duration === 0) return null;
-                        const colorMap: Record<string, string> = {
-                            decomposition: 'text-indigo-400',
-                            search: 'text-sky-400',
-                            synthesis: 'text-violet-400',
-                            verification: 'text-emerald-400'
-                        };
+                        const isActive = key === 'verification';
                         return (
-                            <div key={key} className="flex items-center gap-1.5">
-                                <span className={`w-1 h-1 rounded-full ${colorMap[key].replace('text', 'bg')}`} />
-                                <span className={`text-[9px] uppercase tracking-wider ${colorMap[key]} opacity-60`}>
+                            <div key={key} className="flex items-center gap-1.5 mr-2 last:mr-0">
+                                <span className={`w-1 h-1 rounded-full ${isActive ? 'bg-brand-accent/60' : 'bg-white/30'}`} />
+                                <span className={`text-[9px] uppercase tracking-wider ${isActive ? 'text-brand-accent/60' : 'text-white/40'}`}>
                                     {(duration / 1000).toFixed(1)}s
                                 </span>
                             </div>

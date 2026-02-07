@@ -7,7 +7,12 @@
  * @module maxwell/prompts
  */
 
-import type { MaxwellSource } from './types';
+import type { MaxwellSource, MarketContext, MarketOutcomeContext, VerificationOutput, ResolutionRisk, VerifiedClaim } from './types';
+
+function formatDate(date: Date | string): string {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
 
 // ============================================
 // DECOMPOSITION PROMPT
@@ -24,6 +29,7 @@ STRATEGY RULES:
 2. **Topic Selection:**
    - Use 'news' for current events (last 30 days), politics, sports, or market movements.
    - Use 'general' for historical facts, evergreen concepts, coding help, or science.
+   - Use 'finance' for financial data, earnings, stock/crypto prices, economic indicators, or prediction markets.
 3. **Time Sensitivity:**
    - If the user implies recency ("latest", "today", "new"), set 'days' to 1 (24h) or 3 (72h).
    - If historical, leave 'days' null.
@@ -43,6 +49,10 @@ STRATEGY RULES:
    - 'simple': Fact lookups, specific data points, definitions, weather, stock prices.
    - 'standard': Explanations, summaries of recent events, comparisons, how-to guides.
    - 'deep_research': Multi-faceted analysis, future predictions, medical/legal queries, or requests for "comprehensive" reports.
+8. **BASE RATES (CRITICAL for predictions):**
+   - Before assessing any prediction, consider the historical base rate.
+   - "How often does this type of event happen?" should inform the sub-query strategy.
+   - Include at least one sub-query targeting historical precedent or reference class data when the query involves predictions or forecasts.
 
 OUTPUT FORMAT:
 Return a JSON object with this exact structure:
@@ -54,10 +64,11 @@ Return a JSON object with this exact structure:
     {
       "id": "q1",
       "query": "concise keyword query",
-      "topic": "general" | "news",
+      "topic": "general" | "news" | "finance",
       "depth": "basic" | "advanced",
       "days": number | null,
       "domains": ["example.com"] | null,
+      "excludeDomains": ["spam-site.com"] | null,
       "purpose": "why this query is needed"
     }
   ]
@@ -93,6 +104,93 @@ Output: {
 }
 
 Now decompose the User Query provided in CONTEXT.`;
+
+// ============================================
+// PREDICTION MARKET DECOMPOSITION PROMPT
+// ============================================
+
+export const PREDICTION_MARKET_DECOMPOSITION_PROMPT = `You are a Master Search Strategist for a prediction market intelligence platform.
+
+CONTEXT:
+- Current Date: {currentDate}
+- User Query: {query}
+
+MARKET CONTEXT:
+- Title: {marketTitle}
+- Type: {marketType}
+- Outcomes: {outcomes}
+- Current Prices: {prices}
+- Resolution Rules: {rules}
+- Deadline: {deadline}
+- Platform: {platform}
+
+YOUR TASK:
+Generate sub-queries that will gather intelligence for a PREDICTION MARKET trader.
+Traders need to assess: Is this market fairly priced? What might the market be missing?
+
+REQUIRED SUB-QUERY CATEGORIES:
+
+1. **RESOLUTION CLARITY** (CRITICAL - addresses #1 trader pain point)
+   - Search for the exact resolution criteria interpretation
+   - Look for historical disputes on similar markets
+   - Check for ambiguous language that could cause issues
+   - Query: "[market topic] resolution dispute" or "[platform] [topic] controversy"
+
+2. **RECENT CATALYSTS** (last 24-72 hours)
+   - What just happened that could affect this market?
+   - Breaking news, announcements, developments
+   - Use topic: 'news', days: 1-3
+
+3. **FACTORS FOR EACH OUTCOME** (research ALL top outcomes, not just one)
+   For multi-outcome markets with {outcomeCount} outcomes, generate queries for the top {topN} by market price:
+   {outcomeQueries}
+
+4. **CONTRARIAN SIGNALS**
+   - What could prove the market consensus wrong?
+   - Expert opinions that diverge from market pricing
+   - Historical precedents where similar situations resolved unexpectedly
+
+5. **CROSS-PLATFORM COMPARISON** (if applicable)
+   - Search for equivalent market on other platform
+   - Note any price discrepancies
+
+OUTPUT FORMAT:
+{
+  "reasoning": "Your decomposition strategy",
+  "complexity": "standard" | "deep_research",
+  "complexityReasoning": "Why this complexity level",
+  "subQueries": [
+    {
+      "id": "q1",
+      "query": "concise search query",
+      "topic": "general" | "news",
+      "depth": "basic" | "advanced",
+      "days": number | null,
+      "domains": ["domain.com"] | null,
+      "purpose": "What this query investigates",
+      "category": "resolution" | "catalyst" | "factor_for" | "factor_against" | "contrarian" | "cross_platform",
+      "targetOutcome": "Seattle" | null
+    }
+  ]
+}
+
+RULES:
+- Use topic 'finance' for queries about prices, earnings, economic data, and market fundamentals
+- Use topic 'news' for breaking developments, announcements, and political events
+- Use topic 'general' for historical data, technical analysis, and background research
+- For multi-outcome markets, analyze TOP {topN} outcomes by market price
+- Always include at least one resolution-focused query
+- Always include recent news queries (days: 1-3)
+- Balance queries across FOR and AGAINST factors
+- Target authoritative sources for the domain (see DOMAIN TARGETING below)
+- Consider BASE RATES: include a query for historical precedent or reference class frequency
+
+DOMAIN TARGETING:
+- Political markets: fivethirtyeight.com, realclearpolitics.com, politico.com
+- Sports markets: espn.com, nfl.com, pro-football-reference.com
+- Crypto markets: glassnode.com, arkham.ai, official project domains
+- Economic markets: federalreserve.gov, bls.gov, sec.gov, reuters.com
+`;
 
 // ============================================
 // SYNTHESIS PROMPT
@@ -137,6 +235,84 @@ SOURCES PROVIDED:
 {sources}
 
 Generate your synthesized intelligence report based strictly on the above sources.`;
+
+// ============================================
+// PREDICTION MARKET SYNTHESIS PROMPT
+// ============================================
+
+export const PREDICTION_MARKET_SYNTHESIS_PROMPT = `You are an intelligence analyst for a prediction market research platform.
+
+CONTEXT:
+- Current Date: {currentDate}
+- Market Question: {marketQuestion}
+- Market Type: {marketType}
+- Outcomes Being Analyzed: {outcomes}
+- Resolution Rules: {rules}
+- Deadline: {deadline}
+
+SOURCES PROVIDED:
+{sources}
+
+YOUR TASK:
+Synthesize the research into a STRUCTURED INTELLIGENCE BRIEFING.
+This will be parsed by a downstream system, so follow the format exactly.
+
+OUTPUT FORMAT:
+
+## MARKET CONTEXT
+[One paragraph restating what this market is asking, the deadline, and resolution criteria in plain language]
+
+## RESOLUTION ANALYSIS
+[Analysis of resolution criteria clarity. Flag any ambiguous language, historical disputes, or interpretation risks]
+- Risk Level: LOW | MEDIUM | HIGH
+- Risk Factors: [List specific concerns, if any]
+
+## FACTORS FOR: {primaryOutcome}
+List 3-5 factors that support this outcome occurring:
+1. **[Factor Title]** — [Evidence with citation] [n]
+2. **[Factor Title]** — [Evidence with citation] [n]
+3. **[Factor Title]** — [Evidence with citation] [n]
+
+## FACTORS AGAINST: {primaryOutcome}
+List 3-5 factors that work against this outcome:
+1. **[Factor Title]** — [Evidence with citation] [n]
+2. **[Factor Title]** — [Evidence with citation] [n]
+3. **[Factor Title]** — [Evidence with citation] [n]
+
+## KEY UNCERTAINTY
+[The single biggest unknown that could swing the outcome either direction]
+
+## NEXT CATALYST
+- Event: [What event could move the market next]
+- Date: [When, if known]
+- Impact: [How it could affect odds]
+
+## SOURCE CONFLICTS
+[Explicitly state when sources disagree on key facts. If no conflicts, state "No significant source conflicts identified."]
+
+## MULTI-OUTCOME COMPARISON
+For each analyzed outcome:
+### {OutcomeName} ({marketPrice}%)
+- Factors For: [Brief summary]
+- Factors Against: [Brief summary]
+- Assessment: UNDERPRICED | OVERPRICED | FAIR
+- Confidence: HIGH | MEDIUM | LOW
+- One-liner: [Single sentence assessment]
+
+STRICT RULES:
+1. NEVER say "you should bet" or "I recommend" — this is intelligence, not advice
+2. NEVER say "I am X% confident" — let the evidence speak
+3. NEVER use filler phrases like "it's important to note" or "one must consider"
+4. EVERY factual claim MUST cite its source using [n] notation
+5. Be DENSE — traders want information, not padding
+6. Flag ALL source conflicts explicitly
+7. For multi-outcome markets, analyze ALL outcomes provided
+8. **PRICED-IN ASSESSMENT (CRITICAL FOR TRADING):**
+   - For each major factor, assess whether it is NEW information (last 24-48 hours) or KNOWN information the market has likely already incorporated
+   - Mark factors as [NEW] if they emerged in the last 48 hours, or [KNOWN] if they are older public knowledge
+   - Only [NEW] or genuinely underappreciated factors should be considered as reasons the market might be mispriced
+   - If all factors are [KNOWN], the market is likely fairly priced
+`;
 
 // ============================================
 // CLAIM EXTRACTION PROMPT
@@ -369,6 +545,359 @@ export function createNLIPrompt(claim: string, evidence: string, sourceDate?: st
 // ADJUDICATOR PROMPT
 // ============================================
 
+// ============================================
+// PREDICTION MARKET DECOMPOSITION HELPER
+// ============================================
+
+export function getTopNOutcomes(outcomes: MarketOutcomeContext[], totalCount: number): number {
+    if (totalCount <= 2) return totalCount;
+    if (totalCount <= 6) return totalCount;
+    if (totalCount <= 12) return 6;
+    if (totalCount <= 32) return 8;
+    return 10;
+}
+
+export function createPredictionMarketDecompositionPrompt(
+    query: string,
+    marketContext: MarketContext
+): string {
+    const topN = getTopNOutcomes(marketContext.outcomes, marketContext.outcomes.length);
+    const topOutcomes = [...marketContext.outcomes]
+        .sort((a, b) => b.price - a.price)
+        .slice(0, topN);
+
+    const outcomeQueries = topOutcomes
+        .map(o => `- ${o.name} (${Math.round(o.price * 100)}%): factors for/against`)
+        .join('\n   ');
+
+    const prices = topOutcomes
+        .map(o => `${o.name}: ${Math.round(o.price * 100)}%`)
+        .join(', ');
+
+    return fillPromptTemplate(PREDICTION_MARKET_DECOMPOSITION_PROMPT, {
+        currentDate: formatDate(new Date()),
+        query,
+        marketTitle: marketContext.title,
+        marketType: marketContext.type,
+        outcomes: marketContext.outcomes.map(o => o.name).join(', '),
+        prices,
+        rules: marketContext.rules,
+        deadline: formatDate(marketContext.endDate),
+        platform: marketContext.platform,
+        outcomeCount: String(marketContext.outcomes.length),
+        topN: String(topN),
+        outcomeQueries,
+    });
+}
+
+export function createPredictionMarketSynthesisPrompt(
+    sources: MaxwellSource[],
+    query: string,
+    marketContext: MarketContext
+): string {
+    const formattedSources = formatSourcesForPrompt(sources);
+    const topN = getTopNOutcomes(marketContext.outcomes, marketContext.outcomes.length);
+    const topOutcomes = [...marketContext.outcomes]
+        .sort((a, b) => b.price - a.price)
+        .slice(0, topN);
+
+    const primaryOutcome = topOutcomes[0]?.name || 'YES';
+
+    const outcomesForAnalysis = topOutcomes
+        .map(o => `${o.name} (${Math.round(o.price * 100)}%)`)
+        .join(', ');
+
+    return fillPromptTemplate(PREDICTION_MARKET_SYNTHESIS_PROMPT, {
+        currentDate: formatDate(new Date()),
+        marketQuestion: marketContext.title,
+        marketType: marketContext.type,
+        outcomes: outcomesForAnalysis,
+        rules: marketContext.rules,
+        deadline: formatDate(marketContext.endDate),
+        primaryOutcome,
+        sources: formattedSources,
+    });
+}
+
+// ============================================
+// RESOLUTION RISK PROMPT
+// ============================================
+
+export const RESOLUTION_RISK_PROMPT = `You are a prediction market resolution analyst.
+
+Your task is to analyze the RESOLUTION CRITERIA of a prediction market and assess the risk of disputes.
+
+MARKET INFORMATION:
+- Platform: {platform}
+- Title: {title}
+- Resolution Rules: {rules}
+- Resolution Source: {resolutionSource}
+- Deadline: {deadline}
+
+HISTORICAL CONTEXT (if available):
+{historicalDisputes}
+
+ANALYZE FOR THESE RISK FACTORS:
+
+1. **AMBIGUOUS LANGUAGE**
+   - Words like "significant", "material", "substantial", "reasonable"
+   - Undefined terms that require interpretation
+   - Subjective criteria ("in the opinion of...")
+
+2. **RESOLUTION SOURCE RELIABILITY**
+   - Official government/organization sources = LOW risk
+   - Major news outlets = LOW-MEDIUM risk
+   - Social media posts = HIGH risk
+   - "To be determined" = HIGH risk
+
+3. **EDGE CASES**
+   - What happens if the event is cancelled?
+   - What if there's a tie or unclear outcome?
+   - What if the resolution source is unavailable?
+
+4. **PLATFORM-SPECIFIC RISKS**
+   - Polymarket: UMA oracle disputes, whale voting manipulation
+   - Kalshi: Centralized resolution, potential for rule interpretation disputes
+
+5. **TEMPORAL RISKS**
+   - Very long time horizons increase uncertainty
+   - Markets that depend on future announcements
+   - "First to X" markets with unclear timing
+
+OUTPUT FORMAT:
+{
+  "riskLevel": "LOW" | "MEDIUM" | "HIGH",
+  "riskScore": 0-100,
+  "factors": [
+    {
+      "type": "ambiguous_language" | "source_reliability" | "edge_case" | "platform_risk" | "temporal_risk",
+      "description": "Specific issue identified",
+      "severity": "LOW" | "MEDIUM" | "HIGH"
+    }
+  ],
+  "ambiguousTerms": ["term1", "term2"],
+  "recommendation": "Brief recommendation for trader awareness",
+  "historicalComparison": "Similar markets had X% dispute rate" | null
+}
+
+CALIBRATION:
+- LOW (0-30): Clear rules, official sources, well-defined outcomes
+- MEDIUM (31-60): Some ambiguity but manageable, reputable sources
+- HIGH (61-100): Vague criteria, unreliable sources, high dispute likelihood
+`;
+
+export function createResolutionRiskPrompt(marketContext: MarketContext): string {
+    return fillPromptTemplate(RESOLUTION_RISK_PROMPT, {
+        platform: marketContext.platform,
+        title: marketContext.title,
+        rules: marketContext.rules,
+        resolutionSource: marketContext.resolutionSource || 'Not specified',
+        deadline: formatDate(marketContext.endDate),
+        historicalDisputes: 'No historical dispute data available.',
+    });
+}
+
+// ============================================
+// ADJUDICATOR PROMPT
+// ============================================
+
+// ============================================
+// PRESENTER PROMPTS
+// ============================================
+
+export const PRESENTER_SYSTEM_PROMPT = `You are the Presentation Layer for a prediction market intelligence platform.
+
+Your job is to transform research outputs into STRUCTURED JSON that a UI can render beautifully.
+
+CRITICAL PRINCIPLES:
+
+1. **INTELLIGENCE, NOT ADVICE**
+   - Say "UNDERPRICED" not "BET YES"
+   - Say "Maxwell range: 22-28%" not "I predict 25%"
+   - Traders make their own decisions
+
+2. **STRUCTURED, NOT PROSE**
+   - Every output field must be concise
+   - Headlines are ONE sentence
+   - Factor descriptions are ONE sentence each
+   - No paragraphs in structured fields
+
+3. **PROBABILITY ESTIMATION (CRITICAL FOR TRADING)**
+   - START from the current market price as your PRIOR. The market is efficient — it already reflects public information.
+   - Only deviate from market price if you have SPECIFIC, VERIFIED evidence that the market has NOT yet priced in.
+   - For each percentage point of deviation from market price, you MUST cite the specific new/underappreciated evidence justifying it.
+   - If all evidence is already public knowledge (>48 hours old), the market has likely priced it in → verdict should be FAIR.
+   - Provide a RANGE (low/mid/high). The range width reflects uncertainty:
+     - Narrow range (±3-5%): Strong evidence consensus, clear catalysts
+     - Medium range (±5-10%): Mixed evidence, some unknowns
+     - Wide range (±10-20%): High uncertainty, conflicting sources
+   - NEVER deviate more than 25 percentage points from market price unless you have extraordinary evidence
+
+4. **COMPARATIVE ANALYSIS**
+   - For multi-outcome markets, rank ALL analyzed outcomes
+   - Compare each outcome's evidence quality
+   - Identify the most/least favorable based on research
+
+5. **VERDICTS**
+   - UNDERPRICED: Evidence suggests higher probability than market
+   - OVERPRICED: Evidence suggests lower probability than market
+   - FAIR: Evidence aligns with market pricing
+   - UNCERTAIN: Insufficient or conflicting evidence
+
+6. **CONFIDENCE LEVELS**
+   - HIGH: Strong evidence consensus, high verification score
+   - MEDIUM: Mixed evidence, some verification issues
+   - LOW: Conflicting sources, low verification score
+`;
+
+export const PRESENTER_USER_PROMPT = `Transform this prediction market research into structured intelligence.
+
+MARKET CONTEXT:
+{marketContextJSON}
+
+SYNTHESIS OUTPUT (Phase 3):
+{synthesis}
+
+VERIFICATION OUTPUT (Phase 4):
+{verificationJSON}
+
+RESOLUTION RISK (Phase 4):
+{resolutionRiskJSON}
+
+ADJUDICATION OUTPUT (Phase 5):
+{adjudication}
+
+SOURCES USED:
+{sourcesJSON}
+
+PIPELINE DURATION: {durationMs}ms
+
+Generate a MaxwellIntelligence JSON object following this EXACT schema:
+
+{
+  "market": {
+    "question": "string - the market question in plain language",
+    "type": "binary | multi-option | matchup",
+    "deadline": "string - human readable like '23 days'",
+    "deadlineDate": "ISO date string",
+    "resolutionCriteria": "string - plain language summary of how this resolves"
+  },
+  "assessment": {
+    "primaryOutcome": "string - the outcome being primarily assessed",
+    "marketPrice": 0.XX,
+    "maxwellRange": {
+      "low": 0.XX,
+      "mid": 0.XX,
+      "high": 0.XX
+    },
+    "verdict": "UNDERPRICED | OVERPRICED | FAIR | UNCERTAIN",
+    "confidence": "HIGH | MEDIUM | LOW",
+    "headline": "One sentence capturing the key insight"
+  },
+  "thesis": {
+    "factorsFor": [
+      {
+        "point": "Brief factor title",
+        "evidence": "One sentence of supporting evidence",
+        "sourceIndex": 1,
+        "confidence": "HIGH | MEDIUM | LOW"
+      }
+    ],
+    "factorsAgainst": [
+      {
+        "point": "Brief factor title",
+        "evidence": "One sentence of supporting evidence",
+        "sourceIndex": 2,
+        "confidence": "HIGH | MEDIUM | LOW"
+      }
+    ],
+    "keyUncertainty": "The single biggest unknown",
+    "nextCatalyst": {
+      "event": "What event",
+      "date": "When (if known)",
+      "impact": "How it affects odds"
+    },
+    "sourceConflicts": ["Array of conflicts or empty"]
+  },
+  "outcomes": [
+    {
+      "name": "Outcome name",
+      "marketPrice": 0.XX,
+      "maxwellRange": { "low": 0.XX, "mid": 0.XX, "high": 0.XX },
+      "view": "UNDERPRICED | OVERPRICED | FAIR | UNCERTAIN",
+      "confidence": "HIGH | MEDIUM | LOW",
+      "oneLiner": "One sentence assessment",
+      "rank": 1
+    }
+  ],
+  "arbitrage": {
+    "detected": false,
+    "description": null,
+    "spread": null
+  },
+  "verification": {
+    "score": 0-100,
+    "level": "VERIFIED | PARTIAL | LOW_CONFIDENCE",
+    "sourcesAnalyzed": number,
+    "claimsVerified": number,
+    "claimsDisputed": number,
+    "topSources": [
+      { "title": "string", "domain": "string", "relevanceScore": 0.XX }
+    ]
+  }
+}
+
+RULES:
+- factorsFor and factorsAgainst should have 3-5 items each
+- outcomes array should be sorted by rank (1 = most favorable)
+- topSources should have max 5 items
+- All text fields should be concise - no paragraphs
+- The headline should be memorable and insightful
+- If multi-outcome, the assessment.primaryOutcome should match the rank 1 outcome
+- sourceIndex values must reference valid source indices (1-based)
+`;
+
+export function createPresenterPrompt(
+    marketContext: MarketContext,
+    synthesis: string,
+    verification: VerificationOutput,
+    resolutionRisk: ResolutionRisk,
+    adjudication: string,
+    sources: MaxwellSource[],
+    pipelineDurationMs: number
+): string {
+    return fillPromptTemplate(PRESENTER_USER_PROMPT, {
+        marketContextJSON: JSON.stringify(marketContext, null, 2),
+        synthesis,
+        verificationJSON: JSON.stringify({
+            claims: verification.claims.map(c => ({
+                id: c.id,
+                text: c.text,
+                confidence: c.confidence,
+                entailment: c.entailment,
+            })),
+            summary: verification.summary,
+        }, null, 2),
+        resolutionRiskJSON: JSON.stringify(resolutionRisk, null, 2),
+        adjudication,
+        sourcesJSON: JSON.stringify(
+            sources.map((s, i) => ({
+                index: i + 1,
+                title: s.title,
+                url: s.url,
+                snippet: s.snippet.substring(0, 500),
+            })),
+            null,
+            2
+        ),
+        durationMs: String(pipelineDurationMs),
+    });
+}
+
+// ============================================
+// ADJUDICATOR PROMPT
+// ============================================
+
 export const RECONSTRUCTOR_SYSTEM_PROMPT = `
 You are the Final Authority in a high-stakes intelligence pipeline.
 Your job is to answer the User's Question using ONLY verified evidence.
@@ -391,8 +920,13 @@ Your job is to answer the User's Question using ONLY verified evidence.
      - **Bad:** "The release date is unknown."
      - **Good:** "Current documentation indicates version 16.1.0 is the active release, though the precise calendar date was not explicitly retrieved."
      - **Good:** "While specific pricing is unverified, reports suggest a range of..."
-   - Only discard claims that are explicitly **CONTRADICTED**.
-6. **CONCLUSION:** End with a "Final Verdict" or "Outlook" based purely on the verified signals.
+    - Only discard claims that are explicitly **CONTRADICTED**.
+6. **CROSS-VALIDATION SIGNALS:**
+   - Facts marked [CROSS-VALIDATED by independent search] have been confirmed by a second search engine. Treat with HIGH confidence.
+   - Facts marked [DISPUTED BY INDEPENDENT CHECK] have conflicting signals. Present BOTH perspectives and note the disagreement.
+   - Facts marked [INDEPENDENTLY CONFIRMED (was uncertain)] were upgraded from uncertain. Treat as likely true.
+   - Facts marked [CROSS-VALIDATED CONTRADICTION] are confirmed false by multiple sources. Treat as definitively false.
+7. **CONCLUSION:** End with a "Final Verdict" or "Outlook" based purely on the verified signals.
 
 **TONE & STYLE GUIDELINES:**
 - **Voice:** High-level Intelligence Analyst. You are briefing a decision-maker.

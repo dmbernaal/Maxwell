@@ -16,6 +16,20 @@
  */
 export type Platform = 'polymarket' | 'kalshi';
 
+/**
+ * Market type classification for UI rendering
+ */
+export type MarketType = 'binary' | 'matchup' | 'multi-option';
+
+/**
+ * Individual outcome/option in a market
+ */
+export interface MarketOutcome {
+  name: string;
+  price: number;
+  imageUrl?: string;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // UNIFIED MARKET
 // ─────────────────────────────────────────────────────────────────────────────
@@ -61,7 +75,17 @@ export interface UnifiedMarket {
   imageUrl?: string;
   
   // ─────────────────────────────────────────────
-  // PRICING (NORMALIZED TO 0-1)
+  // MARKET TYPE & OUTCOMES
+  // ─────────────────────────────────────────────
+  
+  /** Classification for UI rendering */
+  marketType: MarketType;
+  
+  /** All outcomes with their prices (supports multi-outcome) */
+  outcomes: MarketOutcome[];
+  
+  // ─────────────────────────────────────────────
+  // PRICING (NORMALIZED TO 0-1) - Legacy for binary
   // ─────────────────────────────────────────────
   
   /** YES probability (0.0 - 1.0) */
@@ -72,6 +96,25 @@ export interface UnifiedMarket {
   
   /** Last trade price */
   lastPrice?: number;
+  
+  /** Previous price (for calculating change) */
+  previousPrice?: number;
+  
+  // ─────────────────────────────────────────────
+  // BID/ASK (NORMALIZED TO 0-1)
+  // ─────────────────────────────────────────────
+  
+  /** Best bid for YES */
+  yesBid?: number;
+  
+  /** Best ask for YES */
+  yesAsk?: number;
+  
+  /** Best bid for NO */
+  noBid?: number;
+  
+  /** Best ask for NO */
+  noAsk?: number;
   
   // ─────────────────────────────────────────────
   // VOLUME (NORMALIZED TO USD)
@@ -86,7 +129,7 @@ export interface UnifiedMarket {
   /** Current liquidity */
   liquidity?: number;
   
-  /** Open interest (Kalshi only) */
+  /** Open interest (contracts outstanding) */
   openInterest?: number;
   
   // ─────────────────────────────────────────────
@@ -124,6 +167,12 @@ export interface UnifiedMarket {
   
   /** Featured/promoted market? */
   featured?: boolean;
+  
+  /** Event grouping ID (for related markets) */
+  eventId?: string;
+  
+  /** Event title for grouping */
+  eventTitle?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -142,25 +191,30 @@ export interface PricePoint {
 }
 
 /**
- * Order book data
+ * Price history for a single outcome in multi-outcome markets
  */
-export interface OrderBook {
-  /** Bid orders: [price, size][] */
-  bids: [number, number][];
-  
-  /** Ask orders: [price, size][] */
-  asks: [number, number][];
-  
-  /** Timestamp when fetched */
-  asOf: number;
+export interface OutcomePriceHistory {
+  outcomeName: string;
+  tokenId?: string;
+  history: PricePoint[];
+  color?: string;
 }
 
 /**
- * Market with full detail (for detail page)
+ * Order book data
  */
+export interface OrderBook {
+  bids: [number, number][];
+  asks: [number, number][];
+  timestamp: number;
+}
+
 export interface UnifiedMarketDetail extends UnifiedMarket {
-  /** Historical price data */
+  /** Historical price data (for binary/simple markets) */
   priceHistory: PricePoint[];
+  
+  /** Per-outcome price history (for multi-outcome markets) */
+  outcomePriceHistories?: OutcomePriceHistory[];
   
   /** Current order book */
   orderBook?: OrderBook;
@@ -182,6 +236,7 @@ export interface UnifiedMarketDetail extends UnifiedMarket {
 export interface MarketsRequest {
   query?: string;
   platform?: Platform | 'all';
+  category?: string;
   sort?: 'volume' | 'trending' | 'endDate' | 'newest';
   limit?: number;
   cursor?: string;

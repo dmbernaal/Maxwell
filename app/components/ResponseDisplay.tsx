@@ -89,7 +89,7 @@ const CitationBadge = ({ href, number, source }: { href?: string, number: string
             inline-flex items-center justify-center min-w-[14px] h-[14px] 
             rounded-full border text-[9px] font-mono no-underline transition-all duration-200
             ${isHovered
-            ? 'bg-brand-accent text-white border-brand-accent scale-110 shadow-[0_0_10px_rgba(111,59,245,0.4)]'
+            ? 'bg-brand-accent text-white border-brand-accent scale-110'
             : 'bg-white/5 text-white/30 border-white/5 hover:bg-white/10 hover:text-white/70'
           }
         `}
@@ -200,7 +200,7 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
               transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut" }}
             />
             <motion.div
-              className="relative w-2 h-2 rounded-full bg-brand-accent shadow-[0_0_12px_rgba(111,59,245,0.8)]"
+              className="relative w-2 h-2 rounded-full bg-brand-accent"
               animate={{ scale: [1, 1.1, 1] }}
               transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
             />
@@ -250,7 +250,7 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="prose prose-invert prose-lg leading-relaxed text-white/70 mb-8 min-h-[20px]"
+          className="prose prose-invert prose-sm leading-relaxed text-white/80 mb-8 min-h-[20px]"
         >
           <ClaimHeatmap
             content={message?.content || ''}
@@ -262,25 +262,25 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
           variants={container}
           initial={isHistory ? "show" : "hidden"}
           animate="show"
-          className="prose prose-invert prose-lg leading-relaxed text-white/70 mb-8 min-h-[20px]"
+          className="prose prose-invert prose-sm leading-relaxed text-white/80 mb-8 min-h-[20px]"
         >
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
               // Headers - styled for dark mode
               h1: ({ children }) => (
-                <h1 className="text-xl font-bold text-white mt-6 mb-3">{children}</h1>
+                <h1 className="text-base font-bold text-white mt-4 mb-2">{children}</h1>
               ),
               h2: ({ children }) => (
-                <h2 className="text-lg font-bold text-white/95 mt-5 mb-2 border-b border-white/10 pb-1">{children}</h2>
+                <h2 className="text-sm font-bold text-white/95 mt-4 mb-2 border-b border-white/10 pb-1">{children}</h2>
               ),
               h3: ({ children }) => (
-                <h3 className="text-base font-bold text-white/90 mt-4 mb-2">{children}</h3>
+                <h3 className="text-xs font-bold text-white/90 mt-3 mb-1 uppercase tracking-wide">{children}</h3>
               ),
               // Horizontal rule
-              hr: () => <hr className="my-6 border-white/10" />,
+              hr: () => <hr className="my-4 border-white/10" />,
               p: ({ children }) => (
-                <p className="mb-3 last:mb-0 leading-relaxed text-[17px]">{children}</p>
+                <p className="mb-2 last:mb-0 leading-relaxed text-[13px]">{children}</p>
               ),
               a: ({ href, children }) => {
                 const content = String(children);
@@ -313,33 +313,33 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
                 <strong className="font-semibold text-white">{children}</strong>
               ),
               ul: ({ children }) => (
-                <ul className="list-disc list-inside mb-3 space-y-1 ml-2">{children}</ul>
+                <ul className="list-disc list-inside mb-2 space-y-1 ml-1">{children}</ul>
               ),
               ol: ({ children }) => (
-                <ol className="list-decimal list-inside mb-3 space-y-1 ml-2">{children}</ol>
+                <ol className="list-decimal list-inside mb-2 space-y-1 ml-1">{children}</ol>
               ),
               li: ({ children }) => (
-                <li className="leading-relaxed">{children}</li>
+                <li className="leading-relaxed text-[13px]">{children}</li>
               ),
               code: ({ className, children }) => {
                 const isInline = !className;
                 return isInline ? (
-                  <code className="bg-zinc-700/50 px-1.5 py-0.5 rounded text-sm font-mono">
+                  <code className="bg-zinc-700/50 px-1 py-0.5 rounded text-xs font-mono">
                     {children}
                   </code>
                 ) : (
-                  <pre className="bg-zinc-900 p-3 rounded-lg overflow-x-auto text-sm font-mono">
+                  <pre className="bg-zinc-900 p-2 rounded-lg overflow-x-auto text-xs font-mono my-2">
                     <code>{children}</code>
                   </pre>
                 );
               },
               sup: ({ children }) => (
-                <sup className="text-brand-accent text-xs font-medium">{children}</sup>
+                <sup className="text-brand-accent text-[10px] font-medium">{children}</sup>
               ),
               // Table components for GFM tables
               table: ({ children }) => (
-                <div className="overflow-x-auto my-4">
-                  <table className="min-w-full border-collapse text-sm">{children}</table>
+                <div className="overflow-x-auto my-3">
+                  <table className="min-w-full border-collapse text-xs">{children}</table>
                 </div>
               ),
               thead: ({ children }) => (
@@ -352,10 +352,10 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
                 <tr className="hover:bg-white/5">{children}</tr>
               ),
               th: ({ children }) => (
-                <th className="px-3 py-2 text-left font-semibold text-white/90">{children}</th>
+                <th className="px-2 py-1.5 text-left font-semibold text-white/90">{children}</th>
               ),
               td: ({ children }) => (
-                <td className="px-3 py-2 text-white/70">{children}</td>
+                <td className="px-2 py-1.5 text-white/70">{children}</td>
               ),
             }}
           >
@@ -452,7 +452,7 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
         >
           <div className="relative flex items-center justify-center w-3 h-3">
             <span className="absolute inset-0 rounded-full bg-brand-accent/30 animate-ping" />
-            <span className="relative w-1.5 h-1.5 rounded-full bg-brand-accent shadow-[0_0_8px_rgba(111,59,245,0.8)]" />
+            <span className="relative w-1.5 h-1.5 rounded-full bg-brand-accent" />
           </div>
           <span className="text-[10px] font-medium text-white/40 uppercase tracking-widest animate-pulse">
             {message.maxwellState.phase === 'verification' ? 'Verifying Claims...' : 'Finalizing Verdict...'}
@@ -492,9 +492,9 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
                 <div className="flex items-center gap-3">
                   <div className="flex flex-col items-end">
                     <span className="text-[10px] uppercase tracking-wider font-medium text-white/40">Confidence</span>
-                    <span className={`text-xs font-bold ${message.maxwellState.verification.overallConfidence >= 80 ? 'text-emerald-400' :
-                      message.maxwellState.verification.overallConfidence >= 50 ? 'text-amber-400' :
-                        'text-rose-400'
+                    <span className={`text-xs font-bold ${message.maxwellState.verification.overallConfidence >= 80 ? 'text-white/80' :
+                      message.maxwellState.verification.overallConfidence >= 50 ? 'text-white/60' :
+                        'text-white/40'
                       }`}>
                       {message.maxwellState.verification.overallConfidence}%
                     </span>
@@ -512,10 +512,10 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
                       />
                       {/* Progress Ring */}
                       <path
-                        className={`${message.maxwellState.verification.overallConfidence >= 80 ? 'text-emerald-500' :
-                          message.maxwellState.verification.overallConfidence >= 50 ? 'text-amber-500' :
-                            'text-rose-500'
-                          } drop-shadow-[0_0_4px_currentColor]`}
+                        className={`${message.maxwellState.verification.overallConfidence >= 80 ? 'text-brand-accent' :
+                          message.maxwellState.verification.overallConfidence >= 50 ? 'text-white/50' :
+                            'text-white/30'
+                          }`}
                         strokeDasharray={`${message.maxwellState.verification.overallConfidence}, 100`}
                         d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                         fill="none"
@@ -527,9 +527,9 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
 
                     {/* Inner Icon/Text */}
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className={`w-1.5 h-1.5 rounded-full ${message.maxwellState.verification.overallConfidence >= 80 ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]' :
-                        message.maxwellState.verification.overallConfidence >= 50 ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]' :
-                          'bg-rose-400 shadow-[0_0_8px_rgba(251,113,133,0.6)]'
+                      <div className={`w-1.5 h-1.5 rounded-full ${message.maxwellState.verification.overallConfidence >= 80 ? 'bg-brand-accent' :
+                        message.maxwellState.verification.overallConfidence >= 50 ? 'bg-white/40' :
+                          'bg-white/20'
                         }`} />
                     </div>
                   </div>
@@ -543,46 +543,46 @@ export default function ResponseDisplay({ message, isHistory = false, status = '
 
       {/* Adjudication - Rendered as regular text (Phase 5) */}
       {(message?.maxwellState?.adjudication || message?.maxwellState?.phase === 'adjudication') && (
-        <div className="mt-8 pt-6 prose prose-invert prose-lg leading-relaxed text-white/70">
+        <div className="mt-8 pt-6 prose prose-invert prose-sm leading-relaxed text-white/80">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
               h1: ({ children }) => (
-                <h1 className="text-xl font-bold text-white mt-6 mb-3">{children}</h1>
+                <h1 className="text-base font-bold text-white mt-4 mb-2">{children}</h1>
               ),
               h2: ({ children }) => (
-                <h2 className="text-lg font-bold text-white/95 mt-5 mb-2 border-b border-white/10 pb-1">{children}</h2>
+                <h2 className="text-sm font-bold text-white/95 mt-4 mb-2 border-b border-white/10 pb-1">{children}</h2>
               ),
               h3: ({ children }) => (
-                <h3 className="text-base font-bold text-white/90 mt-4 mb-2">{children}</h3>
+                <h3 className="text-xs font-bold text-white/90 mt-3 mb-1 uppercase tracking-wide">{children}</h3>
               ),
-              hr: () => <hr className="my-6 border-white/10" />,
+              hr: () => <hr className="my-4 border-white/10" />,
               p: ({ children }) => (
-                <p className="mb-3 last:mb-0 leading-relaxed text-[17px]">{children}</p>
+                <p className="mb-2 last:mb-0 leading-relaxed text-[13px]">{children}</p>
               ),
               strong: ({ children }) => (
                 <strong className="font-semibold text-white">{children}</strong>
               ),
               ul: ({ children }) => (
-                <ul className="list-disc list-outside ml-4 mb-3 space-y-1">{children}</ul>
+                <ul className="list-disc list-outside ml-4 mb-2 space-y-1">{children}</ul>
               ),
               ol: ({ children }) => (
-                <ol className="list-decimal list-outside ml-4 mb-3 space-y-1">{children}</ol>
+                <ol className="list-decimal list-outside ml-4 mb-2 space-y-1">{children}</ol>
               ),
               li: ({ children }) => (
-                <li className="pl-1">{children}</li>
+                <li className="pl-1 text-[13px]">{children}</li>
               ),
               // Table components
               table: ({ children }) => (
-                <div className="overflow-x-auto my-4">
-                  <table className="min-w-full border-collapse text-sm">{children}</table>
+                <div className="overflow-x-auto my-3">
+                  <table className="min-w-full border-collapse text-xs">{children}</table>
                 </div>
               ),
               thead: ({ children }) => <thead className="border-b border-white/20">{children}</thead>,
               tbody: ({ children }) => <tbody className="divide-y divide-white/10">{children}</tbody>,
               tr: ({ children }) => <tr className="hover:bg-white/5">{children}</tr>,
-              th: ({ children }) => <th className="px-3 py-2 text-left font-semibold text-white/90">{children}</th>,
-              td: ({ children }) => <td className="px-3 py-2 text-white/70">{children}</td>,
+              th: ({ children }) => <th className="px-2 py-1.5 text-left font-semibold text-white/90">{children}</th>,
+              td: ({ children }) => <td className="px-2 py-1.5 text-white/70">{children}</td>,
             }}
           >
             {message.maxwellState.adjudication || ''}

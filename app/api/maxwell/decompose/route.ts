@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { query } = body;
+        const { query, marketContext } = body;
 
         // 2. Validation
         if (!query || typeof query !== 'string') {
@@ -55,10 +55,10 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        console.log('[Maxwell Decompose] Query received:', trimmedQuery.slice(0, 50) + '...');
+        console.log('[Maxwell Decompose] Query received:', trimmedQuery.slice(0, 50) + '...', marketContext ? '[Prediction Market Mode]' : '');
 
         // 3. Run decomposition
-        const decomposition = await decomposeQuery(trimmedQuery);
+        const decomposition = await decomposeQuery(trimmedQuery, undefined, marketContext);
 
         // 4. Create execution config based on complexity
         const config = createExecutionConfig(

@@ -1,103 +1,154 @@
 'use client';
 
-import React from 'react';
 import { motion } from 'framer-motion';
-import { ShieldCheck, ShieldAlert, ShieldX, TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import type { VerificationOutput } from '../../lib/maxwell/types';
 
 interface VerdictCardProps {
     adjudication: string | null;
-    confidence: number;
-    phase: string;
+    verification: VerificationOutput | null;
 }
 
-export function VerdictCard({ adjudication, confidence, phase }: VerdictCardProps) {
-    // If no adjudication yet, show skeleton or "Analyzing" state
-    if (!adjudication) {
-        return (
-            <div className="relative w-full overflow-hidden rounded-2xl border border-white/5 bg-white/[0.02] p-6">
-                <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 rounded-full bg-white/5 animate-pulse" />
-                    <div className="h-4 w-24 bg-white/5 rounded animate-pulse" />
-                </div>
-                <div className="space-y-2">
-                    <div className="h-3 w-full bg-white/5 rounded animate-pulse" />
-                    <div className="h-3 w-3/4 bg-white/5 rounded animate-pulse" />
-                </div>
-            </div>
-        );
-    }
+type MarketVerdict = 'YES' | 'NO' | 'LIKELY' | 'UNLIKELY' | 'UNCERTAIN';
 
-    // Determine Sentiment/Direction (Simple heuristic for demo - in prod this would come from analysis)
-    const isPositive = adjudication.toLowerCase().includes('bullish') || adjudication.toLowerCase().includes('yes') || adjudication.toLowerCase().includes('positive');
-    const isNegative = adjudication.toLowerCase().includes('bearish') || adjudication.toLowerCase().includes('no') || adjudication.toLowerCase().includes('negative');
+interface ParsedVerdict {
+    verdict: MarketVerdict;
+    confidence: number;
+    summary: string;
+}
+
+function parseMarketVerdict(adjudication: string, verification: VerificationOutput | null): ParsedVerdict {
+    const text = adjudication.toLowerCase();
     
-    // Config based on confidence
-    const getConfidenceConfig = (score: number) => {
-        if (score >= 80) return { color: 'text-emerald-400', bg: 'bg-emerald-400', border: 'border-emerald-500/20', icon: ShieldCheck };
-        if (score >= 50) return { color: 'text-amber-400', bg: 'bg-amber-400', border: 'border-amber-500/20', icon: ShieldAlert };
-        return { color: 'text-rose-400', bg: 'bg-rose-400', border: 'border-rose-500/20', icon: ShieldX };
-    };
+    let verdict: MarketVerdict = 'UNCERTAIN';
+    const verdictMatch = adjudication.match(/(?:Executive Summary|VERDICT):\s*(YES|NO|LIKELY YES|LIKELY NO|LIKELY|UNLIKELY|UNCERTAIN)/i);
+    
+    if (verdictMatch) {
+        const match = verdictMatch[1].toUpperCase();
+        if (match === 'LIKELY YES') verdict = 'LIKELY';
+        else if (match === 'LIKELY NO') verdict = 'UNLIKELY';
+        else verdict = match as MarketVerdict;
+    } else {
+        if (text.includes('likely yes') || (text.includes('yes') && text.includes('likely'))) {
+            verdict = 'LIKELY';
+        } else if (text.includes('likely no') || text.includes('unlikely')) {
+            verdict = 'UNLIKELY';
+        } else if (text.includes('bullish') || text.includes('positive outlook')) {
+            verdict = 'LIKELY';
+        } else if (text.includes('bearish') || text.includes('negative outlook')) {
+            verdict = 'UNLIKELY';
+        }
+    }
+    
+    const confidenceMatch = adjudication.match(/Confidence Level:\s*[^(]*\((\d+)%\)/i) ||
+                           adjudication.match(/CONFIDENCE:\s*(\d+)%/i) ||
+                           adjudication.match(/(\d+)%\s*confidence/i);
+    let confidence = confidenceMatch ? parseInt(confidenceMatch[1]) : 0;
+    
+    if (!confidence && verification?.overallConfidence) {
+        confidence = Math.round(verification.overallConfidence);
+    }
+    
+    let summary = '';
+    const lines = adjudication.split('\n');
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.length > 50 && 
+            !trimmed.startsWith('#') && 
+            !trimmed.startsWith('**') &&
+            !trimmed.includes('Executive Summary') &&
+            !trimmed.includes('Confidence Level') &&
+            !trimmed.includes('Market Resolution')) {
+            summary = trimmed.replace(/\*\*/g, '').replace(/\[[\d,]+\]/g, '').trim();
+            break;
+        }
+    }
+    
+    if (!summary) {
+        const paragraphs = adjudication.split('\n\n');
+        for (const p of paragraphs) {
+            const clean = p.replace(/\*\*/g, '').replace(/##/g, '').replace(/\[[\d,]+\]/g, '').trim();
+            if (clean.length > 80 && !clean.includes(':')) {
+                summary = clean.split('.').slice(0, 2).join('.') + '.';
+                break;
+            }
+        }
+    }
+    
+    return { verdict, confidence, summary };
+}
 
-    const config = getConfidenceConfig(confidence);
-    const Icon = config.icon;
+const VERDICT_CONFIG = {
+    YES: { color: '#ffffff', label: 'YES', sublabel: 'Likely to resolve yes' },
+    LIKELY: { color: '#ffffff', label: 'LIKELY', sublabel: 'Favorable outcome expected' },
+    NO: { color: 'rgba(255,255,255,0.6)', label: 'NO', sublabel: 'Likely to resolve no' },
+    UNLIKELY: { color: 'rgba(255,255,255,0.6)', label: 'UNLIKELY', sublabel: 'Unfavorable conditions' },
+    UNCERTAIN: { color: 'rgba(255,255,255,0.3)', label: 'UNCERTAIN', sublabel: 'Insufficient evidence' },
+};
+
+export function VerdictCard({ adjudication, verification }: VerdictCardProps) {
+    if (!adjudication) return null;
+
+    const { verdict, confidence, summary } = parseMarketVerdict(adjudication, verification);
+    const config = VERDICT_CONFIG[verdict];
 
     return (
-        <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`relative w-full overflow-hidden rounded-2xl border ${config.border} bg-[#18151d] shadow-2xl`}
-        >
-            {/* Background Glow */}
-            <div className={`absolute top-0 right-0 w-32 h-32 ${config.bg} opacity-[0.03] blur-3xl rounded-full -mr-10 -mt-10`} />
-
-            <div className="relative p-6">
-                {/* Header: Verdict Label & Confidence */}
-                <div className="flex items-start justify-between mb-4">
-                    <div className="flex flex-col">
-                        <span className="text-[10px] font-mono uppercase tracking-widest text-white/40 mb-1">
-                            Maxwell Verdict
+        <div className="space-y-6">
+            <motion.div
+                layout
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-end justify-between gap-6"
+            >
+                <div>
+                    <span className="text-[10px] uppercase tracking-widest text-white/30 font-medium block mb-2">
+                        Maxwell Verdict
+                    </span>
+                    <div className="flex items-baseline gap-3">
+                        <span 
+                            className="text-5xl lg:text-6xl font-bold tracking-tight"
+                            style={{ color: config.color }}
+                        >
+                            {config.label}
                         </span>
-                        <h2 className="text-xl font-bold text-white/95 leading-tight">
-                            {/* Extract first sentence or headline */}
-                            {adjudication.split('.')[0]}.
-                        </h2>
+                        {confidence > 0 && (
+                            <span className="text-xl font-mono text-white/40">
+                                {confidence}%
+                            </span>
+                        )}
                     </div>
+                    <span className="text-[11px] text-white/40 mt-1 block">
+                        {config.sublabel}
+                    </span>
+                </div>
 
-                    {/* Confidence Badge */}
-                    <div className="flex flex-col items-end">
-                        <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full bg-white/[0.03] border border-white/5 ${config.color}`}>
-                            <Icon size={14} />
-                            <span className="text-xs font-bold">{confidence}%</span>
+                {verification && (
+                    <div className="flex items-center gap-4 text-[11px] font-mono text-white/30">
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-white/40" />
+                            <span>{verification.summary.supported}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-white/20" />
+                            <span>{verification.summary.uncertain}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
+                            <span>{verification.summary.contradicted}</span>
                         </div>
                     </div>
-                </div>
+                )}
+            </motion.div>
 
-                {/* Body: Summary */}
-                <div className="relative">
-                    <p className="text-sm text-white/60 leading-relaxed line-clamp-3 font-light">
-                        {adjudication}
-                    </p>
-                    {/* Fade out bottom if long */}
-                    <div className="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-[#18151d] to-transparent" />
-                </div>
-
-                {/* Footer: Action/Status */}
-                <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className={`w-1.5 h-1.5 rounded-full ${config.bg} animate-pulse`} />
-                        <span className="text-[10px] font-mono text-white/30 uppercase">
-                            Market Impact
-                        </span>
-                    </div>
-                    {isPositive ? (
-                        <TrendingUp size={16} className="text-emerald-400" />
-                    ) : isNegative ? (
-                        <TrendingDown size={16} className="text-rose-400" />
-                    ) : (
-                        <Activity size={16} className="text-white/20" />
-                    )}
-                </div>
-            </div>
-        </motion.div>
+            {summary && (
+                <motion.p 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.1 }}
+                    className="text-[15px] leading-relaxed text-white/60 max-w-3xl"
+                >
+                    {summary}
+                </motion.p>
+            )}
+        </div>
     );
 }

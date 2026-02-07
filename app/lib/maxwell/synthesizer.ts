@@ -10,11 +10,12 @@
 import { streamText } from 'ai';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 
-// Phase 1 Import
-import { createSynthesisPrompt } from './prompts';
-// Phase 0 Constants
+import { 
+    createSynthesisPrompt,
+    createPredictionMarketSynthesisPrompt,
+} from './prompts';
 import { SYNTHESIS_MODEL, SYNTHESIS_MAX_TOKENS } from './constants';
-import type { MaxwellSource, SynthesisOutput } from './types';
+import type { MaxwellSource, SynthesisOutput, MarketContext } from './types';
 
 // ============================================
 // OPENROUTER CLIENT
@@ -42,6 +43,15 @@ function getOpenRouterClient() {
 export type SynthesisEvent =
     | { type: 'chunk'; content: string }
     | { type: 'complete'; answer: string; sourcesUsed: string[]; durationMs: number };
+
+export function getPrimaryOutcome(marketContext: MarketContext): string {
+    if (marketContext.type === 'binary') {
+        return 'YES';
+    }
+
+    const sorted = [...marketContext.outcomes].sort((a, b) => b.price - a.price);
+    return sorted[0]?.name || 'Unknown';
+}
 
 // ============================================
 // CITATION LOGIC
@@ -122,15 +132,14 @@ function validateCitations(
 export async function* synthesize(
     originalQuery: string,
     sources: MaxwellSource[],
-    synthesisModel: string = SYNTHESIS_MODEL // Added parameter with default
+    synthesisModel: string = SYNTHESIS_MODEL,
+    marketContext?: MarketContext
 ): AsyncGenerator<SynthesisEvent> {
     const startTime = Date.now();
 
-    // 1. Validation
     if (!originalQuery) throw new Error('Query cannot be empty');
     if (!Array.isArray(sources)) throw new Error('Sources must be an array');
 
-    // 2. Handle Empty Sources (Fast Exit)
     if (sources.length === 0) {
         const msg = `I couldn't find any relevant sources for "${originalQuery}".`;
         yield { type: 'chunk', content: msg };
@@ -146,12 +155,12 @@ export async function* synthesize(
     try {
         const openrouter = getOpenRouterClient();
 
-        // 3. Prepare Prompt (Date Injection happens inside createSynthesisPrompt)
-        const prompt = createSynthesisPrompt(sources, originalQuery);
+        const prompt = marketContext
+            ? createPredictionMarketSynthesisPrompt(sources, originalQuery, marketContext)
+            : createSynthesisPrompt(sources, originalQuery);
 
-        // 4. Start Stream
         const { textStream } = streamText({
-            model: openrouter(synthesisModel), // Use dynamic model
+            model: openrouter(synthesisModel),
             prompt,
             maxOutputTokens: SYNTHESIS_MAX_TOKENS,
         });
@@ -163,7 +172,6 @@ export async function* synthesize(
             yield { type: 'chunk', content: chunk };
         }
 
-        // 5. Post-Processing
         validateCitations(fullAnswer, sources.length);
         const sourcesUsed = extractCitations(fullAnswer, sources.length);
 
@@ -193,11 +201,13 @@ export async function* synthesize(
  */
 export async function synthesizeComplete(
     originalQuery: string,
-    sources: MaxwellSource[]
+    sources: MaxwellSource[],
+    synthesisModel: string = SYNTHESIS_MODEL,
+    marketContext?: MarketContext
 ): Promise<SynthesisOutput> {
     let finalResult: SynthesisOutput | null = null;
 
-    for await (const event of synthesize(originalQuery, sources)) {
+    for await (const event of synthesize(originalQuery, sources, synthesisModel, marketContext)) {
         if (event.type === 'complete') {
             finalResult = {
                 answer: event.answer,

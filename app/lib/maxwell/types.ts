@@ -15,9 +15,15 @@
  * A sub-query generated from the original user query.
  * Each sub-query is designed to be searched independently.
  */
-export type TavilySearchTopic = 'general' | 'news';
+export type TavilySearchTopic = 'general' | 'news' | 'finance';
 export type TavilySearchDepth = 'basic' | 'advanced';
 export type TavilyTimeRange = 'day' | 'week' | 'month' | 'year' | 'd' | 'w' | 'm' | 'y';
+
+/**
+ * Category of sub-query for prediction market decomposition.
+ * Used to ensure comprehensive coverage of market analysis angles.
+ */
+export type SubQueryCategory = 'resolution' | 'catalyst' | 'factor_for' | 'factor_against' | 'contrarian' | 'cross_platform';
 
 /**
  * A sub-query generated from the original user query.
@@ -40,6 +46,14 @@ export interface SubQuery {
     days?: number;
     /** Specific domains to include (optional) */
     domains?: string[];
+    /** Specific domains to exclude (optional) */
+    excludeDomains?: string[];
+    
+    // Prediction Market Specific Fields (optional for backward compatibility)
+    /** Category of query for market analysis coverage */
+    category?: SubQueryCategory;
+    /** Target outcome this query is investigating (for multi-outcome markets) */
+    targetOutcome?: string;
 }
 
 import { ComplexityLevel, ExecutionConfig } from './configFactory';
@@ -120,6 +134,8 @@ export interface MaxwellSource {
     fromQuery: string;
     /** Published date of the source (from Tavily) */
     date?: string;
+    /** Relevance score from search provider (0-1) */
+    score?: number;
 }
 
 /**
@@ -397,7 +413,7 @@ export interface AdjudicationChunkEvent {
  */
 export interface PhaseStartEvent {
     type: 'phase-start';
-    phase: 'decomposition' | 'search' | 'synthesis' | 'verification' | 'adjudication';
+    phase: 'decomposition' | 'search' | 'synthesis' | 'verification' | 'adjudication' | 'presenter';
 }
 
 /**
@@ -405,7 +421,7 @@ export interface PhaseStartEvent {
  */
 export interface PhaseCompleteEvent {
     type: 'phase-complete';
-    phase: 'decomposition' | 'search' | 'synthesis' | 'verification' | 'adjudication';
+    phase: 'decomposition' | 'search' | 'synthesis' | 'verification' | 'adjudication' | 'presenter';
     data: unknown;
 }
 
@@ -489,6 +505,7 @@ export type ExecutionPhase =
     | 'synthesis'
     | 'verification'
     | 'adjudication'
+    | 'presenter'
     | 'complete'
     | 'error';
 
@@ -501,6 +518,7 @@ export interface PhaseDurations {
     synthesis?: number;
     verification?: number;
     adjudication?: number;
+    presenter?: number;
     total?: number;
 }
 
@@ -518,4 +536,147 @@ export interface MaxwellState {
     adjudication: string | null;
     error: string | null;
     phaseDurations: PhaseDurations;
+}
+
+// ============================================
+// PHASE 1 TRADER REVAMP: INTELLIGENCE TYPES
+// ============================================
+
+export type IntelligenceVerdict = 'UNDERPRICED' | 'OVERPRICED' | 'FAIR' | 'UNCERTAIN';
+export type ConfidenceLevel = 'HIGH' | 'MEDIUM' | 'LOW';
+export type ResolutionRiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+export type IntelligenceVerificationLevel = 'VERIFIED' | 'PARTIAL' | 'LOW_CONFIDENCE';
+export type ClaimEntailment = 'SUPPORTED' | 'CONTRADICTED' | 'NEUTRAL';
+export type IntelligenceMarketType = 'binary' | 'multi-option' | 'matchup';
+export type IntelligencePlatform = 'polymarket' | 'kalshi';
+
+export interface MarketOutcomeContext {
+    name: string;
+    price: number;
+    priceChange24h?: number;
+    volume?: number;
+}
+
+export interface MarketContext {
+    id: string;
+    platform: IntelligencePlatform;
+    title: string;
+    type: IntelligenceMarketType;
+    outcomes: MarketOutcomeContext[];
+    rules: string;
+    resolutionSource?: string;
+    endDate: Date;
+    volume: number;
+    volume24h: number;
+    liquidity?: number;
+    crossPlatformOdds?: {
+        platform: IntelligencePlatform;
+        outcomes: Array<{ name: string; price: number }>;
+    };
+}
+
+export interface ResolutionRisk {
+    level: ResolutionRiskLevel;
+    score: number;
+    factors: string[];
+    historicalDisputes?: string;
+}
+
+export interface ThesisFactor {
+    point: string;
+    evidence: string;
+    sourceIndex: number;
+    confidence: ConfidenceLevel;
+}
+
+export interface OutcomeAnalysis {
+    name: string;
+    marketPrice: number;
+    maxwellRange: {
+        low: number;
+        mid: number;
+        high: number;
+    };
+    view: IntelligenceVerdict;
+    confidence: ConfidenceLevel;
+    oneLiner: string;
+    rank: number;
+}
+
+export interface SourceSummary {
+    title: string;
+    domain: string;
+    relevanceScore: number;
+}
+
+export interface SourceReference {
+    index: number;
+    title: string;
+    url: string;
+    snippet: string;
+    date?: string;
+}
+
+export interface ClaimReference {
+    id: string;
+    text: string;
+    confidence: number;
+    entailment: ClaimEntailment;
+}
+
+export interface MaxwellIntelligence {
+    market: {
+        question: string;
+        type: IntelligenceMarketType;
+        deadline: string;
+        deadlineDate: string;
+        resolutionCriteria: string;
+    };
+    resolutionRisk: ResolutionRisk;
+    assessment: {
+        primaryOutcome: string;
+        marketPrice: number;
+        maxwellRange: {
+            low: number;
+            mid: number;
+            high: number;
+        };
+        verdict: IntelligenceVerdict;
+        confidence: ConfidenceLevel;
+        headline: string;
+    };
+    thesis: {
+        factorsFor: ThesisFactor[];
+        factorsAgainst: ThesisFactor[];
+        keyUncertainty: string;
+        nextCatalyst: {
+            event: string;
+            date?: string;
+            impact: string;
+        };
+        sourceConflicts?: string[];
+    };
+    outcomes?: OutcomeAnalysis[];
+    arbitrage?: {
+        detected: boolean;
+        description?: string;
+        spread?: number;
+    };
+    verification: {
+        score: number;
+        level: IntelligenceVerificationLevel;
+        sourcesAnalyzed: number;
+        claimsVerified: number;
+        claimsDisputed: number;
+        topSources: SourceSummary[];
+    };
+    raw: {
+        synthesis: string;
+        adjudication: string;
+        allSources: SourceReference[];
+        allClaims: ClaimReference[];
+    };
+    generatedAt: string;
+    pipelineDurationMs: number;
+    modelUsed: string;
 }

@@ -51,7 +51,7 @@ export function SourcesPanel({ sources, searchMetadata }: SourcesPanelProps) {
                 <div className="h-4 w-[1px] bg-white/10" />
                 <div className="flex flex-col">
                     <span className="text-[9px] font-mono text-white/30 uppercase tracking-widest">Indexed</span>
-                    <span className="text-xs font-mono text-emerald-400">{indexed}</span>
+                    <span className="text-xs font-mono text-white/60">{indexed}</span>
                 </div>
                 <div className="h-4 w-[1px] bg-white/10" />
                 <div className="flex flex-col">

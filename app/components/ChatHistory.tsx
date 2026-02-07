@@ -80,11 +80,7 @@ export default function ChatHistory() {
                     height: isHovered ? 'auto' : 48
                 }}
                 transition={transition}
-                className={`
-          relative overflow-hidden backdrop-blur-xl border border-white/5 shadow-2xl
-          bg-[#18151d]
-          rounded-[24px]
-        `}
+                className="relative overflow-hidden bg-[#141414] rounded-xl"
             >
                 {/* Header / Trigger Area */}
                 <div className="flex items-center justify-between pl-3.5 pr-3 h-12 w-full">
@@ -117,7 +113,7 @@ export default function ChatHistory() {
                                 animate={{ opacity: 1, scale: 1 }}
                                 exit={{ opacity: 0, scale: 0.9 }}
                                 onClick={handleNewChat}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#18151d] hover:bg-[#231f29] border border-white/5 transition-all text-white/60 hover:text-white group"
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#1a1a1a] hover:bg-[#222222] transition-all text-white/60 hover:text-white group"
                             >
                                 <Plus size={12} className="group-hover:text-white transition-colors" />
                                 <span className="text-[10px] font-medium tracking-wide">New</span>
@@ -159,10 +155,10 @@ export default function ChatHistory() {
                                             exit="hidden"
                                             onClick={(e) => handleSessionClick(session.id, e)}
                                             className={`
-                        group relative flex items-center gap-3 py-2 px-3 rounded-lg cursor-pointer transition-all duration-200
+                        group relative flex items-center gap-3 py-2 px-3 rounded-md cursor-pointer transition-all duration-200
                         ${activeSessionId === session.id
-                                                    ? 'bg-white/[0.03] text-white'
-                                                    : 'text-white/50 hover:bg-white/[0.02] hover:text-white/80'
+                                                    ? 'bg-[#1a1a1a] text-white'
+                                                    : 'text-white/50 hover:bg-[#1a1a1a] hover:text-white/80'
                                                 }
                       `}
                                         >

@@ -2,12 +2,11 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mic, ArrowRight, Search, Zap, Globe, FileText, Plus, Paperclip, X } from 'lucide-react';
+import { Mic, ArrowRight, Search, Zap, Globe, FileText, Plus, Paperclip, X, Terminal } from 'lucide-react';
 import { AgentState, SearchMode, Attachment, ATTACHMENT_LIMITS } from '../types';
 import { convertToBase64, validateAttachment, generateAttachmentId } from '../lib/file-utils';
 import ModeDropdown from './ModeDropdown';
 import type { UnifiedMarket } from '@/app/lib/markets/types';
-import { TRENDING_SEARCHES } from '../lib/market-data';
 import MarketAutocomplete from './MarketAutocomplete';
 
 interface InputInterfaceProps {
@@ -22,6 +21,7 @@ interface InputInterfaceProps {
   onFocusChange?: (isFocused: boolean) => void;
   isMarketSearch?: boolean;
   onMarketSelect?: (market: UnifiedMarket) => void;
+  hideSuggestions?: boolean;
 }
 
 function SpotlightPill({ icon: Icon, label, onClick }: { icon: any, label: string, onClick: () => void }) {
@@ -51,13 +51,32 @@ export default function InputInterface({
   onViewResults,
   onFocusChange,
   isMarketSearch = false,
-  onMarketSelect
+  onMarketSelect,
+  hideSuggestions = false
 }: InputInterfaceProps) {
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
 
   const [marketResults, setMarketResults] = useState<UnifiedMarket[]>([]);
+  const [topMarkets, setTopMarkets] = useState<UnifiedMarket[]>([]);
   const [showMarketDropdown, setShowMarketDropdown] = useState(false);
+
+  useEffect(() => {
+    if (!isMarketSearch) return;
+    
+    const fetchTopMarkets = async () => {
+      try {
+        const res = await fetch('/api/markets?limit=5&sort=volume');
+        if (res.ok) {
+          const data = await res.json();
+          setTopMarkets(data.markets || []);
+        }
+      } catch (e) {
+        console.error("Failed to fetch top markets", e);
+      }
+    };
+    fetchTopMarkets();
+  }, [isMarketSearch]);
 
   useEffect(() => {
     if (!isMarketSearch) return;
@@ -219,7 +238,11 @@ export default function InputInterface({
 
             <div className="p-3 flex items-start gap-3">
               <div className="mt-2.5 pl-1">
-                 <Search size={16} className={`transition-colors ${isFocused ? 'text-white/80' : 'text-white/30'}`} />
+                 {isMarketSearch ? (
+                   <Search size={16} className={`transition-colors ${isFocused ? 'text-white/80' : 'text-white/30'}`} />
+                 ) : (
+                   <Terminal size={16} className={`transition-colors ${isFocused ? 'text-brand-accent' : 'text-white/30'}`} />
+                 )}
               </div>
               
               <textarea
@@ -254,7 +277,7 @@ export default function InputInterface({
                 }}
                 placeholder={isMarketSearch ? "Search markets (e.g. Fed Rates, Election)..." : "Ask anything..."}
                 rows={1}
-                className="flex-1 bg-transparent text-[15px] font-mono text-white placeholder-white/20 focus:outline-none py-2 resize-none max-h-[200px] overflow-y-auto leading-relaxed"
+                className="flex-1 bg-transparent text-[13px] font-mono text-white placeholder-white/20 focus:outline-none py-2 resize-none max-h-[200px] overflow-y-auto leading-5"
               />
 
               <div className="flex items-center gap-2 pt-1">
@@ -308,47 +331,45 @@ export default function InputInterface({
           </div>
         </motion.form>
 
-        <div className="absolute top-full left-0 w-full pt-4">
-          {isMarketSearch ? (
-            <MarketAutocomplete
-              query={query}
-              results={marketResults}
-              trendingQueries={TRENDING_SEARCHES}
-              onSelectMarket={(m) => onMarketSelect?.(m)}
-              onSelectQuery={(q) => {
-                setQuery(q);
-                if (textareaRef.current) textareaRef.current.focus();
-              }}
-              isVisible={showMarketDropdown}
-            />
-          ) : (
-            <AnimatePresence>
-              {state === 'relaxed' && !query && (
-                <motion.div
-                  className="flex flex-nowrap justify-center gap-2 px-4 overflow-x-auto no-scrollbar w-full"
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -5 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {[
-                    { icon: Search, label: 'Deep Research' },
-                    { icon: Zap, label: 'Brainstorm' },
-                    { icon: Globe, label: 'Market Analysis' },
-                    { icon: FileText, label: 'Summarize' },
-                  ].map((item, idx) => (
-                    <SpotlightPill
-                      key={idx}
-                      icon={item.icon}
-                      label={item.label}
-                      onClick={() => handlePillClick(item.label)}
-                    />
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          )}
-        </div>
+        {!hideSuggestions && (
+          <div className="absolute top-full left-0 w-full pt-4">
+            {isMarketSearch ? (
+              <MarketAutocomplete
+                query={query}
+                results={marketResults}
+                topMarkets={topMarkets}
+                onSelectMarket={(m) => onMarketSelect?.(m)}
+                isVisible={showMarketDropdown}
+              />
+            ) : (
+              <AnimatePresence>
+                {state === 'relaxed' && !query && (
+                  <motion.div
+                    className="flex flex-nowrap justify-center gap-2 px-4 overflow-x-auto no-scrollbar w-full"
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {[
+                      { icon: Search, label: 'Deep Research' },
+                      { icon: Zap, label: 'Brainstorm' },
+                      { icon: Globe, label: 'Market Analysis' },
+                      { icon: FileText, label: 'Summarize' },
+                    ].map((item, idx) => (
+                      <SpotlightPill
+                        key={idx}
+                        icon={item.icon}
+                        label={item.label}
+                        onClick={() => handlePillClick(item.label)}
+                      />
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            )}
+          </div>
+        )}
       </motion.div>
     </div>
 

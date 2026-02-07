@@ -2,7 +2,7 @@ import React from 'react';
 
 export const PLATFORM_COLORS = {
   polymarket: '#2E5CFF',
-  kalshi: '#09C285',
+  kalshi: '#28CC95',
 } as const;
 
 /** Source: https://polymarket.com/brand */

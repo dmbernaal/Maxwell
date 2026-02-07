@@ -11,10 +11,70 @@ export interface PolymarketMarketRaw {
   active: boolean;
   closed: boolean;
   endDate: string;
-  createdTime: string;
-  category: string;
+  createdTime?: string;    // Optional - not present in events response
+  createdAt?: string;      // Alternative field name in events
+  category?: string;       // Optional in events response
   image?: string;
   clobTokenIds?: string;
+  enableOrderBook?: boolean;
+  acceptingOrders?: boolean;
+  groupItemTitle?: string;  // For grouped markets (e.g., "March 31, 2026")
+  eventSlug?: string;       // Optional - if market belongs to an event
+}
+
+export interface PolymarketSeries {
+  id: string;
+  ticker: string;
+  slug: string;
+  title: string;
+  seriesType: string;
+  recurrence: string;
+  image?: string;
+  icon?: string;
+  layout: string;
+  active: boolean;
+  closed: boolean;
+  archived: boolean;
+  new: boolean;
+  featured: boolean;
+  restricted: boolean;
+  publishedAt: string;
+  createdBy: string;
+  updatedBy: string;
+  createdAt: string;
+  updatedAt: string;
+  competitive: string;
+  volume24hr: number;
+  volume: number;
+  liquidity: number;
+  startDate: string;
+  requiresTranslation: boolean;
+}
+
+export interface PolymarketEventRaw {
+  id: string;
+  ticker: string;
+  slug: string;
+  title: string;
+  description: string;
+  resolutionSource?: string;
+  image?: string;
+  icon?: string;
+  active: boolean;
+  closed: boolean;
+  archived: boolean;
+  liquidity: number;
+  volume: number;
+  volume24hr: number;
+  createdAt: string;
+  updatedAt: string;
+  endDate: string;
+  startDate: string;
+  enableOrderBook: boolean;
+  markets: PolymarketMarketRaw[];
+  tags?: Array<{ label: string; slug: string }>;
+  competitive?: number;
+  series?: PolymarketSeries[];  // Array of series (usually 1)
 }
 
 export interface PolymarketPriceHistory {

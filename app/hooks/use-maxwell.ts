@@ -33,6 +33,8 @@ import type {
     MaxwellEvent,
     ExecutionPhase,
     PhaseDurations,
+    MarketContext,
+    MaxwellIntelligence,
 } from '../lib/maxwell/types';
 import type { ExecutionConfig } from '../lib/maxwell/configFactory';
 import type {
@@ -62,6 +64,7 @@ export interface MaxwellUIState {
     verificationProgress: VerificationProgress | null;
     answer: string;
     adjudication: string | null;
+    intelligence: MaxwellIntelligence | null;
     phaseDurations: PhaseDurations;
     phaseStartTimes: Record<string, number>;
     events: MaxwellEvent[];
@@ -79,6 +82,7 @@ const initialState: MaxwellUIState = {
     verificationProgress: null,
     answer: '',
     adjudication: null,
+    intelligence: null,
     phaseDurations: {},
     phaseStartTimes: {},
     events: [],
@@ -93,7 +97,7 @@ const initialState: MaxwellUIState = {
 
 export interface UseMaxwellReturn extends MaxwellUIState {
     isLoading: boolean;
-    search: (query: string) => Promise<void>;
+    search: (query: string, marketContext?: MarketContext) => Promise<void>;
     reset: () => void;
     abort: () => void;
     hydrate: (state: MaxwellUIState) => void;
@@ -130,6 +134,7 @@ function mapPhaseToAgentState(phase: ExecutionPhase): 'relaxed' | 'thinking' | '
             return 'synthesizing';
         case 'verification':
         case 'adjudication':
+        case 'presenter':
             return 'thinking';
         case 'complete':
         case 'error':
@@ -222,10 +227,7 @@ export function useMaxwell(): UseMaxwellReturn {
         }));
     }, []);
 
-    /**
-     * Updates phase and notifies store.
-     */
-    const setPhase = useCallback((phase: ExecutionPhase, sessionId: string) => {
+    const setPhase = useCallback((phase: ExecutionPhase, sessionId: string | null) => {
         setState((prev) => ({
             ...prev,
             phase,
@@ -238,13 +240,13 @@ export function useMaxwell(): UseMaxwellReturn {
                 : prev.verificationProgress,
         }));
 
-        setAgentState(mapPhaseToAgentState(phase), sessionId);
+        if (sessionId) {
+            setAgentState(mapPhaseToAgentState(phase), sessionId);
+        }
 
-        // Log phase-start event
         logEvent({ type: 'phase-start', phase: phase as any });
 
-        // Update message with phase for UI sync
-        if (agentMessageIdRef.current && (phase === 'verification' || phase === 'adjudication')) {
+        if (sessionId && agentMessageIdRef.current && (phase === 'verification' || phase === 'adjudication')) {
             const session = getActiveSession();
             const message = session?.messages.find((m) => m.id === agentMessageIdRef.current);
             if (message) {
@@ -261,32 +263,29 @@ export function useMaxwell(): UseMaxwellReturn {
     }, [setAgentState, logEvent, getActiveSession, updateMessage]);
 
     /**
-     * Main search function - orchestrates all 5 phases.
+     * Main search function - orchestrates all 6 phases.
+     * Phase 6 (presenter) is only executed when marketContext is provided.
+     * 
+     * NOTE: Chat store integration is OPTIONAL. When no session exists,
+     * the pipeline runs standalone without adding messages to the store.
+     * This enables use on market pages without chat functionality.
      */
     const search = useCallback(
-        async (query: string) => {
-            if (!activeSessionId) {
-                setState((prev) => ({
-                    ...prev,
-                    phase: 'error',
-                    error: 'No active session',
-                }));
-                return;
-            }
-
+        async (query: string, marketContext?: MarketContext) => {
+            // Session is optional - pipeline works without chat store integration
             const sessionId = activeSessionId;
             reset();
             setIsLoading(true);
             abortControllerRef.current = new AbortController();
 
             try {
-                // Add user message to store
-                addMessage(query, 'user', false, sessionId);
-                setAgentState('thinking', sessionId);
-
-                // Create placeholder agent message
-                const agentMessageId = addMessage('', 'agent', false, sessionId);
-                agentMessageIdRef.current = agentMessageId;
+                // Only add messages to store if we have an active session
+                if (sessionId) {
+                    addMessage(query, 'user', false, sessionId);
+                    setAgentState('thinking', sessionId);
+                    const agentMessageId = addMessage('', 'agent', false, sessionId);
+                    agentMessageIdRef.current = agentMessageId;
+                }
 
                 const overallStart = Date.now();
 
@@ -298,7 +297,7 @@ export function useMaxwell(): UseMaxwellReturn {
                 const decomposeRes = await fetch('/api/maxwell/decompose', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query }),
+                    body: JSON.stringify({ query, marketContext }),
                     signal: abortControllerRef.current.signal,
                 });
 
@@ -342,6 +341,7 @@ export function useMaxwell(): UseMaxwellReturn {
                     body: JSON.stringify({
                         subQueries: decomposition.subQueries,
                         config: decomposition.config,
+                        originalQuery: query,
                     }),
                     signal: abortControllerRef.current.signal,
                 });
@@ -353,12 +353,11 @@ export function useMaxwell(): UseMaxwellReturn {
 
                 const searchOutput: SearchResponse = await searchRes.json();
 
-                // Store blob URL for verification phase
-                // Embeddings are stored in Vercel Blob to avoid 4.5MB payload limit
                 const evidenceBlobUrl = searchOutput.evidenceBlobUrl;
+                const isLocalCache = evidenceBlobUrl.startsWith('maxwell-local://') || evidenceBlobUrl.startsWith('data:');
 
-                console.log('[useMaxwell] Evidence stored in Blob:', {
-                    url: evidenceBlobUrl.startsWith('data:') ? '[data URL - local]' : evidenceBlobUrl,
+                console.log('[useMaxwell] Evidence stored:', {
+                    url: isLocalCache ? '[local cache]' : evidenceBlobUrl,
                     passageCount: searchOutput.evidenceStats.passageCount,
                     embeddingCount: searchOutput.evidenceStats.embeddingCount,
                 });
@@ -373,8 +372,7 @@ export function useMaxwell(): UseMaxwellReturn {
                     },
                 }));
 
-                // Update message with sources
-                if (agentMessageIdRef.current) {
+                if (sessionId && agentMessageIdRef.current) {
                     const baseSources = searchOutput.sources.map(mapMaxwellSourceToSource);
                     updateMessage(agentMessageIdRef.current, '', baseSources, sessionId);
                 }
@@ -402,6 +400,7 @@ export function useMaxwell(): UseMaxwellReturn {
                         query,
                         sources: searchOutput.sources,
                         synthesisModel: decomposition.config.synthesisModel,
+                        marketContext,
                     }),
                     signal: abortControllerRef.current.signal,
                 });
@@ -419,8 +418,7 @@ export function useMaxwell(): UseMaxwellReturn {
                     if (abortControllerRef.current?.signal.aborted) break;
 
                     if (event.type === 'synthesis-chunk') {
-                        // Stream chunk to message
-                        if (agentMessageIdRef.current) {
+                        if (sessionId && agentMessageIdRef.current) {
                             const session = getActiveSession();
                             const message = session?.messages.find((m) => m.id === agentMessageIdRef.current);
                             const currentContent = message?.content || '';
@@ -510,8 +508,7 @@ export function useMaxwell(): UseMaxwellReturn {
                     },
                 }));
 
-                // Update message with verification confidence
-                if (agentMessageIdRef.current) {
+                if (sessionId && agentMessageIdRef.current) {
                     const session = getActiveSession();
                     const message = session?.messages.find((m) => m.id === agentMessageIdRef.current);
                     if (message) {
@@ -569,8 +566,7 @@ export function useMaxwell(): UseMaxwellReturn {
                             adjudication: adjudicationText,
                         }));
 
-                        // Stream to store for live UI updates
-                        if (agentMessageIdRef.current) {
+                        if (sessionId && agentMessageIdRef.current) {
                             const session = getActiveSession();
                             const message = session?.messages.find((m) => m.id === agentMessageIdRef.current);
                             if (message) {
@@ -612,6 +608,55 @@ export function useMaxwell(): UseMaxwellReturn {
                 });
 
                 // ═══════════════════════════════════════════════════════════
+                // PHASE 6: PRESENTER (conditional - only with marketContext)
+                // ═══════════════════════════════════════════════════════════
+                let intelligence: MaxwellIntelligence | null = null;
+                let presenterDuration = 0;
+
+                if (marketContext) {
+                    setPhase('presenter', sessionId);
+
+                    const presenterRes = await fetch('/api/maxwell/present', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            query,
+                            marketContext,
+                            synthesis: answer,
+                            verification,
+                            adjudication: adjudicationText,
+                            sources: searchOutput.sources,
+                            pipelineDurationMs: Date.now() - overallStart,
+                        }),
+                        signal: abortControllerRef.current.signal,
+                    });
+
+                    if (!presenterRes.ok) {
+                        const errorData = await presenterRes.json().catch(() => ({}));
+                        throw new Error(errorData.error || `Presenter failed: HTTP ${presenterRes.status}`);
+                    }
+
+                    const presenterOutput = await presenterRes.json();
+                    intelligence = presenterOutput.intelligence;
+                    presenterDuration = presenterOutput.durationMs;
+
+                    setState((prev) => ({
+                        ...prev,
+                        intelligence,
+                        phaseDurations: {
+                            ...prev.phaseDurations,
+                            presenter: presenterDuration,
+                        },
+                    }));
+
+                    logEvent({
+                        type: 'phase-complete',
+                        phase: 'presenter',
+                        data: { intelligence, durationMs: presenterDuration },
+                    });
+                }
+
+                // ═══════════════════════════════════════════════════════════
                 // COMPLETE
                 // ═══════════════════════════════════════════════════════════
                 const totalDurationMs = Date.now() - overallStart;
@@ -625,12 +670,14 @@ export function useMaxwell(): UseMaxwellReturn {
                     verificationProgress: null,
                     answer,
                     adjudication: adjudicationText || null,
+                    intelligence,
                     phaseDurations: {
                         decomposition: decomposition.durationMs,
                         search: searchOutput.durationMs,
                         synthesis: synthesisDuration,
                         verification: verification.durationMs,
                         adjudication: adjudicationDuration,
+                        ...(marketContext && { presenter: presenterDuration }),
                         total: totalDurationMs,
                     },
                     phaseStartTimes: {},
@@ -647,8 +694,7 @@ export function useMaxwell(): UseMaxwellReturn {
                     phaseDurations: finalState.phaseDurations,
                 }));
 
-                // Final update with full state persistence
-                if (agentMessageIdRef.current) {
+                if (sessionId && agentMessageIdRef.current) {
                     const baseSources = searchOutput.sources.map(mapMaxwellSourceToSource);
                     updateMessage(
                         agentMessageIdRef.current,
@@ -660,7 +706,9 @@ export function useMaxwell(): UseMaxwellReturn {
                     );
                 }
 
-                setAgentState('complete', sessionId);
+                if (sessionId) {
+                    setAgentState('complete', sessionId);
+                }
 
                 logEvent({
                     type: 'complete',
@@ -690,9 +738,10 @@ export function useMaxwell(): UseMaxwellReturn {
                     error: errorMessage,
                 }));
 
-                // Add error message to chat
-                addMessage(`Sorry, I encountered an error: ${errorMessage}`, 'agent', false, sessionId);
-                setAgentState('complete', sessionId);
+                if (sessionId) {
+                    addMessage(`Sorry, I encountered an error: ${errorMessage}`, 'agent', false, sessionId);
+                    setAgentState('complete', sessionId);
+                }
 
                 logEvent({ type: 'error', message: errorMessage });
             } finally {
@@ -726,6 +775,7 @@ export function usePhaseInfo(phase: ExecutionPhase): {
         synthesis: { label: 'Synthesizing', description: 'Generating answer...' },
         verification: { label: 'Verifying', description: 'Checking claims...' },
         adjudication: { label: 'Adjudicating', description: 'Finalizing verdict...' },
+        presenter: { label: 'Presenting', description: 'Structuring intelligence...' },
         complete: { label: 'Complete', description: 'Search finished' },
         error: { label: 'Error', description: 'Something went wrong' },
     };

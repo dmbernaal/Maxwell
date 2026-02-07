@@ -11,15 +11,19 @@ import { generateObject } from 'ai';
 import { z } from 'zod';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 
-// ✅ CORRECT IMPORT: Using the helper function, not the raw string
-import { DECOMPOSITION_PROMPT } from './prompts';
+import { 
+    DECOMPOSITION_PROMPT,
+    createPredictionMarketDecompositionPrompt,
+} from './prompts';
 import {
     DECOMPOSITION_MODEL,
     MIN_SUB_QUERIES,
     MAX_SUB_QUERIES,
 } from './constants';
 
-import type { SubQuery, DecompositionOutput } from './types';
+import type { SubQuery, SubQueryCategory, DecompositionOutput, MarketContext, MarketOutcomeContext } from './types';
+
+export { getTopNOutcomes } from './prompts';
 import type { ComplexityLevel } from './configFactory';
 
 // ============================================
@@ -48,10 +52,11 @@ const SubQuerySchema = z.object({
     id: z.string().describe('Unique identifier like "q1", "q2"'),
     query: z.string().describe('The search query optimized for Tavily'),
     purpose: z.string().describe('Why this query is needed'),
-    topic: z.enum(['general', 'news']).describe('Search topic'),
+    topic: z.enum(['general', 'news', 'finance']).describe('Search topic: general, news, or finance'),
     depth: z.enum(['basic', 'advanced']).describe('Search depth'),
     days: z.number().nullable().describe('Days back to search (null for all time)'),
     domains: z.array(z.string()).nullable().describe('Specific domains to search'),
+    excludeDomains: z.array(z.string()).nullable().optional().describe('Specific domains to exclude'),
 });
 
 const DecompositionSchema = z.object({
@@ -61,24 +66,37 @@ const DecompositionSchema = z.object({
     subQueries: z.array(SubQuerySchema).min(1).max(7),
 });
 
+const PredictionMarketSubQuerySchema = z.object({
+    id: z.string(),
+    query: z.string(),
+    purpose: z.string(),
+    topic: z.enum(['general', 'news', 'finance']),
+    depth: z.enum(['basic', 'advanced']),
+    days: z.number().nullable(),
+    domains: z.array(z.string()).nullable(),
+    excludeDomains: z.array(z.string()).nullable().optional(),
+    category: z.enum(['resolution', 'catalyst', 'factor_for', 'factor_against', 'contrarian', 'cross_platform']),
+    targetOutcome: z.string().nullable(),
+});
+
+const PredictionMarketDecompositionSchema = z.object({
+    reasoning: z.string(),
+    complexity: z.enum(['standard', 'deep_research']),
+    complexityReasoning: z.string(),
+    subQueries: z.array(PredictionMarketSubQuerySchema).min(3).max(12),
+});
+
 // ============================================
 // MAIN DECOMPOSITION FUNCTION
 // ============================================
 
-/**
- * Decomposes a complex user query into focused sub-queries.
- *
- * @param query - The user's original complex question
- * @returns DecompositionOutput with sub-queries and metadata
- * @throws Error if query is empty or decomposition fails
- */
 export async function decomposeQuery(
     query: string,
-    modelId: string = DECOMPOSITION_MODEL
+    modelId: string = DECOMPOSITION_MODEL,
+    marketContext?: MarketContext
 ): Promise<DecompositionOutput> {
     const startTime = Date.now();
 
-    // Validate input
     if (!query || typeof query !== 'string') {
         throw new Error('Query must be a non-empty string');
     }
@@ -91,31 +109,36 @@ export async function decomposeQuery(
     try {
         const openrouter = getOpenRouterClient();
 
-        // ✅ Generate prompt with Date Injection
+        if (marketContext) {
+            return decomposeWithMarketContext(
+                openrouter,
+                modelId,
+                trimmedQuery,
+                marketContext,
+                startTime
+            );
+        }
+
         const fullPrompt = DECOMPOSITION_PROMPT
             .replace('{currentDate}', new Date().toISOString())
-            .replace('{query}', trimmedQuery); // Use trimmedQuery
+            .replace('{query}', trimmedQuery);
 
-        // Generate structured output
         const { object } = await generateObject({
             model: openrouter(modelId),
             schema: DecompositionSchema,
             prompt: fullPrompt,
-            temperature: 0.3, // Low temp for structured output
+            temperature: 0.3,
         });
 
-        // Validate sub-query IDs are unique
         const ids = object.subQueries.map((sq) => sq.id);
         const uniqueIds = new Set(ids);
         if (uniqueIds.size !== ids.length) {
-            // Fix duplicate IDs by reassigning
             object.subQueries = object.subQueries.map((sq, index) => ({
                 ...sq,
                 id: `q${index + 1}`,
             }));
         }
 
-        // Normalize IDs to q1, q2, q3 pattern
         const normalizedSubQueries: SubQuery[] = object.subQueries.map((sq, index) => ({
             id: `q${index + 1}`,
             query: sq.query.trim(),
@@ -124,6 +147,7 @@ export async function decomposeQuery(
             depth: sq.depth,
             days: sq.days ?? undefined,
             domains: sq.domains ?? undefined,
+            excludeDomains: sq.excludeDomains ?? undefined,
         }));
 
         return {
@@ -135,10 +159,57 @@ export async function decomposeQuery(
             durationMs: Date.now() - startTime,
         };
     } catch (error) {
-        // Re-throw with more context
         const message = error instanceof Error ? error.message : 'Unknown error';
         throw new Error(`Decomposition failed: ${message}`);
     }
+}
+
+async function decomposeWithMarketContext(
+    openrouter: ReturnType<typeof createOpenRouter>,
+    modelId: string,
+    query: string,
+    marketContext: MarketContext,
+    startTime: number
+): Promise<DecompositionOutput> {
+    const fullPrompt = createPredictionMarketDecompositionPrompt(query, marketContext);
+
+    const { object } = await generateObject({
+        model: openrouter(modelId),
+        schema: PredictionMarketDecompositionSchema,
+        prompt: fullPrompt,
+        temperature: 0.3,
+    });
+
+    const ids = object.subQueries.map((sq) => sq.id);
+    const uniqueIds = new Set(ids);
+    if (uniqueIds.size !== ids.length) {
+        object.subQueries = object.subQueries.map((sq, index) => ({
+            ...sq,
+            id: `q${index + 1}`,
+        }));
+    }
+
+    const normalizedSubQueries: SubQuery[] = object.subQueries.map((sq, index) => ({
+        id: `q${index + 1}`,
+        query: sq.query.trim(),
+        purpose: sq.purpose.trim(),
+        topic: sq.topic,
+        depth: sq.depth,
+        days: sq.days ?? undefined,
+        domains: sq.domains ?? undefined,
+        excludeDomains: sq.excludeDomains ?? undefined,
+        category: sq.category as SubQueryCategory,
+        targetOutcome: sq.targetOutcome ?? undefined,
+    }));
+
+    return {
+        originalQuery: query,
+        subQueries: normalizedSubQueries,
+        reasoning: object.reasoning,
+        complexity: object.complexity as ComplexityLevel,
+        complexityReasoning: object.complexityReasoning,
+        durationMs: Date.now() - startTime,
+    };
 }
 
 // ============================================

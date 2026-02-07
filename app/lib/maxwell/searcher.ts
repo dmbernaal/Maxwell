@@ -7,7 +7,15 @@
  * @module maxwell/searcher
  */
 
-import { RESULTS_PER_QUERY, SEARCH_DEPTH } from './constants';
+import {
+    RESULTS_PER_QUERY,
+    SEARCH_DEPTH,
+    MIN_SEARCH_RELEVANCE_SCORE,
+    MAX_SEARCH_RETRIES,
+    SEARCH_RETRY_BASE_DELAY_MS,
+    DEFAULT_CHUNKS_PER_SOURCE,
+    EXCLUDED_DOMAINS,
+} from './constants';
 import type { SubQuery, MaxwellSource, SearchMetadata, SearchOutput } from './types';
 
 // ============================================
@@ -53,17 +61,20 @@ interface SingleSearchResult {
 // SINGLE QUERY SEARCH
 // ============================================
 
-/**
- * Execute a single search query against Tavily API
- * Uses direct fetch like existing tools.ts pattern
- */
+function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function isRetryableStatus(status: number): boolean {
+    return status === 429 || status === 500 || status === 502 || status === 503;
+}
+
 async function searchSingleQuery(
     apiKey: string,
     subQuery: SubQuery,
     resultsPerQuery: number
 ): Promise<SingleSearchResult> {
     try {
-        // Map days to time_range
         let time_range: 'day' | 'week' | 'month' | 'year' | undefined;
         if (subQuery.days) {
             if (subQuery.days <= 1) time_range = 'day';
@@ -72,8 +83,6 @@ async function searchSingleQuery(
             else time_range = 'year';
         }
 
-        // Detect if the user is hunting for specific facts (Dates, Versions, Names, Numbers)
-        // Fetch raw content for precision - snippets are too short for specific data points
         const isFactLookup =
             subQuery.depth === 'advanced' ||
             /^(who|what|when|where|which|version|release|date|price|cost)/i.test(subQuery.query) ||
@@ -81,56 +90,85 @@ async function searchSingleQuery(
 
         const includeRaw = isFactLookup;
 
+        // Merge global blocklist with per-query excludes
+        const mergedExcludeDomains = [
+            ...EXCLUDED_DOMAINS,
+            ...(subQuery.excludeDomains || []),
+        ];
+
         const executeTavilySearch = async (depth: 'basic' | 'advanced', raw: boolean) => {
+            const body: Record<string, unknown> = {
+                api_key: apiKey,
+                query: subQuery.query,
+                max_results: resultsPerQuery,
+                search_depth: depth,
+                topic: subQuery.topic,
+                time_range: time_range,
+                include_domains: subQuery.domains,
+                exclude_domains: mergedExcludeDomains.length > 0 ? mergedExcludeDomains : undefined,
+                include_answer: false,
+                include_raw_content: raw,
+            };
+
+            // Add chunks_per_source for advanced searches
+            if (depth === 'advanced') {
+                body.chunks_per_source = DEFAULT_CHUNKS_PER_SOURCE;
+            }
+
             return fetch('https://api.tavily.com/search', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    api_key: apiKey,
-                    query: subQuery.query,
-                    max_results: resultsPerQuery,
-                    search_depth: depth,
-                    topic: subQuery.topic,
-                    time_range: time_range,
-                    include_domains: subQuery.domains,
-                    include_answer: false,
-                    include_raw_content: raw,
-                }),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
             });
         };
 
-        let response = await executeTavilySearch(subQuery.depth, includeRaw);
+        // Exponential backoff retry loop
+        let lastError: string | undefined;
+        for (let attempt = 0; attempt <= MAX_SEARCH_RETRIES; attempt++) {
+            if (attempt > 0) {
+                const delay = SEARCH_RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1);
+                console.log(`[Maxwell Search] Retry ${attempt}/${MAX_SEARCH_RETRIES} for "${subQuery.query}" after ${delay}ms`);
+                await sleep(delay);
+            }
 
-        // FAIL-SAFE: If Basic search returned 0 results, retry with Advanced
-        if (response.ok) {
-            const data = await response.json();
-            if ((!data.results || data.results.length === 0) && subQuery.depth === 'basic') {
-                console.log(`[Maxwell Search] Basic search failed for "${subQuery.query}". Retrying with Advanced...`);
-                response = await executeTavilySearch('advanced', true);
-            } else {
-                // Return original data if successful
-                return processTavilyResponse(data, subQuery);
+            let response = await executeTavilySearch(subQuery.depth, includeRaw);
+
+            // FAIL-SAFE: If Basic search returned 0 results, retry with Advanced
+            if (response.ok) {
+                const data = await response.json();
+                if ((!data.results || data.results.length === 0) && subQuery.depth === 'basic') {
+                    console.log(`[Maxwell Search] Basic search returned 0 results for "${subQuery.query}". Retrying with Advanced...`);
+                    response = await executeTavilySearch('advanced', true);
+                    if (response.ok) {
+                        const advancedData = await response.json();
+                        return processTavilyResponse(advancedData, subQuery);
+                    }
+                } else {
+                    return processTavilyResponse(data, subQuery);
+                }
+            }
+
+            if (!response.ok) {
+                lastError = `HTTP ${response.status}`;
+                if (isRetryableStatus(response.status) && attempt < MAX_SEARCH_RETRIES) {
+                    console.warn(`[Maxwell Search] Retryable error ${response.status} for ${subQuery.id}`);
+                    continue;
+                }
+                const errorText = await response.text();
+                console.error(`[Maxwell Search] API error for ${subQuery.id}:`, response.status, errorText);
+                break;
             }
         }
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`[Maxwell Search] API error for ${subQuery.id}:`, response.status, errorText);
-            return {
-                sources: [],
-                metadata: {
-                    queryId: subQuery.id,
-                    query: subQuery.query,
-                    sourcesFound: 0,
-                    status: 'failed',
-                },
-            };
-        }
-
-        const data = await response.json();
-        return processTavilyResponse(data, subQuery);
+        return {
+            sources: [],
+            metadata: {
+                queryId: subQuery.id,
+                query: subQuery.query,
+                sourcesFound: 0,
+                status: 'failed',
+            },
+        };
 
     } catch (error) {
         console.error(`[Maxwell Search] Failed for ${subQuery.id} ("${subQuery.query}"):`, error);
@@ -148,20 +186,22 @@ async function searchSingleQuery(
 }
 
 function processTavilyResponse(data: TavilyResponse, subQuery: SubQuery): SingleSearchResult {
-    // Map Tavily results to our MaxwellSource type
-    const sources: MaxwellSource[] = (data.results || []).map(
-        (result: TavilyResult, index: number) => ({
-            // Temporary ID - will be reassigned after deduplication
+    const sources: MaxwellSource[] = (data.results || [])
+        .filter((result: TavilyResult) => result.score >= MIN_SEARCH_RELEVANCE_SCORE)
+        .map((result: TavilyResult, index: number) => ({
             id: `${subQuery.id}_s${index}`,
             url: result.url,
             title: result.title || 'Untitled',
-            // Prefer raw_content if available (more detailed), fallback to content
             snippet: result.raw_content || result.content || '',
             fromQuery: subQuery.id,
-            // Map published_date from Tavily
             date: result.published_date,
-        })
-    );
+            score: result.score,
+        }));
+
+    const filtered = (data.results || []).length - sources.length;
+    if (filtered > 0) {
+        console.log(`[Maxwell Search] Filtered ${filtered} low-relevance results (< ${MIN_SEARCH_RELEVANCE_SCORE}) for ${subQuery.id}`);
+    }
 
     return {
         sources,
